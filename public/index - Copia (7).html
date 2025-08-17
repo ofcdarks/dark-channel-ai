@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v13.3</title>
+    <title>Darks Vips AI v13.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -56,7 +56,7 @@
         }
     </style>
 </head>
-<body class="text-slate-800" oncontextmenu="return false;">
+<body class="text-slate-800">
 
     <!-- Telas de Autenticação -->
     <div id="login-container" class="flex items-center justify-center h-screen bg-slate-100">
@@ -764,13 +764,6 @@
     ELEMENTS.menuOverlay.addEventListener('click', () => {
         ELEMENTS.sidebar.classList.remove('open');
         ELEMENTS.menuOverlay.style.display = 'none';
-    });
-
-    // Basic Security: Disable Dev Tools
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
-            e.preventDefault();
-        }
     });
     </script>
 </body>
