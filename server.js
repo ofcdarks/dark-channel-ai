@@ -14,8 +14,8 @@ const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(express.json());
-// [FIX] Configurado para servir arquivos estáticos (como o index.html) a partir do diretório raiz.
-app.use(express.static(__dirname)); 
+// [FIX] Revertido para servir arquivos da pasta 'public'. O erro ENOENT indica que o ambiente de execução espera esta estrutura.
+app.use(express.static(path.join(__dirname, 'public'))); 
 
 // 3. Conexão com o Banco de Dados PostgreSQL
 const pool = new Pool({
@@ -167,7 +167,6 @@ app.get('/api/youtube-stats/:channelId', async (req, res) => {
         if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
 
         const youtube = google.youtube({ version: 'v3', auth: apiKey });
-        // Adicionado 'snippet' para buscar mais detalhes do canal
         const response = await youtube.channels.list({
             part: 'statistics,snippet', 
             id: channelId,
@@ -185,7 +184,6 @@ app.get('/api/youtube-stats/:channelId', async (req, res) => {
             subscriberCount: formatStat(stats.subscriberCount),
             videoCount: formatStat(stats.videoCount),
             viewCount: formatStat(stats.viewCount),
-            // Novas métricas adicionadas
             publishedAt: snippet.publishedAt ? new Date(snippet.publishedAt).toLocaleDateString('pt-BR') : 'N/A',
             country: snippet.country || 'Não especificado'
         });
@@ -212,9 +210,9 @@ app.get('/api/google-trends/:keyword/:country', async (req, res) => {
 
 
 // 6. Rota Genérica (Catch-all)
-// Esta rota garante que o index.html seja servido para qualquer requisição que não seja uma API
+// [FIX] Revertido para servir o index.html a partir da pasta 'public'.
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // 7. Inicialização do Servidor
