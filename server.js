@@ -14,8 +14,8 @@ const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(express.json());
-// [FIX] Removido o express.static para servir o index.html pela rota genérica
-// app.use(express.static(path.join(__dirname, 'public'))); 
+// [FIX] Configurado para servir arquivos estáticos (como o index.html) a partir do diretório raiz.
+app.use(express.static(__dirname)); 
 
 // 3. Conexão com o Banco de Dados PostgreSQL
 const pool = new Pool({
