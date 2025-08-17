@@ -14,8 +14,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(express.json());
-// [FIX] Removido o express.static para servir o index.html pela rota genérica
-// app.use(express.static(path.join(__dirname, 'public'))); 
+app.use(express.static(path.join(__dirname, 'public')));
 
 // 3. Conexão com o Banco de Dados PostgreSQL
 const pool = new Pool({
@@ -156,7 +155,6 @@ app.get('/api/video-details/:videoId', async (req, res) => {
     }
 });
 
-// [UPDATE] Rota de estatísticas do canal atualizada para buscar mais métricas
 app.get('/api/youtube-stats/:channelId', async (req, res) => {
     const { channelId } = req.params;
     const userId = req.headers['x-user-id'];
@@ -167,27 +165,21 @@ app.get('/api/youtube-stats/:channelId', async (req, res) => {
         if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
 
         const youtube = google.youtube({ version: 'v3', auth: apiKey });
-        // Adicionado 'snippet' para buscar mais detalhes do canal
         const response = await youtube.channels.list({
-            part: 'statistics,snippet', 
+            part: 'statistics',
             id: channelId,
         });
 
         if (response.data.items.length === 0) {
             return res.status(404).json({ message: 'Canal não encontrado.' });
         }
-        const channel = response.data.items[0];
-        const stats = channel.statistics;
-        const snippet = channel.snippet;
+        const stats = response.data.items[0].statistics;
         const formatStat = (stat) => stat ? parseInt(stat).toLocaleString('pt-BR') : 'N/A';
         
         res.json({
             subscriberCount: formatStat(stats.subscriberCount),
             videoCount: formatStat(stats.videoCount),
             viewCount: formatStat(stats.viewCount),
-            // Novas métricas adicionadas
-            publishedAt: snippet.publishedAt ? new Date(snippet.publishedAt).toLocaleDateString('pt-BR') : 'N/A',
-            country: snippet.country || 'Não especificado'
         });
     } catch (error) {
         console.error("Erro na API do YouTube:", error.message);
@@ -212,9 +204,8 @@ app.get('/api/google-trends/:keyword/:country', async (req, res) => {
 
 
 // 6. Rota Genérica (Catch-all)
-// Esta rota garante que o index.html seja servido para qualquer requisição que não seja uma API
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // 7. Inicialização do Servidor
