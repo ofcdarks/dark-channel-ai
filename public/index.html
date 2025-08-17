@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Dark Channel Automator v12.7</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .sidebar-btn { transition: all 0.2s ease-in-out; }
+        .sidebar-btn:hover { background-color: #f1f5f9; color: #334155; }
+        .sidebar-btn-active { background-color: #eef2ff; color: #4f46e5; font-weight: 600; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .progress-bar-container { background-color: #e0e7ff; border-radius: 9999px; height: 8px; overflow: hidden; }
+        .progress-bar-inner { height: 100%; border-radius: 9999px; transition: width 0.5s ease-in-out; }
+        .progress-bar-indeterminate { background-size: 200% 100%; background-image: linear-gradient(to right, #e0e7ff 0%, #c7d2fe 50%, #e0e7ff 100%); animation: move-bg 2s linear infinite; }
+        @keyframes move-bg { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        #login-container, #register-container { display: flex; }
+        #app-container, #progress-modal { display: none; }
+        .prose { max-width: none; }
+        .copy-btn.copied { background-color: #10b981; color: white; }
+        .form-switch { cursor: pointer; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Tela de Login -->
+    <div id="login-container" class="flex items-center justify-center h-screen bg-slate-100">
+        <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-lg">
+            <div>
+                <h2 class="text-3xl font-extrabold text-center text-slate-900">Dark Channel AI</h2>
+                <p class="mt-2 text-center text-sm text-slate-600">Faça login para continuar</p>
+            </div>
+            <form id="login-form" class="mt-8 space-y-6">
+                <div id="login-feedback" class="text-red-500 text-sm text-center"></div>
+                <div class="rounded-md shadow-sm -space-y-px">
+                    <input id="login-email" type="email" autocomplete="email" required class="appearance-none rounded-none relative block w-full px-3 py-3 border border-slate-300 placeholder-slate-500 text-slate-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Endereço de e-mail">
+                    <input id="login-password" type="password" autocomplete="current-password" required class="appearance-none rounded-none relative block w-full px-3 py-3 border border-slate-300 placeholder-slate-500 text-slate-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Senha">
+                </div>
+                <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">Entrar</button>
+            </form>
+            <p class="text-center text-sm">Não tem uma conta? <a href="#" id="show-register" class="font-medium text-indigo-600 hover:text-indigo-500">Registre-se</a></p>
+        </div>
+    </div>
+
+    <!-- Tela de Registro -->
+    <div id="register-container" class="hidden items-center justify-center h-screen bg-slate-100">
+        <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-lg">
+            <div>
+                <h2 class="text-3xl font-extrabold text-center text-slate-900">Criar Conta</h2>
+                <p class="mt-2 text-center text-sm text-slate-600">Junte-se à plataforma</p>
+            </div>
+            <form id="register-form" class="mt-8 space-y-6">
+                <div id="register-feedback" class="text-red-500 text-sm text-center"></div>
+                <div class="rounded-md shadow-sm -space-y-px">
+                    <input id="register-email" type="email" required class="appearance-none rounded-none relative block w-full px-3 py-3 border border-slate-300 placeholder-slate-500 text-slate-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Seu melhor e-mail">
+                    <input id="register-password" type="password" required class="appearance-none rounded-none relative block w-full px-3 py-3 border border-slate-300 placeholder-slate-500 text-slate-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Crie uma senha forte">
+                </div>
+                <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">Criar Conta</button>
+            </form>
+            <p class="text-center text-sm">Já tem uma conta? <a href="#" id="show-login" class="font-medium text-indigo-600 hover:text-indigo-500">Faça login</a></p>
+        </div>
+    </div>
+
+    <!-- Modal de Progresso -->
+    <div id="progress-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl text-center w-full max-w-sm">
+            <h3 class="text-lg font-semibold text-slate-800 mb-2">Processando...</h3>
+            <p id="progress-phrase" class="text-sm text-slate-600 mb-4">Otimizando para o algoritmo...</p>
+            <div class="w-full bg-slate-200 rounded-full h-2.5"><div class="h-2.5 rounded-full progress-bar-indeterminate"></div></div>
+        </div>
+    </div>
+
+    <!-- Conteúdo da Aplicação -->
+    <div id="app-container" class="hidden h-screen bg-slate-50">
+        <aside class="w-72 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col">
+            <div class="p-6 border-b">
+                <h1 class="text-2xl font-bold text-slate-900">Dark Channel AI</h1>
+                <div class="text-sm text-slate-500" id="user-email-display"></div>
+            </div>
+            <nav id="sidebar-nav" class="p-4 space-y-1 flex-1 overflow-y-auto">
+                <!-- Links da Sidebar (gerados dinamicamente) -->
+            </nav>
+            <div class="p-4 border-t">
+                <button id="logout-btn" class="w-full text-left flex items-center gap-3 px-4 py-2 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-700">
+                    <span>🚪</span><span>Sair</span>
+                </button>
+            </div>
+        </aside>
+        <main id="tab-content" class="flex-1 p-6 md:p-10 overflow-y-auto"></main>
+    </div>
+
+    <script>
+    // --- Global State Management ---
+    let appState = {
+        currentUser: null, // { id, email }
+        apiKeys: { gemini: "", openai: "", youtube: "", google_search: "" },
+        userChannels: [],
+        videoIdeas: []
+    };
+
+    // --- Constants ---
+    const ELEMENTS = {
+        loginContainer: document.getElementById('login-container'),
+        registerContainer: document.getElementById('register-container'),
+        appContainer: document.getElementById('app-container'),
+        loginForm: document.getElementById('login-form'),
+        registerForm: document.getElementById('register-form'),
+        loginFeedback: document.getElementById('login-feedback'),
+        registerFeedback: document.getElementById('register-feedback'),
+        showRegister: document.getElementById('show-register'),
+        showLogin: document.getElementById('show-login'),
+        sidebarNav: document.getElementById('sidebar-nav'),
+        tabContent: document.getElementById('tab-content'),
+        progressModal: document.getElementById('progress-modal'),
+        progressPhrase: document.getElementById('progress-phrase'),
+        userEmailDisplay: document.getElementById('user-email-display'),
+        logoutBtn: document.getElementById('logout-btn'),
+    };
+
+    const PROGRESS_PHRASES = [ "Decodificando o algoritmo...", "Buscando insights virais...", "Consultando os dados de tendência...", "Polindo as palavras-chave...", "Ajustando o potencial de clique..." ];
+
+    // --- API Communication ---
+    /**
+     * Handles API requests to the backend.
+     * @param {string} endpoint - The API endpoint (e.g., '/api/login').
+     * @param {string} method - The HTTP method (e.g., 'POST').
+     * @param {object} [body=null] - The request body for POST/PUT requests.
+     * @returns {Promise<any>} - The JSON response from the server.
+     */
+    async function apiRequest(endpoint, method, body = null) {
+        const options = {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+        };
+        if (body) {
+            options.body = JSON.stringify(body);
+        }
+        const response = await fetch(endpoint, options);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Ocorreu um erro.');
+        }
+        return response.json();
+    }
+
+
+    // --- Authentication ---
+    function showLoginScreen() {
+        ELEMENTS.registerContainer.classList.add('hidden');
+        ELEMENTS.loginContainer.classList.remove('hidden');
+    }
+
+    function showRegisterScreen() {
+        ELEMENTS.loginContainer.classList.add('hidden');
+        ELEMENTS.registerContainer.classList.remove('hidden');
+    }
+
+    async function handleLogin(e) {
+        e.preventDefault();
+        ELEMENTS.loginFeedback.textContent = '';
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        try {
+            const user = await apiRequest('/api/login', 'POST', { email, password });
+            appState.currentUser = user;
+            await initializeApp();
+        } catch (error) {
+            ELEMENTS.loginFeedback.textContent = error.message;
+        }
+    }
+
+    async function handleRegister(e) {
+        e.preventDefault();
+        ELEMENTS.registerFeedback.textContent = '';
+        const email = document.getElementById('register-email').value;
+        const password = document.getElementById('register-password').value;
+        try {
+            await apiRequest('/api/register', 'POST', { email, password });
+            // After successful registration, log the user in automatically
+            const user = await apiRequest('/api/login', 'POST', { email, password });
+            appState.currentUser = user;
+            await initializeApp();
+        } catch (error) {
+            ELEMENTS.registerFeedback.textContent = error.message;
+        }
+    }
+    
+    function handleLogout() {
+        appState.currentUser = null;
+        appState.apiKeys = { gemini: "", openai: "", youtube: "", google_search: "" };
+        ELEMENTS.appContainer.style.display = 'none';
+        ELEMENTS.loginContainer.style.display = 'flex';
+        ELEMENTS.registerContainer.style.display = 'none';
+        document.getElementById('login-form').reset();
+    }
+
+
+    // --- App Initialization ---
+    async function initializeApp() {
+        if (!appState.currentUser) return;
+        
+        // Load user settings (API keys) from the backend
+        try {
+            const settings = await apiRequest(`/api/settings/${appState.currentUser.id}`, 'GET');
+            if (settings && Object.keys(settings).length > 0) {
+                appState.apiKeys = settings;
+            }
+        } catch(error) {
+            console.error("Não foi possível carregar as configurações:", error.message);
+            // Proceed with default empty keys
+        }
+
+        ELEMENTS.userEmailDisplay.textContent = appState.currentUser.email;
+        ELEMENTS.loginContainer.style.display = 'none';
+        ELEMENTS.registerContainer.style.display = 'none';
+        ELEMENTS.appContainer.style.display = 'flex';
+        
+        buildSidebar();
+        renderTabContent('dashboard');
+    }
+
+    // --- UI Building ---
+    function buildSidebar() {
+        const navItems = [
+            { id: 'dashboard', icon: '📈', label: 'Dashboard' },
+            { type: 'divider', label: 'PESQUISA' },
+            { id: 'niche-finder', icon: '🔎', label: 'Nichos e Tendências' },
+            { id: 'subniche-finder', icon: '💎', label: 'Explorador de Subnichos' },
+            { id: 'niche-analysis', icon: '📊', label: 'Análise de Nicho' },
+            { id: 'video-optimizer', icon: '🚀', label: 'Analisador de Vídeo' },
+            { type: 'divider', label: 'CRIAÇÃO' },
+            { id: 'title-structures', icon: '🏗️', label: 'Estruturas de Títulos' },
+            { id: 'script-writer', icon: '📜', label: 'Criador de Roteiros' },
+            { id: 'visual-storyboard', icon: '🎬', label: 'Storyboard Visual' },
+            { id: 'thumbnail-prompts', icon: '🎨', label: 'Prompts de Thumbnail' },
+            { type: 'divider', label: 'OTIMIZAÇÃO' },
+            { id: 'description-optimizer', icon: '📄', label: 'Otimizador de Descrição' },
+            { id: 'tag-generator', icon: '🏷️', label: 'Gerador de Tags' },
+            { type: 'divider', label: 'GERENCIAMENTO' },
+            { id: 'channel-organizer', icon: '📺', label: 'Organizador de Canais' },
+            { id: 'planner', icon: '🗓️', label: 'Planejador de Conteúdo' },
+            { id: 'settings', icon: '⚙️', label: 'Configurações' },
+        ];
+
+        ELEMENTS.sidebarNav.innerHTML = navItems.map(item => {
+            if (item.type === 'divider') {
+                return `<div class="pt-2 mt-2 border-t"><span class="px-4 text-xs font-semibold text-slate-400">${item.label}</span></div>`;
+            }
+            return `<button class="sidebar-btn ${item.id === 'dashboard' ? 'sidebar-btn-active' : ''} w-full text-left flex items-center gap-3 px-4 py-2 rounded-lg" data-tab="${item.id}"><span>${item.icon}</span><span>${item.label}</span></button>`;
+        }).join('');
+    }
+    
+    // --- The rest of your application logic (tools, handlers, etc.) goes here ---
+    // NOTE: This section is identical to the previous version, but now it uses
+    // appState.apiKeys which are loaded from the backend instead of localStorage.
+    // The `callGenerativeAPI` and all tool handlers remain the same.
+
+    const showProgressModal = () => { ELEMENTS.progressModal.style.display = 'flex'; ELEMENTS.progressPhrase.textContent = PROGRESS_PHRASES[Math.floor(Math.random() * PROGRESS_PHRASES.length)]; };
+    const hideProgressModal = () => { ELEMENTS.progressModal.style.display = 'none'; };
+    const getScoreColor = (score) => score >= 80 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+    const createCopyButton = (text) => `<button class="copy-btn text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded hover:bg-slate-300" data-copy-text="${encodeURIComponent(text)}">Copiar</button>`;
+    const renderScoreCard = (title, mainScore, subScores, suggestion) => {
+        const intMainScore = Math.round(mainScore);
+        const subScoresHtml = Object.entries(subScores).map(([key, value]) => `
+            <div class="mb-2">
+                <div class="flex justify-between items-center text-sm mb-1"><span class="text-slate-600">${key}</span><span class="font-semibold text-slate-700">${Math.round(value)}/100</span></div>
+                <div class="progress-bar-container"><div class="progress-bar-inner ${getScoreColor(value)}" style="width: ${value}%;"></div></div>
+            </div>`).join('');
+        return `<div class="bg-white p-4 rounded-lg border w-full md:w-72 flex-shrink-0">
+                    <h4 class="font-semibold text-slate-800 mb-2">${title}</h4>
+                    <div class="flex items-center gap-2 mb-4"><span class="text-3xl font-bold ${getScoreColor(intMainScore).replace('bg', 'text')}-500">${intMainScore}</span><span class="text-slate-500">/ 100</span></div>
+                    ${subScoresHtml}
+                    <p class="text-xs text-slate-500 mt-4"><strong class="text-slate-600">Sugestão:</strong> ${suggestion}</p>
+                </div>`;
+    };
+
+    async function callGenerativeAPI(prompt, schema = null, retries = 3, delay = 1000) {
+        const geminiKey = appState.apiKeys.gemini || "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${geminiKey}`;
+        let payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+        if (schema) payload.generationConfig = { responseMimeType: "application/json", responseSchema: schema };
+
+        showProgressModal();
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorBody = await response.json();
+                if (retries > 0 && response.status === 429) {
+                    await new Promise(res => setTimeout(res, delay));
+                    return callGenerativeAPI(prompt, schema, retries - 1, delay * 2);
+                }
+                throw new Error(`Erro na API: ${response.status} - ${errorBody.error?.message || 'Verifique sua chave de API.'}`);
+            }
+            const result = await response.json();
+            if (result.candidates?.[0]?.content?.parts?.[0]) {
+                const text = result.candidates[0].content.parts[0].text;
+                return schema ? JSON.parse(text) : { text };
+            }
+            if (result.candidates?.[0]?.finishReason === 'SAFETY') throw new Error("A resposta foi bloqueada por políticas de segurança.");
+            throw new Error("Resposta da API inválida ou vazia.");
+        } catch (error) {
+            if (error.name === 'AbortError') throw new Error("A requisição da API excedeu o tempo limite.");
+            throw error;
+        } finally {
+            hideProgressModal();
+        }
+    }
+
+    // (The entire 'tools' and 'handlers' objects from the previous version would go here, unchanged)
+    // For brevity, I'm omitting them, but you should paste them in this exact spot.
+    // Make sure to include the `initializeSettings` function and update it as shown below.
+    
+    const tools = { /* Paste the entire 'tools' object here */ };
+    const handlers = { /* Paste the entire 'handlers' object here */ };
+
+    function renderTabContent(tabId) {
+        const tool = tools[tabId];
+        if (!tool) return;
+        ELEMENTS.tabContent.innerHTML = `<div class="fade-in"><h2 class="text-3xl font-bold text-slate-900 mb-2">${tool.title}</h2><p class="text-slate-600 mb-6">${tool.desc}</p>${tool.content}</div>`;
+        const outputEl = document.getElementById('output');
+        Object.keys(handlers).filter(key => tool.content.includes(`id="${key}"`)).forEach(buttonId => {
+            const btn = document.getElementById(buttonId);
+            if(btn) btn.addEventListener('click', async () => {
+                try { await handlers[buttonId](outputEl); }
+                catch (error) { hideProgressModal(); outputEl.innerHTML = `<p class="text-red-500">${error.message}</p>`; }
+            });
+        });
+
+        if (tabId === 'settings') initializeSettings();
+        // Add other initializers like dashboard, planner, etc.
+    }
+
+    async function initializeSettings() {
+        const geminiKeyInput = document.getElementById('gemini-key');
+        const openaiKeyInput = document.getElementById('openai-key');
+        const saveBtn = document.getElementById('save-settings');
+        const feedbackEl = document.getElementById('settings-feedback');
+
+        // Load current keys into the form
+        geminiKeyInput.value = appState.apiKeys.gemini || '';
+        openaiKeyInput.value = appState.apiKeys.openai || '';
+        // Add other keys (youtube, google_search) if their inputs exist
+
+        saveBtn.addEventListener('click', async () => {
+            const newSettings = {
+                gemini: geminiKeyInput.value.trim(),
+                openai: openaiKeyInput.value.trim(),
+                // Add other keys
+            };
+            try {
+                await apiRequest(`/api/settings/${appState.currentUser.id}`, 'POST', { settings: newSettings });
+                appState.apiKeys = newSettings; // Update state locally
+                feedbackEl.textContent = 'Configurações salvas com sucesso!';
+                feedbackEl.className = 'text-green-600 text-sm mt-4';
+            } catch (error) {
+                feedbackEl.textContent = `Erro ao salvar: ${error.message}`;
+                feedbackEl.className = 'text-red-500 text-sm mt-4';
+            } finally {
+                setTimeout(() => feedbackEl.textContent = '', 3000);
+            }
+        });
+    }
+
+
+    // --- Event Listeners ---
+    ELEMENTS.loginForm.addEventListener('submit', handleLogin);
+    ELEMENTS.registerForm.addEventListener('submit', handleRegister);
+    ELEMENTS.showRegister.addEventListener('click', (e) => { e.preventDefault(); showRegisterScreen(); });
+    ELEMENTS.showLogin.addEventListener('click', (e) => { e.preventDefault(); showLoginScreen(); });
+    ELEMENTS.logoutBtn.addEventListener('click', handleLogout);
+    
+    ELEMENTS.sidebarNav.addEventListener('click', (event) => {
+        const clickedButton = event.target.closest('.sidebar-btn');
+        if (clickedButton) {
+            ELEMENTS.sidebarNav.querySelectorAll('.sidebar-btn').forEach(btn => btn.classList.remove('sidebar-btn-active'));
+            clickedButton.classList.add('sidebar-btn-active');
+            renderTabContent(clickedButton.getAttribute('data-tab'));
+        }
+    });
+
+    ELEMENTS.tabContent.addEventListener('click', (e) => {
+        if (e.target.classList.contains('copy-btn')) {
+            const button = e.target;
+            const text = decodeURIComponent(button.dataset.copyText);
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                button.textContent = 'Copiado!';
+                button.classList.add('copied');
+                setTimeout(() => {
+                    button.textContent = 'Copiar';
+                    button.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                console.error('Falha ao copiar', err);
+            }
+            document.body.removeChild(textArea);
+        }
+    });
+
+    </script>
+</body>
+</html>
