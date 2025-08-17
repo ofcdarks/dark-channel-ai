@@ -30,30 +30,6 @@
             -webkit-text-fill-color: transparent;
             text-shadow: 2px 2px 10px rgba(79, 70, 229, 0.2);
         }
-        /* Mobile Responsiveness */
-        @media (max-width: 768px) {
-            #app-container { flex-direction: column; }
-            #sidebar { 
-                position: fixed;
-                left: -100%;
-                top: 0;
-                height: 100%;
-                z-index: 40;
-                transition: left 0.3s ease-in-out;
-                width: 288px; /* w-72 */
-            }
-            #sidebar.open { left: 0; }
-            #main-content { margin-left: 0; }
-            #menu-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0,0,0,0.5);
-                z-index: 30;
-            }
-        }
     </style>
 </head>
 <body class="text-slate-800">
@@ -105,13 +81,11 @@
 
     <!-- Conteúdo da Aplicação -->
     <div id="app-container" class="hidden h-screen bg-slate-50">
-        <div id="menu-overlay" class="hidden md:hidden"></div>
-        <aside id="sidebar" class="w-72 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col">
-            <div class="p-6 border-b flex justify-between items-center">
+        <aside class="w-72 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col">
+            <div class="p-6 border-b">
                 <h1 class="text-2xl font-bold text-slate-900 app-title">Darks Vips AI</h1>
-                <button id="close-menu-btn" class="md:hidden text-2xl">&times;</button>
+                <div class="text-sm text-slate-500" id="user-email-display"></div>
             </div>
-            <div class="p-4 text-sm text-slate-500" id="user-email-display"></div>
             <nav id="sidebar-nav" class="p-4 space-y-1 flex-1 overflow-y-auto"></nav>
             <div class="p-4 border-t">
                 <button id="logout-btn" class="w-full text-left flex items-center gap-3 px-4 py-2 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-700">
@@ -119,13 +93,7 @@
                 </button>
             </div>
         </aside>
-        <div id="main-content" class="flex-1 flex flex-col">
-            <header class="p-4 md:hidden bg-white border-b flex items-center">
-                <button id="open-menu-btn" class="text-2xl">☰</button>
-                <h2 id="mobile-header-title" class="ml-4 font-semibold text-lg">Dashboard</h2>
-            </header>
-            <main id="tab-content" class="flex-1 p-6 md:p-10 overflow-y-auto"></main>
-        </div>
+        <main id="tab-content" class="flex-1 p-6 md:p-10 overflow-y-auto"></main>
     </div>
 
     <script>
@@ -148,17 +116,12 @@
         registerFeedback: document.getElementById('register-feedback'),
         showRegister: document.getElementById('show-register'),
         showLogin: document.getElementById('show-login'),
-        sidebar: document.getElementById('sidebar'),
         sidebarNav: document.getElementById('sidebar-nav'),
         tabContent: document.getElementById('tab-content'),
         progressModal: document.getElementById('progress-modal'),
         progressPhrase: document.getElementById('progress-phrase'),
         userEmailDisplay: document.getElementById('user-email-display'),
         logoutBtn: document.getElementById('logout-btn'),
-        openMenuBtn: document.getElementById('open-menu-btn'),
-        closeMenuBtn: document.getElementById('close-menu-btn'),
-        menuOverlay: document.getElementById('menu-overlay'),
-        mobileHeaderTitle: document.getElementById('mobile-header-title'),
     };
 
     const PROGRESS_PHRASES = [ "Decodificando o algoritmo...", "Buscando insights virais...", "Consultando os dados de tendência...", "Polindo as palavras-chave...", "Ajustando o potencial de clique..." ];
@@ -169,7 +132,7 @@
             method, 
             headers: { 
                 'Content-Type': 'application/json',
-                'x-user-id': appState.currentUser?.id
+                'x-user-id': appState.currentUser?.id // Pass user ID for backend API calls
             } 
         };
         if (body) options.body = JSON.stringify(body);
@@ -494,22 +457,11 @@
         if (!tool) return;
         ELEMENTS.tabContent.innerHTML = `<div class="fade-in"><h2 class="text-3xl font-bold text-slate-900 mb-2">${tool.title}</h2><p class="text-slate-600 mb-6">${tool.desc}</p>${tool.content}</div>`;
         
-        ELEMENTS.mobileHeaderTitle.textContent = tool.title;
-        ELEMENTS.sidebar.classList.remove('open');
-        ELEMENTS.menuOverlay.style.display = 'none';
-
         // Specific initializers
         if (tabId === 'settings') initializeSettings();
         if (tabId === 'dashboard') initializeDashboard();
         if (tabId === 'channel-organizer') initializeChannelOrganizer();
         if (tabId === 'planner') initializePlanner();
-        if (tabId === 'niche-analysis') {
-            const nicheInput = document.getElementById('analysis-niche');
-            nicheInput.addEventListener('input', () => {
-                const trendsChart = document.getElementById('trends-chart-container');
-                if(trendsChart) trendsChart.style.display = 'none';
-            });
-        }
 
         // Attach generic handlers
         const outputEl = document.getElementById('output');
@@ -569,7 +521,6 @@
     }
     
     let mainChartInstance = null;
-    let trendsChartInstance = null;
     async function initializeDashboard() {
         const container = document.getElementById('dashboard-container');
         if (appState.userChannels.length === 0) {
@@ -629,14 +580,13 @@
                 output.innerHTML = `<p class="text-center text-slate-500 py-8">Nenhum canal adicionado.</p>`;
                 return;
             }
-            output.innerHTML = appState.userChannels.map((ch, index) => `<div class="bg-white p-4 rounded-lg shadow-sm border"><div class="flex justify-between items-center"><h3 class="text-lg font-semibold">${ch.name}</h3><button class="remove-channel text-red-500 text-2xl" data-index="${index}" title="Remover Canal">&times;</button></div><div class="text-sm text-slate-600 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2"><p><strong>Nicho:</strong> ${ch.niche}</p><p><strong>Idioma:</strong> ${ch.lang}</p><p><strong>Vídeos/Semana:</strong> ${ch.freq}</p><p><strong>Horário:</strong> ${ch.time}</p><p><strong>Backlog:</strong> ${ch.backlogQty || '0'}</p><p class="col-span-1 sm:col-span-2"><strong>ID do Canal:</strong> ${ch.id}</p></div></div>`).join('');
+            output.innerHTML = appState.userChannels.map((ch, index) => `<div class="bg-white p-4 rounded-lg shadow-sm border"><div class="flex justify-between items-center"><h3 class="text-lg font-semibold">${ch.name}</h3><button class="remove-channel text-red-500 text-2xl" data-index="${index}" title="Remover Canal">&times;</button></div><div class="text-sm text-slate-600 mt-2 grid grid-cols-2 gap-2"><p><strong>Nicho:</strong> ${ch.niche}</p><p><strong>Idioma:</strong> ${ch.lang}</p><p><strong>Vídeos/Semana:</strong> ${ch.freq}</p><p><strong>Horário:</strong> ${ch.time}</p><p><strong>Backlog:</strong> ${ch.backlogQty || '0'}</p><p class="col-span-2"><strong>ID do Canal:</strong> ${ch.id}</p></div></div>`).join('');
         };
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const channelId = prompt("Por favor, insira o ID do Canal do YouTube (ex: UC_x5XG1OV2P6uZZ5FSM9Ttw)");
-            if (!channelId) return;
             const newChannel = {
-                id: channelId,
+                // IMPORTANT: The ID should be the YouTube Channel ID, e.g., UC...
+                id: prompt("Por favor, insira o ID do Canal do YouTube (ex: UC_x5XG1OV2P6uZZ5FSM9Ttw)"),
                 name: document.getElementById('org-channel-name').value,
                 niche: document.getElementById('org-channel-niche').value,
                 lang: document.getElementById('org-channel-lang').value,
@@ -644,6 +594,7 @@
                 time: document.getElementById('org-post-time').value,
                 backlogQty: document.getElementById('org-backlog-qty').value,
             };
+            if (!newChannel.id) return; // User cancelled prompt
             appState.userChannels.push(newChannel);
             await saveSettings();
             renderChannels();
@@ -670,7 +621,7 @@
                 output.innerHTML = `<p class="text-center text-slate-500 py-8">Nenhuma ideia adicionada.</p>`;
                 return;
             }
-            output.innerHTML = appState.videoIdeas.map((idea, index) => `<div class="bg-white p-4 rounded-lg shadow-sm border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"><div><h4 class="font-semibold">${idea.title}</h4><p class="text-sm text-slate-500">${idea.channel}</p></div><div class="flex items-center gap-2"><select class="status-select bg-slate-100 border-slate-200 rounded-md text-sm p-1" data-index="${index}"><option value="Planejado" ${idea.status === 'Planejado' ? 'selected' : ''}>Planejado</option><option value="Em Produção" ${idea.status === 'Em Produção' ? 'selected' : ''}>Em Produção</option><option value="Publicado" ${idea.status === 'Publicado' ? 'selected' : ''}>Publicado</option></select><button class="delete-idea text-red-500 hover:text-red-700 text-2xl" data-index="${index}" title="Remover Ideia">&times;</button></div></div>`).join('');
+            output.innerHTML = appState.videoIdeas.map((idea, index) => `<div class="bg-white p-4 rounded-lg shadow-sm border flex items-center justify-between"><div><h4 class="font-semibold">${idea.title}</h4><p class="text-sm text-slate-500">${idea.channel}</p></div><div class="flex items-center gap-2"><select class="status-select bg-slate-100 border-slate-200 rounded-md text-sm p-1" data-index="${index}"><option value="Planejado" ${idea.status === 'Planejado' ? 'selected' : ''}>Planejado</option><option value="Em Produção" ${idea.status === 'Em Produção' ? 'selected' : ''}>Em Produção</option><option value="Publicado" ${idea.status === 'Publicado' ? 'selected' : ''}>Publicado</option></select><button class="delete-idea text-red-500 hover:text-red-700 text-2xl" data-index="${index}" title="Remover Ideia">&times;</button></div></div>`).join('');
         };
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -750,20 +701,6 @@
             }
             document.body.removeChild(textArea);
         }
-    });
-
-    // Mobile Menu Listeners
-    ELEMENTS.openMenuBtn.addEventListener('click', () => {
-        ELEMENTS.sidebar.classList.add('open');
-        ELEMENTS.menuOverlay.style.display = 'block';
-    });
-    ELEMENTS.closeMenuBtn.addEventListener('click', () => {
-        ELEMENTS.sidebar.classList.remove('open');
-        ELEMENTS.menuOverlay.style.display = 'none';
-    });
-    ELEMENTS.menuOverlay.addEventListener('click', () => {
-        ELEMENTS.sidebar.classList.remove('open');
-        ELEMENTS.menuOverlay.style.display = 'none';
     });
     </script>
 </body>
