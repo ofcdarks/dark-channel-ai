@@ -108,6 +108,7 @@ app.post('/api/settings/:userId', async (req, res) => {
 });
 
 // 5. Novas Rotas da API (YouTube Data & Google Trends)
+
 const getGoogleApiKey = async (userId) => {
     const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
     if (result.rows.length > 0 && result.rows[0].settings) {
@@ -127,27 +128,19 @@ app.get('/api/video-details/:videoId', async (req, res) => {
 
         const youtube = google.youtube({ version: 'v3', auth: apiKey });
         const response = await youtube.videos.list({
-            part: 'snippet,statistics',
+            part: 'snippet',
             id: videoId,
         });
 
         if (response.data.items.length === 0) {
             return res.status(404).json({ message: 'Vídeo não encontrado.' });
         }
-        const video = response.data.items[0];
-        const snippet = video.snippet;
-        const stats = video.statistics;
-        const formatStat = (stat) => parseInt(stat).toLocaleString('pt-BR');
-
+        const snippet = response.data.items[0].snippet;
         res.json({
             title: snippet.title,
             description: snippet.description,
             tags: snippet.tags || [],
-            channelTitle: snippet.channelTitle,
-            viewCount: stats.viewCount ? formatStat(stats.viewCount) : 'N/A',
-            likeCount: stats.likeCount ? formatStat(stats.likeCount) : 'N/A',
-            commentCount: stats.commentCount ? formatStat(stats.commentCount) : 'N/A',
-            detectedLanguage: snippet.defaultAudioLanguage || snippet.defaultLanguage || 'en'
+            channelTitle: snippet.channelTitle
         });
     } catch (error) {
         console.error("Erro na API do YouTube:", error.message);
@@ -174,7 +167,7 @@ app.get('/api/youtube-stats/:channelId', async (req, res) => {
             return res.status(404).json({ message: 'Canal não encontrado.' });
         }
         const stats = response.data.items[0].statistics;
-        const formatStat = (stat) => stat ? parseInt(stat).toLocaleString('pt-BR') : 'N/A';
+        const formatStat = (stat) => parseInt(stat).toLocaleString('pt-BR');
         
         res.json({
             subscriberCount: formatStat(stats.subscriberCount),
