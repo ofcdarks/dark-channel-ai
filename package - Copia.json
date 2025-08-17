@@ -1,7 +1,7 @@
 {
-  "name": "darks-vips-ai-backend",
-  "version": "2.0.0",
-  "description": "Backend for Darks Vips AI",
+  "name": "dark-channel-ai-backend",
+  "version": "1.0.0",
+  "description": "Backend para o YouTube Dark Channel Automator.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -12,7 +12,6 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "express": "^4.18.2",
-    "googleapis": "^126.0.1",
     "pg": "^8.11.3"
   },
   "devDependencies": {

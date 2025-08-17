@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v13.2</title>
+    <title>YouTube Dark Channel Automator v13.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Poppins', sans-serif; background-color: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         .sidebar-btn { transition: all 0.2s ease-in-out; }
         .sidebar-btn:hover { background-color: #f1f5f9; color: #334155; }
         .sidebar-btn-active { background-color: #eef2ff; color: #4f46e5; font-weight: 600; }
@@ -24,12 +22,6 @@
         #register-container, #app-container, #progress-modal { display: none; }
         .prose { max-width: none; }
         .copy-btn.copied { background-color: #10b981; color: white; }
-        .app-title {
-            background: linear-gradient(45deg, #4f46e5, #818cf8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 2px 2px 10px rgba(79, 70, 229, 0.2);
-        }
     </style>
 </head>
 <body class="text-slate-800">
@@ -38,7 +30,7 @@
     <div id="login-container" class="flex items-center justify-center h-screen bg-slate-100">
         <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-lg">
             <div>
-                <h2 class="text-3xl font-extrabold text-center text-slate-900 app-title">Darks Vips AI</h2>
+                <h2 class="text-3xl font-extrabold text-center text-slate-900">Dark Channel AI</h2>
                 <p class="mt-2 text-center text-sm text-slate-600">Faça login para continuar</p>
             </div>
             <form id="login-form" class="mt-8 space-y-6">
@@ -83,7 +75,7 @@
     <div id="app-container" class="hidden h-screen bg-slate-50">
         <aside class="w-72 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col">
             <div class="p-6 border-b">
-                <h1 class="text-2xl font-bold text-slate-900 app-title">Darks Vips AI</h1>
+                <h1 class="text-2xl font-bold text-slate-900">Dark Channel AI</h1>
                 <div class="text-sm text-slate-500" id="user-email-display"></div>
             </div>
             <nav id="sidebar-nav" class="p-4 space-y-1 flex-1 overflow-y-auto"></nav>
@@ -128,13 +120,7 @@
 
     // --- API Communication ---
     async function apiRequest(endpoint, method, body = null) {
-        const options = { 
-            method, 
-            headers: { 
-                'Content-Type': 'application/json',
-                'x-user-id': appState.currentUser?.id // Pass user ID for backend API calls
-            } 
-        };
+        const options = { method, headers: { 'Content-Type': 'application/json' } };
         if (body) options.body = JSON.stringify(body);
         const response = await fetch(endpoint, options);
         if (!response.ok) {
