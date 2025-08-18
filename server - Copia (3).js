@@ -14,7 +14,6 @@ const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(express.json());
-// [FIX] Revertido para servir arquivos da pasta 'public'. O erro ENOENT indica que o ambiente de execução espera esta estrutura.
 app.use(express.static(path.join(__dirname, 'public'))); 
 
 // 3. Conexão com o Banco de Dados PostgreSQL
@@ -108,7 +107,7 @@ app.post('/api/settings/:userId', async (req, res) => {
     }
 });
 
-// 5. Novas Rotas da API (YouTube Data & Google Trends)
+// 5. Rotas da API (YouTube Data & Google Trends)
 const getGoogleApiKey = async (userId) => {
     const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
     if (result.rows.length > 0 && result.rows[0].settings) {
@@ -116,6 +115,8 @@ const getGoogleApiKey = async (userId) => {
     }
     return null;
 };
+
+const formatStat = (stat) => stat ? parseInt(stat).toLocaleString('pt-BR') : '0';
 
 app.get('/api/video-details/:videoId', async (req, res) => {
     const { videoId } = req.params;
@@ -138,16 +139,15 @@ app.get('/api/video-details/:videoId', async (req, res) => {
         const video = response.data.items[0];
         const snippet = video.snippet;
         const stats = video.statistics;
-        const formatStat = (stat) => parseInt(stat).toLocaleString('pt-BR');
-
+        
         res.json({
             title: snippet.title,
             description: snippet.description,
             tags: snippet.tags || [],
             channelTitle: snippet.channelTitle,
-            viewCount: stats.viewCount ? formatStat(stats.viewCount) : 'N/A',
-            likeCount: stats.likeCount ? formatStat(stats.likeCount) : 'N/A',
-            commentCount: stats.commentCount ? formatStat(stats.commentCount) : 'N/A',
+            viewCount: formatStat(stats.viewCount),
+            likeCount: formatStat(stats.likeCount),
+            commentCount: formatStat(stats.commentCount),
             detectedLanguage: snippet.defaultAudioLanguage || snippet.defaultLanguage || 'en'
         });
     } catch (error) {
@@ -156,7 +156,6 @@ app.get('/api/video-details/:videoId', async (req, res) => {
     }
 });
 
-// [UPDATE] Rota de estatísticas do canal atualizada para buscar mais métricas
 app.get('/api/youtube-stats/:channelId', async (req, res) => {
     const { channelId } = req.params;
     const userId = req.headers['x-user-id'];
@@ -168,7 +167,7 @@ app.get('/api/youtube-stats/:channelId', async (req, res) => {
 
         const youtube = google.youtube({ version: 'v3', auth: apiKey });
         const response = await youtube.channels.list({
-            part: 'statistics,snippet', 
+            part: 'statistics,snippet,contentDetails', 
             id: channelId,
         });
 
@@ -178,14 +177,14 @@ app.get('/api/youtube-stats/:channelId', async (req, res) => {
         const channel = response.data.items[0];
         const stats = channel.statistics;
         const snippet = channel.snippet;
-        const formatStat = (stat) => stat ? parseInt(stat).toLocaleString('pt-BR') : 'N/A';
         
         res.json({
             subscriberCount: formatStat(stats.subscriberCount),
             videoCount: formatStat(stats.videoCount),
             viewCount: formatStat(stats.viewCount),
             publishedAt: snippet.publishedAt ? new Date(snippet.publishedAt).toLocaleDateString('pt-BR') : 'N/A',
-            country: snippet.country || 'Não especificado'
+            country: snippet.country || 'Não especificado',
+            uploadsPlaylistId: channel.contentDetails.relatedPlaylists.uploads
         });
     } catch (error) {
         console.error("Erro na API do YouTube:", error.message);
@@ -193,13 +192,61 @@ app.get('/api/youtube-stats/:channelId', async (req, res) => {
     }
 });
 
+// [NOVA ROTA] Busca os vídeos mais recentes de um canal
+app.get('/api/youtube-recent-videos/:uploadsPlaylistId', async (req, res) => {
+    const { uploadsPlaylistId } = req.params;
+    const userId = req.headers['x-user-id'];
+    if (!userId) return res.status(401).json({ message: "Usuário não autenticado." });
+
+    try {
+        const apiKey = await getGoogleApiKey(userId);
+        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
+
+        const youtube = google.youtube({ version: 'v3', auth: apiKey });
+        
+        // 1. Buscar os 5 IDs de vídeo mais recentes da playlist de uploads
+        const playlistResponse = await youtube.playlistItems.list({
+            part: 'snippet',
+            playlistId: uploadsPlaylistId,
+            maxResults: 5
+        });
+
+        if (playlistResponse.data.items.length === 0) {
+            return res.json([]);
+        }
+        
+        const videoIds = playlistResponse.data.items.map(item => item.snippet.resourceId.videoId);
+
+        // 2. Buscar os detalhes e estatísticas desses vídeos
+        const videosResponse = await youtube.videos.list({
+            part: 'snippet,statistics',
+            id: videoIds.join(',')
+        });
+
+        const videosData = videosResponse.data.items.map(video => ({
+            id: video.id,
+            title: video.snippet.title,
+            thumbnail: video.snippet.thumbnails.default.url,
+            viewCount: formatStat(video.statistics.viewCount),
+            likeCount: formatStat(video.statistics.likeCount),
+            commentCount: formatStat(video.statistics.commentCount)
+        }));
+
+        res.json(videosData);
+    } catch (error) {
+        console.error("Erro na API do YouTube ao buscar vídeos recentes:", error.message);
+        res.status(500).json({ message: "Erro ao buscar vídeos recentes. Verifique a chave da API." });
+    }
+});
+
+
 app.get('/api/google-trends/:keyword/:country', async (req, res) => {
     const { keyword, country } = req.params;
     try {
         const results = await googleTrends.interestOverTime({
             keyword: keyword,
             geo: country,
-            startTime: new Date(Date.now() - 12 * 30 * 24 * 60 * 60 * 1000) // Last 12 months
+            startTime: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) // Last 12 months
         });
         res.json(JSON.parse(results));
     } catch (error) {
@@ -210,7 +257,6 @@ app.get('/api/google-trends/:keyword/:country', async (req, res) => {
 
 
 // 6. Rota Genérica (Catch-all)
-// [FIX] Revertido para servir o index.html a partir da pasta 'public'.
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

@@ -14,7 +14,9 @@ const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public'))); 
+// O express.static foi removido pois o Vercel lida com arquivos estáticos de outra forma.
+// Se for rodar localmente, você pode descomentar a linha abaixo.
+// app.use(express.static(path.join(__dirname, 'public'))); 
 
 // 3. Conexão com o Banco de Dados PostgreSQL
 const pool = new Pool({
@@ -148,7 +150,7 @@ app.get('/api/video-details/:videoId', async (req, res) => {
             viewCount: formatStat(stats.viewCount),
             likeCount: formatStat(stats.likeCount),
             commentCount: formatStat(stats.commentCount),
-            detectedLanguage: snippet.defaultAudioLanguage || snippet.defaultLanguage || 'en'
+            detectedLanguage: snippet.defaultAudioLanguage || snippet.defaultLanguage || 'pt'
         });
     } catch (error) {
         console.error("Erro na API do YouTube:", error.message);
@@ -192,7 +194,6 @@ app.get('/api/youtube-stats/:channelId', async (req, res) => {
     }
 });
 
-// [NOVA ROTA] Busca os vídeos mais recentes de um canal
 app.get('/api/youtube-recent-videos/:uploadsPlaylistId', async (req, res) => {
     const { uploadsPlaylistId } = req.params;
     const userId = req.headers['x-user-id'];
@@ -204,7 +205,6 @@ app.get('/api/youtube-recent-videos/:uploadsPlaylistId', async (req, res) => {
 
         const youtube = google.youtube({ version: 'v3', auth: apiKey });
         
-        // 1. Buscar os 5 IDs de vídeo mais recentes da playlist de uploads
         const playlistResponse = await youtube.playlistItems.list({
             part: 'snippet',
             playlistId: uploadsPlaylistId,
@@ -217,7 +217,6 @@ app.get('/api/youtube-recent-videos/:uploadsPlaylistId', async (req, res) => {
         
         const videoIds = playlistResponse.data.items.map(item => item.snippet.resourceId.videoId);
 
-        // 2. Buscar os detalhes e estatísticas desses vídeos
         const videosResponse = await youtube.videos.list({
             part: 'snippet,statistics',
             id: videoIds.join(',')
@@ -239,6 +238,37 @@ app.get('/api/youtube-recent-videos/:uploadsPlaylistId', async (req, res) => {
     }
 });
 
+// [NOVA ROTA] Busca os comentários de um vídeo
+app.get('/api/video-comments/:videoId', async (req, res) => {
+    const { videoId } = req.params;
+    const userId = req.headers['x-user-id'];
+    if (!userId) return res.status(401).json({ message: "Usuário não autenticado." });
+
+    try {
+        const apiKey = await getGoogleApiKey(userId);
+        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
+
+        const youtube = google.youtube({ version: 'v3', auth: apiKey });
+        
+        const response = await youtube.commentThreads.list({
+            part: 'snippet',
+            videoId: videoId,
+            maxResults: 50, // Pega os 50 comentários principais
+            order: 'relevance' // Pega os mais relevantes
+        });
+
+        const comments = response.data.items.map(item => item.snippet.topLevelComment.snippet.textDisplay);
+        res.json(comments);
+
+    } catch (error) {
+        console.error("Erro na API do YouTube ao buscar comentários:", error.response?.data?.error || error.message);
+        if (error.response?.data?.error?.errors[0]?.reason === 'commentsDisabled') {
+             return res.status(403).json({ message: "Os comentários estão desativados para este vídeo." });
+        }
+        res.status(500).json({ message: "Erro ao buscar comentários. Verifique a chave da API e se o vídeo permite comentários." });
+    }
+});
+
 
 app.get('/api/google-trends/:keyword/:country', async (req, res) => {
     const { keyword, country } = req.params;
@@ -256,9 +286,9 @@ app.get('/api/google-trends/:keyword/:country', async (req, res) => {
 });
 
 
-// 6. Rota Genérica (Catch-all)
+// 6. Rota Genérica (Catch-all) para servir o index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // 7. Inicialização do Servidor
