@@ -14,9 +14,9 @@ const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(express.json());
-// O express.static foi removido pois o Vercel lida com arquivos estáticos de outra forma.
-// Se for rodar localmente, você pode descomentar a linha abaixo.
-// app.use(express.static(path.join(__dirname, 'public'))); 
+// [CORREÇÃO] Para resolver o erro 'ENOENT', o servidor precisa saber onde encontrar seu arquivo principal.
+// A convenção é usar uma pasta 'public'. Certifique-se de que seu 'index.html' está dentro de uma pasta 'public' na raiz do projeto.
+app.use(express.static(path.join(__dirname, 'public')));
 
 // 3. Conexão com o Banco de Dados PostgreSQL
 const pool = new Pool({
@@ -288,7 +288,7 @@ app.get('/api/google-trends/:keyword/:country', async (req, res) => {
 
 // 6. Rota Genérica (Catch-all) para servir o index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // 7. Inicialização do Servidor
