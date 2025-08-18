@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v14.5</title>
+    <title>Darks Vips AI v15.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -258,7 +258,7 @@
         const navItems = [
             { id: 'dashboard', icon: '📈', label: 'Dashboard' },
             { type: 'divider', label: 'PESQUISA' },
-            { id: 'niche-finder', icon: '🔎', label: 'Nichos e Tendências' },
+            { id: 'niche-finder', icon: '🔎', label: 'Localizador de Nichos' },
             { id: 'subniche-finder', icon: '💎', label: 'Explorador de Subnichos' },
             { id: 'niche-analysis', icon: '📊', label: 'Análise de Nicho' },
             { id: 'video-optimizer', icon: '🚀', label: 'Analisador de Vídeo' },
@@ -288,6 +288,7 @@
     const showProgressModal = () => { ELEMENTS.progressModal.style.display = 'flex'; ELEMENTS.progressPhrase.textContent = PROGRESS_PHRASES[Math.floor(Math.random() * PROGRESS_PHRASES.length)]; };
     const hideProgressModal = () => { ELEMENTS.progressModal.style.display = 'none'; };
     const getScoreColor = (score) => score >= 80 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+    const getScoreTextColor = (score) => score >= 80 ? 'text-green-500' : score >= 50 ? 'text-yellow-500' : 'text-red-500';
     const createCopyButton = (text) => `<button class="copy-btn text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded hover:bg-slate-300" data-copy-text="${encodeURIComponent(text)}">Copiar</button>`;
     
     const renderScoreCard = (title, mainScore, subScores, suggestion, isNovel = false) => {
@@ -305,13 +306,13 @@
                     <h4 class="font-semibold text-slate-800 mb-2">${title}</h4>
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-baseline gap-1">
-                            <span class="text-3xl font-bold ${getScoreColor(intMainScore).replace('bg', 'text')}-500">${intMainScore}</span>
+                            <span class="text-3xl font-bold ${getScoreTextColor(intMainScore)}">${intMainScore}</span>
                             <span class="text-slate-500 text-sm">/ 100</span>
                         </div>
                         ${novelBadge}
                     </div>
                     ${subScoresHtml}
-                    <p class="text-xs text-slate-500 mt-4"><strong class="text-slate-600">A Virada de Chave:</strong> ${suggestion}</p>
+                    ${suggestion ? `<p class="text-xs text-slate-500 mt-4"><strong class="text-slate-600">A Virada de Chave:</strong> ${suggestion}</p>` : ''}
                 </div>`;
     };
 
@@ -334,7 +335,7 @@
         showProgressModal();
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 45000); // Increased timeout
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // Increased timeout to 60s
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: controller.signal });
             clearTimeout(timeoutId);
 
@@ -370,7 +371,7 @@
         "dashboard": { title: "Dashboard de Performance", desc: "Selecione um canal para ver as métricas e obter insights da IA.", content: `<div id="dashboard-container"></div>` },
         "niche-finder": { 
             title: "Localizador de Nichos", 
-            desc: "Encontre nichos e tendências de mercado.", 
+            desc: "Encontre nichos e tendências de mercado com estimativas de RPM.", 
             content: `<div class="bg-white p-6 rounded-xl shadow-sm border">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <input type="text" id="niche-keyword" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Palavra-chave (opcional)">
@@ -448,7 +449,7 @@
         'generate-niches': async (output, append = false) => {
             const keyword = document.getElementById('niche-keyword').value || 'tópicos em alta';
             const country = document.getElementById('niche-country').value;
-            const prompt = `Como um especialista em YouTube, gere 3 nichos promissores sobre '${keyword}' para o país ${country}. Foque em oportunidades com baixa concorrência. Para cada nicho, forneça uma sugestão estratégica que seja uma "virada de chave".`;
+            const prompt = `Como um especialista em YouTube, gere 3 nichos promissores sobre '${keyword}' para o país ${country}. Foque em oportunidades com baixa concorrência. Para cada nicho, forneça uma sugestão estratégica que seja uma "virada de chave" e uma estimativa de RPM em dólares americanos.`;
             const schema = {
                 type: "ARRAY",
                 items: {
@@ -457,7 +458,7 @@
                         niche_name: { type: "STRING" },
                         description: { type: "STRING" },
                         unexplored_subniches: { type: "ARRAY", items: { type: "STRING" } },
-                        rpm_estimate: { type: "STRING", description: "Estimativa de RPM em dólares, ex: '$5.50'" },
+                        rpm_estimate_value: { type: "NUMBER", description: "Estimativa de RPM em dólares, ex: 5.50" },
                         scores: {
                             type: "OBJECT",
                             properties: {
@@ -471,7 +472,7 @@
                 }
             };
             const result = await callGenerativeAPI(prompt, schema);
-            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: ${item.rpm_estimate || 'N/A'}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Volume de Busca': item.scores['Volume de Busca'] }, item.suggestion)}</div>`).join('');
+            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: $${(item.rpm_estimate_value || 0).toFixed(2)}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Volume de Busca': item.scores['Volume de Busca'] }, item.suggestion)}</div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
             document.getElementById('generate-more-niches').style.display = 'block';
         },
@@ -480,7 +481,7 @@
             const country = document.getElementById('subniche-country').value;
             if (!mainNiche) { mainNiche = "qualquer nicho com alta demanda e baixa concorrência" }
             
-            const prompt = `Para o nicho principal de "${mainNiche}", no país ${country}, gere 5 subnichos inexplorados e criativos. Para cada um, forneça uma sugestão que seja uma "virada de chave" e indique se é uma ideia inédita.`;
+            const prompt = `Para o nicho principal de "${mainNiche}", no país ${country}, gere 5 subnichos inexplorados e criativos. Para cada um, forneça uma sugestão que seja uma "virada de chave", pontuações de análise e indique se é uma ideia inédita.`;
             const schema = {
                 type: "ARRAY",
                 items: {
@@ -495,7 +496,7 @@
                             properties: {
                                 Potencial: { type: "NUMBER", description: "Pontuação de potencial (70-95, >90 é raro)." },
                                 Concorrência: { type: "NUMBER", description: "Pontuação de concorrência (10-60)." },
-                                "Volume de Busca": { type: "NUMBER", description: "Pontuação de volume de busca (60-95)." }
+                                "Originalidade": { type: "NUMBER", description: "Pontuação de originalidade (60-95)." }
                             }
                         },
                         suggestion: { type: "STRING", description: "A 'virada de chave' para o sucesso no subnicho." }
@@ -503,7 +504,7 @@
                 }
             };
             const result = await callGenerativeAPI(prompt, schema);
-            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.subniche_name} ${createCopyButton(item.subniche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">Ideias de Vídeo: ${item.video_ideas.join('; ')}</p></div>${renderScoreCard('Análise do Subnicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência': 100 - item.scores.Concorrência, 'Volume de Busca': item.scores['Volume de Busca'] }, item.suggestion, item.is_novel)}</div>`).join('');
+            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.subniche_name} ${createCopyButton(item.subniche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">Ideias de Vídeo: ${item.video_ideas.join('; ')}</p></div>${renderScoreCard('Análise do Subnicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Originalidade': item.scores.Originalidade }, item.suggestion, item.is_novel)}</div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
             document.getElementById('generate-more-subniches').style.display = 'block';
         },
@@ -512,7 +513,7 @@
             const country = document.getElementById('analysis-country').value;
             if (!niche) { output.innerHTML = `<p class="text-red-500">Insira um nicho para análise.</p>`; return; }
             
-            const prompt = `Analise profundamente o nicho "${niche}" para o país ${country}. Forneça uma sugestão estratégica que seja uma "virada de chave".`;
+            const prompt = `Analise profundamente o nicho "${niche}" para o YouTube no país ${country}. Forneça uma estimativa de RPM em dólares, uma pontuação de "hype" (potencial de viralização), canais de referência e uma sugestão estratégica que seja uma "virada de chave".`;
             const schema = {
                 type: "OBJECT",
                 properties: {
@@ -541,10 +542,10 @@
                     <div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start">
                         <div class="flex-1">
                             <h3 class="font-semibold text-lg">${result.niche_name}</h3>
-                            <p class="text-sm mt-1">RPM Estimado: <strong>$${result.rpm_estimate_value.toFixed(2)}</strong></p>
+                            <p class="text-sm mt-1">RPM Estimado: <strong>$${(result.rpm_estimate_value || 0).toFixed(2)}</strong></p>
                             <p class="text-sm mt-1">Canais de Referência: ${channelsHtml}</p>
                         </div>
-                        ${renderScoreCard('Análise de Nicho', result.hype_score, { 'Hype Score': result.hype_score, 'Potencial de RPM': result.rpm_estimate_value * 10, 'Busca Média': avgInterest }, result.suggestion)}
+                        ${renderScoreCard('Análise de Nicho', result.hype_score, { 'Hype Score': result.hype_score, 'Potencial de RPM': (result.rpm_estimate_value || 0) * 10, 'Busca Média': avgInterest }, result.suggestion)}
                     </div>
                     <div id="trends-chart-container" class="mt-6 bg-white p-4 rounded-lg border">
                         <h4 class="font-semibold text-slate-800 mb-2">Tendência de Interesse (Últimos 12 meses)</h4>
@@ -578,75 +579,120 @@
         },
         'analyze-video': async (output) => {
             const url = document.getElementById('video-url').value.trim();
-            if (!url) { output.innerHTML = `<p class="text-red-500">Insira uma URL.</p>`; return; }
+            if (!url) { output.innerHTML = `<p class="text-red-500">Insira uma URL válida do YouTube.</p>`; return; }
             const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/);
-            if (!videoIdMatch) { output.innerHTML = `<p class="text-red-500">URL inválida.</p>`; return; }
+            if (!videoIdMatch) { output.innerHTML = `<p class="text-red-500">URL inválida. Não foi possível extrair o ID do vídeo.</p>`; return; }
             const videoId = videoIdMatch[1];
             
             showProgressModal();
             try {
                 const videoData = await apiRequest(`/api/video-details/${videoId}`, 'GET');
-                const { title, description, tags, channelTitle } = videoData;
+                const { title, description, tags } = videoData;
 
-                const prompt = `Como um especialista em YouTube, analise os dados de um vídeo e gere otimizações de alta performance para "ressuscitar" seu alcance. Seja criativo e forneça sugestões que sejam uma "virada de chave". Título Atual: "${title}". Descrição Atual: "${description}". Tags Atuais: "${tags.join(', ')}".`;
+                const prompt = `Como um especialista em SEO para YouTube, analise criticamente os metadados de um vídeo e depois crie versões otimizadas.
+                
+                DADOS ATUAIS:
+                - Título: "${title}"
+                - Descrição: "${description}"
+                - Tags: "${tags.join(', ')}"
+
+                SUA TAREFA:
+                1.  **Análise Crítica:** Avalie cada item (título, descrição, tags) e atribua uma pontuação de 0 a 100 para cada um, explicando brevemente o porquê da nota.
+                2.  **Otimização:** Crie 3 novas sugestões de títulos, 1 nova descrição e 1 novo conjunto de tags. Para cada item otimizado, atribua uma nova pontuação (maior que a original) e uma "virada de chave" (a principal melhoria).`;
+                
                 const schema = {
                     type: "OBJECT",
                     properties: {
-                        optimized_titles: {
-                            type: "ARRAY",
-                            items: {
-                                type: "OBJECT",
-                                properties: {
-                                    title: { type: "STRING", description: "Título otimizado (máx 100 chars)." },
-                                    score: { type: "NUMBER", description: "Pontuação (70-95)." },
-                                    suggestion: { type: "STRING", description: "A 'virada de chave' para este título." }
-                                }
-                            }
-                        },
-                        optimized_description: {
+                        analysis: {
                             type: "OBJECT",
                             properties: {
-                                description: { type: "STRING", description: "Descrição formatada com parágrafos, emojis." },
-                                hashtags: { type: "STRING", description: "Linha de hashtags separadas por espaço." },
-                                score: { type: "NUMBER" },
-                                suggestion: { type: "STRING", description: "A 'virada de chave' para esta descrição." }
+                                title: { type: "OBJECT", properties: { score: { type: "NUMBER" }, critique: { type: "STRING" } } },
+                                description: { type: "OBJECT", properties: { score: { type: "NUMBER" }, critique: { type: "STRING" } } },
+                                tags: { type: "OBJECT", properties: { score: { type: "NUMBER" }, critique: { type: "STRING" } } }
                             }
                         },
-                        optimized_tags: {
+                        optimizations: {
                             type: "OBJECT",
                             properties: {
-                                tags: { type: "ARRAY", items: { type: "STRING" } },
-                                score: { type: "NUMBER" },
-                                suggestion: { type: "STRING", description: "A 'virada de chave' para estas tags." }
+                                titles: {
+                                    type: "ARRAY",
+                                    items: { type: "OBJECT", properties: { title: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } }
+                                },
+                                description: { type: "OBJECT", properties: { text: { type: "STRING" }, hashtags: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } },
+                                tags: { type: "OBJECT", properties: { tag_list: { type: "ARRAY", items: { type: "STRING" } }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } }
                             }
                         }
                     }
                 };
                 
                 const result = await callGenerativeAPI(prompt, schema);
+                const { analysis, optimizations } = result;
 
                 output.innerHTML = `
-                    <div class="mb-6"><h3 class="text-xl font-bold mb-2">Análise Atual (Dados Reais)</h3><div class="flex gap-4 bg-slate-100 p-4 rounded-lg"><img src="https://i.ytimg.com/vi/${videoId}/hqdefault.jpg" onerror="this.src='https://placehold.co/120x90/e2e8f0/334155?text=Thumb'" class="rounded-md w-32 h-auto object-cover"/><div class="flex-1"><h4 class="font-semibold">${title}</h4><p class="text-sm font-medium text-slate-600">${channelTitle}</p><p class="text-sm text-slate-500 prose whitespace-pre-wrap">${description}</p><p class="text-xs text-slate-400 mt-2">Tags: ${tags.join(', ')}</p></div></div></div>
-                    <div><h3 class="text-xl font-bold mb-2">Sugestões de Otimização</h3>
-                    ${result.optimized_titles.map(t => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${t.title} ${createCopyButton(t.title)}</h4></div>${renderScoreCard('Potencial Viral', t.score, { 'CTR': t.score, 'SEO': t.score - 5 }, t.suggestion)}</div>`).join('')}
-                    <div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4 items-start">
-                        <div class="flex-1">
-                            <h4 class="font-semibold">Descrição Otimizada ${createCopyButton(result.optimized_description.description + '\n\n' + result.optimized_description.hashtags)}</h4>
-                            <div class="prose whitespace-pre-wrap text-sm mt-2">${result.optimized_description.description}</div>
-                            <div class="mt-4">
-                                <h5 class="font-semibold text-sm">Hashtags ${createCopyButton(result.optimized_description.hashtags)}</h5>
-                                <p class="text-sm text-slate-700 p-2 bg-white rounded border mt-1">${result.optimized_description.hashtags}</p>
+                    <div class="space-y-8">
+                        <!-- TÍTULO -->
+                        <div>
+                            <h3 class="text-xl font-bold mb-3 border-b pb-2">Análise de Título</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-slate-100 p-4 rounded-lg">
+                                    <h4 class="font-semibold mb-2">Título Atual</h4>
+                                    <p class="text-sm bg-white p-2 rounded border">${title}</p>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.title.score, { 'SEO & CTR': analysis.title.score }, analysis.title.critique)}</div>
+                                </div>
+                                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                                    <h4 class="font-semibold mb-2 text-green-800">Sugestões Otimizadas</h4>
+                                    ${optimizations.titles.map(t => `
+                                        <div class="mb-4">
+                                            <div class="flex justify-between items-start gap-2">
+                                                <p class="text-sm bg-white p-2 rounded border flex-1">${t.title} ${createCopyButton(t.title)}</p>
+                                                <div class="w-32 flex-shrink-0 text-center">
+                                                    <p class="font-bold text-lg ${getScoreTextColor(t.score)}">${t.score}</p>
+                                                    <p class="text-xs text-slate-500">Potencial</p>
+                                                </div>
+                                            </div>
+                                            <p class="text-xs text-slate-600 mt-1 pl-1"><strong>Virada de Chave:</strong> ${t.suggestion}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
                             </div>
                         </div>
-                        ${renderScoreCard('Otimização SEO', result.optimized_description.score, { 'Palavras-chave': result.optimized_description.score, 'Clareza': result.optimized_description.score - 2 }, result.optimized_description.suggestion)}
-                    </div>
-                    <div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4 items-start">
-                        <div class="flex-1">
-                            <h4 class="font-semibold">Tags Otimizadas (para campo de tags) ${createCopyButton(result.optimized_tags.tags.join(', '))}</h4>
-                            <p class="text-sm text-slate-700 p-2 bg-white rounded border mt-2">${result.optimized_tags.tags.join(', ')}</p>
+
+                        <!-- DESCRIÇÃO -->
+                        <div>
+                            <h3 class="text-xl font-bold mb-3 border-b pb-2">Análise de Descrição</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-slate-100 p-4 rounded-lg">
+                                    <h4 class="font-semibold mb-2">Descrição Atual</h4>
+                                    <div class="text-sm bg-white p-2 rounded border prose whitespace-pre-wrap max-h-48 overflow-y-auto">${description}</div>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.description.score, { 'SEO & Clareza': analysis.description.score }, analysis.description.critique)}</div>
+                                </div>
+                                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                                    <h4 class="font-semibold mb-2 text-green-800">Descrição Otimizada ${createCopyButton(optimizations.description.text + '\n\n' + optimizations.description.hashtags)}</h4>
+                                    <div class="text-sm bg-white p-2 rounded border prose whitespace-pre-wrap max-h-48 overflow-y-auto">${optimizations.description.text}</div>
+                                    <p class="text-sm bg-white p-2 rounded border mt-2 font-semibold">${optimizations.description.hashtags}</p>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Otimizada', optimizations.description.score, { 'SEO & Engajamento': optimizations.description.score }, optimizations.description.suggestion)}</div>
+                                </div>
+                            </div>
                         </div>
-                        ${renderScoreCard('Qualidade das Tags', result.optimized_tags.score, { 'Relevância': result.optimized_tags.score, 'Volume': result.optimized_tags.score - 8 }, result.optimized_tags.suggestion)}
-                    </div></div>`;
+
+                        <!-- TAGS -->
+                        <div>
+                            <h3 class="text-xl font-bold mb-3 border-b pb-2">Análise de Tags</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-slate-100 p-4 rounded-lg">
+                                    <h4 class="font-semibold mb-2">Tags Atuais</h4>
+                                    <p class="text-sm bg-white p-2 rounded border">${tags.join(', ')}</p>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.tags.score, { 'Relevância': analysis.tags.score }, analysis.tags.critique)}</div>
+                                </div>
+                                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                                    <h4 class="font-semibold mb-2 text-green-800">Tags Otimizadas ${createCopyButton(optimizations.tags.tag_list.join(', '))}</h4>
+                                    <p class="text-sm bg-white p-2 rounded border">${optimizations.tags.tag_list.join(', ')}</p>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Otimizada', optimizations.tags.score, { 'Relevância & Volume': optimizations.tags.score }, optimizations.tags.suggestion)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
             } finally {
                 hideProgressModal();
             }
@@ -757,7 +803,7 @@
             const title = document.getElementById('desc-title').value.trim();
             const topic = document.getElementById('desc-topic').value.trim();
             if (!title || !topic) { output.innerHTML = `<p class="text-red-500">Insira título e tópico.</p>`; return; }
-            const prompt = `Crie uma descrição de vídeo para o YouTube, altamente otimizada para SEO sobre o título "${title}" e o tópico "${topic}". Forneça uma sugestão que seja uma "virada de chave".`;
+            const prompt = `Crie uma descrição de vídeo para o YouTube, altamente otimizada para SEO sobre o título "${title}" e o tópico "${topic}". Inclua parágrafos, CTAs, e hashtags. Calcule uma pontuação de otimização (0-100) baseada em SEO e engajamento, e forneça uma "virada de chave".`;
             const schema = {
                 type: "OBJECT",
                 properties: {
@@ -784,14 +830,14 @@
                             <p class="text-sm text-slate-700 p-2 bg-white rounded border mt-1">${result.hashtags}</p>
                         </div>
                     </div>
-                    ${renderScoreCard('Otimização', result.score, { 'SEO': result.score, 'Engajamento': result.score - 4 }, result.suggestion)}
+                    ${renderScoreCard('Otimização', result.score, { 'SEO': result.score, 'Engajamento': result.score > 10 ? result.score - 4 : result.score }, result.suggestion)}
                 </div>`;
         },
         'generate-tags': async (output) => {
             const topic = document.getElementById('tag-topic').value.trim();
             const lang = document.getElementById('tag-lang').value;
             if (!topic) { output.innerHTML = `<p class="text-red-500">Insira um tópico.</p>`; return; }
-            const prompt = `Gere 25 tags para o campo de tags do YouTube, sobre "${topic}" no idioma ${lang}. As tags devem ser retornadas como uma única string, separadas por vírgula, com no máximo 500 caracteres. Forneça uma sugestão que seja uma "virada de chave".`;
+            const prompt = `Gere 25 tags para o campo de tags do YouTube, sobre "${topic}" no idioma ${lang}. As tags devem ser retornadas como uma única string, separadas por vírgula, com no máximo 500 caracteres. Calcule uma pontuação (0-100) baseada na relevância e volume de busca, e forneça uma "virada de chave".`;
             const schema = {
                 type: "OBJECT",
                 properties: {
@@ -801,7 +847,7 @@
                 }
             };
             const result = await callGenerativeAPI(prompt, schema);
-            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Tags Geradas</h4>${createCopyButton(result.tags)}</div><p class="text-sm text-slate-700 p-2 bg-white rounded border">${result.tags}</p></div>${renderScoreCard('Qualidade', result.score, { 'Relevância': result.score, 'Volume': result.score - 8 }, result.suggestion)}</div>`;
+            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Tags Geradas</h4>${createCopyButton(result.tags)}</div><p class="text-sm text-slate-700 p-2 bg-white rounded border">${result.tags}</p></div>${renderScoreCard('Qualidade', result.score, { 'Relevância': result.score, 'Volume': result.score > 10 ? result.score - 8 : result.score }, result.suggestion)}</div>`;
         }
     };
     
@@ -842,7 +888,10 @@
         ['niches', 'subniches', 'structures', 'prompts'].forEach(type => {
             const moreBtn = document.getElementById(`generate-more-${type}`);
             if (moreBtn) {
-                moreBtn.addEventListener('click', () => handlers[`generate-${type}`](outputEl, true));
+                moreBtn.addEventListener('click', () => {
+                    const handlerKey = type === 'subniches' ? 'find-subniches' : `generate-${type}`;
+                    handlers[handlerKey](outputEl, true)
+                });
             }
         });
     }
