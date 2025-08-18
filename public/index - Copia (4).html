@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v17.1</title>
+    <title>Darks Vips AI v17.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +21,7 @@
         .progress-bar-indeterminate { background-size: 200% 100%; background-image: linear-gradient(to right, #e0e7ff 0%, #c7d2fe 50%, #e0e7ff 100%); animation: move-bg 2s linear infinite; }
         @keyframes move-bg { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         #login-container { display: flex; }
-        #register-container, #app-container, #progress-modal, #legend-modal { display: none; }
+        #register-container, #app-container, #progress-modal { display: none; }
         .prose { max-width: none; }
         .copy-btn.copied { background-color: #10b981; color: white; }
         .app-title {
@@ -103,51 +103,6 @@
         </div>
     </div>
 
-    <!-- Modal de Legenda -->
-    <div id="legend-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg relative">
-            <button id="close-legend-modal" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
-            <h3 class="text-2xl font-bold text-slate-800 mb-4">Entenda as Pontuações</h3>
-            <div class="space-y-4 text-slate-700">
-                <div>
-                    <h4 class="font-semibold text-lg text-indigo-600">Pontuação de Conteúdo (0-100)</h4>
-                    <p class="text-sm">Mede a qualidade e o potencial geral de um nicho, ideia ou vídeo. Pontuações mais altas indicam maior probabilidade de sucesso. Pontuações acima de 80 são excelentes.</p>
-                </div>
-                <div>
-                    <h4 class="font-semibold text-lg text-indigo-600">Análise de Nicho/Subnicho</h4>
-                    <ul class="list-disc list-inside text-sm space-y-1 mt-1">
-                        <li><strong class="text-green-600">Potencial:</strong> O quão promissor o tema é para crescimento.</li>
-                        <li><strong class="text-yellow-600">Concorrência (menor é melhor):</strong> O nível de saturação do nicho. Pontuações menores significam um oceano azul.</li>
-                        <li><strong class="text-blue-600">Volume de Busca:</strong> O interesse de busca do público.</li>
-                        <li><strong class="text-purple-600">Originalidade:</strong> O quão nova e criativa a ideia é.</li>
-                        <li><strong class="text-orange-600">Hype Score:</strong> Potencial de viralização do tópico.</li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-semibold text-lg text-indigo-600">Análise de Otimização (SEO)</h4>
-                    <ul class="list-disc list-inside text-sm space-y-1 mt-1">
-                        <li><strong class="text-green-600">SEO & Engajamento:</strong> Avalia se o texto (título, descrição, etc.) está alinhado com o que os algoritmos e o público buscam.</li>
-                    </ul>
-                </div>
-                 <div>
-                    <h4 class="font-semibold text-lg text-indigo-600">Análise de Comentários</h4>
-                    <ul class="list-disc list-inside text-sm space-y-1 mt-1">
-                        <li><strong class="text-pink-600">Saúde da Comunidade:</strong> Mede o sentimento geral dos comentários (positivo, negativo, misto).</li>
-                    </ul>
-                </div>
-                 <div>
-                    <h4 class="font-semibold text-lg text-indigo-600">Análise de Tendência (Google Trends)</h4>
-                    <ul class="list-disc list-inside text-sm space-y-1 mt-1">
-                        <li><strong class="text-red-500">Baixo:</strong> O interesse de busca é baixo. Pode ser um nicho de baixa demanda ou muito sazonal.</li>
-                        <li><strong class="text-yellow-500">Médio:</strong> O interesse é razoável. Uma base de público estável.</li>
-                        <li><strong class="text-green-500">Alto:</strong> O interesse é alto e crescente. Grande potencial, mas pode ter maior concorrência.</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
     <!-- Conteúdo da Aplicação -->
     <div id="app-container" class="hidden h-screen bg-slate-50">
         <div id="menu-overlay" class="hidden md:hidden"></div>
@@ -177,7 +132,7 @@
     // --- Global State Management ---
     let appState = {
         currentUser: null,
-        apiKeys: { gemini: "", openai: "", google_api: "", openrouter: "" },
+        apiKeys: { gemini: "", openai: "", google_api: "" },
         userChannels: [],
         videoIdeas: []
     };
@@ -204,8 +159,6 @@
         closeMenuBtn: document.getElementById('close-menu-btn'),
         menuOverlay: document.getElementById('menu-overlay'),
         mobileHeaderTitle: document.getElementById('mobile-header-title'),
-        legendModal: document.getElementById('legend-modal'),
-        closeLegendModal: document.getElementById('close-legend-modal')
     };
 
     const PROGRESS_PHRASES = [ "Decodificando o algoritmo...", "Buscando insights virais...", "Consultando os dados de tendência...", "Polindo as palavras-chave...", "Ajustando o potencial de clique..." ];
@@ -270,7 +223,7 @@
     }
     
     function handleLogout() {
-        appState = { currentUser: null, apiKeys: { gemini: "", openai: "", google_api: "", openrouter: "" }, userChannels: [], videoIdeas: [] };
+        appState = { currentUser: null, apiKeys: { gemini: "", openai: "", google_api: "" }, userChannels: [], videoIdeas: [] };
         ELEMENTS.appContainer.style.display = 'none';
         showLoginScreen();
         document.getElementById('login-form').reset();
@@ -341,19 +294,11 @@
     const getScoreColor = (score) => score >= 80 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-500';
     const getScoreTextColor = (score) => score >= 80 ? 'text-green-500' : score >= 50 ? 'text-yellow-500' : 'text-red-500';
     const createCopyButton = (text) => `<button class="copy-btn text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded hover:bg-slate-300" data-copy-text="${encodeURIComponent(text)}">Copiar</button>`;
-    const createCorrectButton = (text) => {
-        if (!appState.apiKeys.openrouter) return '';
-        return `<button class="correct-btn text-xs bg-slate-500 text-white px-2 py-1 rounded hover:bg-slate-600 ml-2" data-correct-text="${encodeURIComponent(text)}">Revisar com OpenRouter</button>`;
-    };
     
     const renderScoreCard = (title, mainScore, subScores, suggestion, isNovel = false) => {
         const intMainScore = Math.round(Math.min(100, mainScore || 0));
         const novelBadge = isNovel ? '<span class="inline-flex items-center rounded-md bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700">✨ Inédita</span>' : '';
         const subScoresHtml = Object.entries(subScores).map(([key, value]) => {
-            if (typeof value === 'string') {
-                const color = value === 'Alto' ? 'text-green-500' : value === 'Médio' ? 'text-yellow-500' : 'text-red-500';
-                return `<div class="mb-2"><div class="flex justify-between items-center text-sm mb-1"><span class="text-slate-600">${key}</span><span class="font-semibold ${color}">${value}</span></div></div>`;
-            }
             const cappedValue = Math.min(100, Math.round(value || 0));
             return `
             <div class="mb-2">
@@ -418,23 +363,6 @@
         } catch (error) {
             console.error("Erro detalhado na API:", error);
             if (error.name === 'AbortError') throw new Error("A requisição da API excedeu o tempo limite.");
-            throw error;
-        } finally {
-            hideProgressModal();
-        }
-    }
-
-    // --- OpenRouter API Call for text correction
-    async function correctTextWithOpenRouter(text) {
-        const openrouterKey = appState.apiKeys.openrouter || "";
-        if (!openrouterKey) {
-            throw new Error("Chave da API OpenRouter não encontrada. Por favor, adicione-a nas Configurações.");
-        }
-        showProgressModal();
-        try {
-            const response = await apiRequest('/api/correct-text', 'POST', { text, openrouterKey });
-            return response.text;
-        } catch (error) {
             throw error;
         } finally {
             hideProgressModal();
@@ -506,11 +434,6 @@
                                     <label class="block text-sm font-medium text-slate-700">OpenAI API Key (Opcional)</label>
                                     <input type="password" id="openai-key" class="mt-1 block w-full px-3 py-2 border rounded-md">
                                     <a href="https://platform.openai.com/api-keys" target="_blank" class="text-xs text-indigo-600 hover:underline">Obter chave da OpenAI</a>
-                                </div>
-                                 <div>
-                                    <label class="block text-sm font-medium text-slate-700">OpenRouter API Key (Opcional)</label>
-                                    <input type="password" id="openrouter-key" class="mt-1 block w-full px-3 py-2 border rounded-md">
-                                    <a href="https://openrouter.ai/keys" target="_blank" class="text-xs text-indigo-600 hover:underline">Obter chave da OpenRouter</a>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-slate-700">Google API Key (YouTube Data)</label>
@@ -636,12 +559,6 @@
                 const labels = timelineData.map(d => new Date(d.time * 1000).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }));
                 const values = timelineData.map(d => d.value[0]);
                 const avgInterest = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
-                const getTrendLevel = (score) => {
-                    if (score > 66) return "Alto";
-                    if (score > 33) return "Médio";
-                    return "Baixo";
-                };
-                const trendLevelText = getTrendLevel(avgInterest);
 
                 output.innerHTML = `
                     <div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start">
@@ -650,7 +567,7 @@
                             <p class="text-sm mt-1">RPM Estimado: <strong>$${(result.rpm_estimate_value || 0).toFixed(2)}</strong></p>
                             <p class="text-sm mt-1">Canais de Referência: ${channelsHtml}</p>
                         </div>
-                        ${renderScoreCard('Análise de Nicho', result.hype_score, { 'Hype Score': result.hype_score, 'Potencial de RPM': (result.rpm_estimate_value || 0) * 10, 'Busca Média': avgInterest, 'Tendência de Busca': trendLevelText }, result.suggestion)}
+                        ${renderScoreCard('Análise de Nicho', result.hype_score, { 'Hype Score': result.hype_score, 'Potencial de RPM': (result.rpm_estimate_value || 0) * 10, 'Busca Média': avgInterest }, result.suggestion)}
                     </div>
                     <div id="trends-chart-container" class="mt-6 bg-white p-4 rounded-lg border">
                         <h4 class="font-semibold text-slate-800 mb-2">Tendência de Interesse (Últimos 12 meses)</h4>
@@ -835,32 +752,10 @@
                 SUA ANÁLISE:
                 1.  **Estratégia de Conteúdo:** Qual parece ser o foco principal do canal?
                 2.  **Pontos Fortes:** O que este canal faz muito bem?
-                3.  **Oportunidades (Brechas):** Com base nos títulos e performance, sugira 3 tipos de vídeos ou ângulos que este canal NÃO está explorando e que poderiam ter sucesso.
-                4. **Pontuação:** Dê uma pontuação geral de 0 a 100 para a estratégia do canal.`
+                3.  **Oportunidades (Brechas):** Com base nos títulos e performance, sugira 3 tipos de vídeos ou ângulos que este canal NÃO está explorando e que poderiam ter sucesso.`;
 
-                const schema = {
-                    type: "OBJECT",
-                    properties: {
-                        overall_score: { type: "NUMBER", description: "Pontuação geral da estratégia do canal." },
-                        content_strategy: { type: "STRING" },
-                        strengths: { type: "STRING" },
-                        opportunities: { type: "STRING" }
-                    }
-                };
-
-                const result = await callGenerativeAPI(prompt, schema);
-                output.innerHTML = `
-                    <div class="flex flex-col md:flex-row gap-6 mb-6">
-                        ${renderScoreCard('Estratégia do Concorrente', result.overall_score, {}, 'Pontuação baseada em SEO, crescimento e consistência.')}
-                        <div class="flex-1 bg-white p-6 rounded-xl shadow-sm border">
-                            <h4 class="font-semibold text-lg mb-4">Análise Detalhada</h4>
-                            <div class="space-y-4">
-                                <div><strong class="text-indigo-600">Estratégia de Conteúdo:</strong><p class="mt-1 prose whitespace-pre-wrap">${result.content_strategy}</p></div>
-                                <div><strong class="text-indigo-600">Pontos Fortes:</strong><p class="mt-1 prose whitespace-pre-wrap">${result.strengths}</p></div>
-                                <div><strong class="text-indigo-600">Oportunidades (Brechas):</strong><p class="mt-1 prose whitespace-pre-wrap">${result.opportunities}</p></div>
-                            </div>
-                        </div>
-                    </div>`;
+                const result = await callGenerativeAPI(prompt);
+                output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Análise de Concorrência</h4><div class="prose whitespace-pre-wrap">${result.text}</div></div>`;
 
             } catch (error) {
                 output.innerHTML = `<p class="text-red-500">Erro ao analisar concorrente: ${error.message}</p>`;
@@ -888,34 +783,10 @@
                 1.  **Sentimento Geral:** Qual a percepção do público (Positiva, Negativa, Mista)? Justifique.
                 2.  **Principais Elogios:** Quais os 3 pontos mais elogiados?
                 3.  **Principais Dúvidas/Críticas:** Quais as 3 principais questões ou críticas levantadas?
-                4.  **Ideias para Novos Vídeos:** Sugira 3 títulos de novos vídeos baseados diretamente nas dúvidas e interesses dos comentários.
-                5. **Pontuação de Saúde da Comunidade:** Dê uma pontuação geral de 0 a 100 para a saúde da comunidade do canal, baseada no sentimento dos comentários.`;
+                4.  **Ideias para Novos Vídeos:** Sugira 3 títulos de novos vídeos baseados diretamente nas dúvidas e interesses dos comentários.`;
                 
-                const schema = {
-                    type: "OBJECT",
-                    properties: {
-                        community_score: { type: "NUMBER", description: "Pontuação de saúde da comunidade." },
-                        general_sentiment: { type: "STRING" },
-                        praise: { type: "ARRAY", items: { type: "STRING" } },
-                        criticism: { type: "ARRAY", items: { type: "STRING" } },
-                        new_video_ideas: { type: "ARRAY", items: { type: "STRING" } }
-                    }
-                };
-
-                const result = await callGenerativeAPI(prompt, schema);
-                output.innerHTML = `
-                    <div class="flex flex-col md:flex-row gap-6 mb-6">
-                        ${renderScoreCard('Saúde da Comunidade', result.community_score, {}, 'Baseado no sentimento geral e na relevância dos comentários.')}
-                        <div class="flex-1 bg-white p-6 rounded-xl shadow-sm border">
-                            <h4 class="font-semibold text-lg mb-4">Análise Detalhada</h4>
-                            <div class="space-y-4">
-                                <div><strong class="text-indigo-600">Sentimento Geral:</strong><p class="mt-1 prose whitespace-pre-wrap">${result.general_sentiment}</p></div>
-                                <div><strong class="text-indigo-600">Principais Elogios:</strong><ul class="list-disc list-inside prose mt-1">${result.praise.map(item => `<li>${item}</li>`).join('')}</ul></div>
-                                <div><strong class="text-indigo-600">Principais Dúvidas/Críticas:</strong><ul class="list-disc list-inside prose mt-1">${result.criticism.map(item => `<li>${item}</li>`).join('')}</ul></div>
-                                <div><strong class="text-indigo-600">Ideias para Novos Vídeos:</strong><ul class="list-disc list-inside prose mt-1">${result.new_video_ideas.map(item => `<li>${item}</li>`).join('')}</ul></div>
-                            </div>
-                        </div>
-                    </div>`;
+                const result = await callGenerativeAPI(prompt);
+                output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Análise de Comentários</h4><div class="prose whitespace-pre-wrap">${result.text}</div></div>`;
 
             } catch (error) {
                 output.innerHTML = `<p class="text-red-500">Erro ao analisar comentários: ${error.message}</p>`;
@@ -974,21 +845,21 @@
             if (narrationOnly) prompt += ` O roteiro DEVE conter APENAS narração, sem diálogos.`;
             prompt += ` Foque em storytelling e hooks emocionais para alta retenção.`;
             const result = await callGenerativeAPI(prompt);
-            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Roteiro Gerado</h4>${createCopyButton(result.text)}${createCorrectButton(result.text)}</div><div class="prose h-96 overflow-y-auto whitespace-pre-wrap p-2 bg-white rounded border">${result.text}</div></div>`;
+            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Roteiro Gerado</h4>${createCopyButton(result.text)}</div><div class="prose h-96 overflow-y-auto whitespace-pre-wrap p-2 bg-white rounded border">${result.text}</div></div>`;
         },
-        'shorts-script-writer': async (output) => {
+        'generate-shorts-script': async (output) => {
             const topic = document.getElementById('shorts-topic').value.trim();
             if (!topic) { output.innerHTML = `<p class="text-red-500">Insira um tópico.</p>`; return; }
             const prompt = `Crie um roteiro para um vídeo curto (Shorts/Reels) de até 60 segundos sobre "${topic}". O roteiro deve ser dividido em 3 partes: 1. Gancho Rápido (primeiros 3 segundos), 2. Desenvolvimento (conteúdo principal), 3. CTA (Chamada para Ação). Inclua sugestões de cenas/visuais para cada parte.`;
             const result = await callGenerativeAPI(prompt);
-            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Roteiro de Short Gerado</h4>${createCopyButton(result.text)}${createCorrectButton(result.text)}</div><div class="prose h-96 overflow-y-auto whitespace-pre-wrap p-2 bg-white rounded border">${result.text}</div></div>`;
+            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Roteiro de Short Gerado</h4>${createCopyButton(result.text)}</div><div class="prose h-96 overflow-y-auto whitespace-pre-wrap p-2 bg-white rounded border">${result.text}</div></div>`;
         },
         'recycle-content': async (output) => {
             const script = document.getElementById('recycler-script').value.trim();
             if (!script) { output.innerHTML = `<p class="text-red-500">Cole um roteiro para reciclar.</p>`; return; }
             const prompt = `Analise o seguinte roteiro de vídeo longo e extraia 5 ideias de vídeos curtos (Shorts/Reels). Para cada ideia, forneça um título para o short e o trecho específico do roteiro original que pode ser usado. ROTEIRO: """${script}"""`;
             const result = await callGenerativeAPI(prompt);
-            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Ideias de Conteúdo Reciclado</h4>${createCorrectButton(result.text)}</div><div class="prose whitespace-pre-wrap p-2 bg-white rounded border">${result.text}</div></div>`;
+            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Ideias de Conteúdo Reciclado</h4><div class="prose whitespace-pre-wrap">${result.text}</div></div>`;
         },
         'generate-storyboard': async (output) => {
             const script = document.getElementById('storyboard-script').value.trim();
@@ -1058,7 +929,6 @@
                         <div class="flex justify-between items-center mb-2">
                             <h4 class="font-semibold">Descrição Otimizada</h4>
                             ${createCopyButton(result.description + '\n\n' + result.hashtags)}
-                            ${createCorrectButton(result.description + '\n\n' + result.hashtags)}
                         </div>
                         <div class="prose whitespace-pre-wrap text-sm">${result.description}</div>
                          <div class="mt-4">
@@ -1094,7 +964,7 @@
             if (!niche) { output.innerHTML = `<p class="text-red-500">Selecione um canal cadastrado.</p>`; return; }
             const prompt = `Como um consultor de negócios para criadores de conteúdo, gere uma lista de 5 ideias de monetização para um canal do YouTube sobre "${niche}", além do AdSense. Para cada ideia, explique a estratégia e o público-alvo. Formate a resposta de forma clara e organizada.`;
             const result = await callGenerativeAPI(prompt);
-            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Ideias de Monetização para ${niche}</h4>${createCorrectButton(result.text)}</div><div class="prose whitespace-pre-wrap p-2 bg-white rounded border">${result.text}</div></div>`;
+            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Ideias de Monetização para ${niche}</h4><div class="prose whitespace-pre-wrap p-2 bg-white rounded border">${result.text}</div></div>`;
         }
     };
     
@@ -1102,7 +972,7 @@
     function renderTabContent(tabId) {
         const tool = tools[tabId];
         if (!tool) return;
-        ELEMENTS.tabContent.innerHTML = `<div class="fade-in"><div class="flex items-center gap-4"><h2 class="text-3xl font-bold text-slate-900 mb-2">${tool.title}</h2><button id="show-legend-btn" class="text-sm text-indigo-600 font-semibold hidden md:inline-block">Entenda as Pontuações</button></div><p class="text-slate-600 mb-6">${tool.desc}</p>${tool.content}</div>`;
+        ELEMENTS.tabContent.innerHTML = `<div class="fade-in"><h2 class="text-3xl font-bold text-slate-900 mb-2">${tool.title}</h2><p class="text-slate-600 mb-6">${tool.desc}</p>${tool.content}</div>`;
         
         ELEMENTS.mobileHeaderTitle.textContent = tool.title;
         ELEMENTS.sidebar.classList.remove('open');
@@ -1120,9 +990,6 @@
                 if(trendsChart) trendsChart.style.display = 'none';
             });
         }
-        
-        const showLegendBtn = document.getElementById('show-legend-btn');
-        if (showLegendBtn) { showLegendBtn.style.display = 'inline-block'; showLegendBtn.addEventListener('click', () => ELEMENTS.legendModal.style.display = 'flex'); }
 
         const outputEl = document.getElementById('output');
         if (!outputEl) return;
@@ -1145,25 +1012,6 @@
                 });
             }
         });
-
-        // Add event listener for correct button
-        outputEl.addEventListener('click', async (e) => {
-            if (e.target.classList.contains('correct-btn')) {
-                const button = e.target;
-                const parentDiv = button.parentElement.parentElement;
-                const textElement = parentDiv.querySelector('.prose');
-                
-                try {
-                    const originalText = decodeURIComponent(button.dataset.correctText);
-                    const correctedText = await correctTextWithOpenRouter(originalText);
-                    textElement.innerHTML = correctedText;
-                    button.textContent = 'Revisado!';
-                    button.disabled = true;
-                } catch (error) {
-                    alert('Erro ao revisar o texto: ' + error.message);
-                }
-            }
-        });
     }
 
     // --- Specific Initializers ---
@@ -1171,21 +1019,18 @@
         const geminiKeyInput = document.getElementById('gemini-key');
         const openaiKeyInput = document.getElementById('openai-key');
         const googleApiKeyInput = document.getElementById('google-api-key');
-        const openrouterKeyInput = document.getElementById('openrouter-key');
         const saveBtn = document.getElementById('save-settings');
         const feedbackEl = document.getElementById('settings-feedback');
 
         geminiKeyInput.value = appState.apiKeys.gemini || '';
         openaiKeyInput.value = appState.apiKeys.openai || '';
         googleApiKeyInput.value = appState.apiKeys.google_api || '';
-        openrouterKeyInput.value = appState.apiKeys.openrouter || '';
 
         saveBtn.addEventListener('click', async () => {
             const newSettings = {
                 gemini: geminiKeyInput.value.trim(),
                 openai: openaiKeyInput.value.trim(),
                 google_api: googleApiKeyInput.value.trim(),
-                openrouter: openrouterKeyInput.value.trim(),
                 userChannels: appState.userChannels,
                 videoIdeas: appState.videoIdeas
             };
@@ -1416,7 +1261,6 @@
             gemini: appState.apiKeys.gemini,
             openai: appState.apiKeys.openai,
             google_api: appState.apiKeys.google_api,
-            openrouter: appState.apiKeys.openrouter,
             userChannels: appState.userChannels, 
             videoIdeas: appState.videoIdeas 
         };
@@ -1429,7 +1273,6 @@
     ELEMENTS.showRegister.addEventListener('click', (e) => { e.preventDefault(); showRegisterScreen(); });
     ELEMENTS.showLogin.addEventListener('click', (e) => { e.preventDefault(); showLoginScreen(); });
     ELEMENTS.logoutBtn.addEventListener('click', handleLogout);
-    ELEMENTS.closeLegendModal.addEventListener('click', () => ELEMENTS.legendModal.style.display = 'none');
     
     ELEMENTS.sidebarNav.addEventListener('click', (event) => {
         const clickedButton = event.target.closest('.sidebar-btn');

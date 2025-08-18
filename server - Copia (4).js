@@ -7,7 +7,6 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const { google } = require('googleapis');
 const googleTrends = require('google-trends-api');
-const axios = require('axios'); // Adicionado axios para a nova API
 
 // 2. Configuração Inicial
 const app = express();
@@ -110,19 +109,11 @@ app.post('/api/settings/:userId', async (req, res) => {
     }
 });
 
-// 5. Rotas da API (YouTube Data, Google Trends & OpenRouter)
+// 5. Rotas da API (YouTube Data & Google Trends)
 const getGoogleApiKey = async (userId) => {
     const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
     if (result.rows.length > 0 && result.rows[0].settings) {
         return result.rows[0].settings.google_api;
-    }
-    return null;
-};
-
-const getOpenRouterApiKey = async (userId) => {
-    const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
-    if (result.rows.length > 0 && result.rows[0].settings) {
-        return result.rows[0].settings.openrouter;
     }
     return null;
 };
@@ -294,36 +285,6 @@ app.get('/api/google-trends/:keyword/:country', async (req, res) => {
     }
 });
 
-// [NOVA ROTA] Rota para correção de texto com OpenRouter
-app.post('/api/correct-text', async (req, res) => {
-    const { text, openrouterKey } = req.body;
-    if (!text || !openrouterKey) {
-        return res.status(400).json({ message: "Texto e chave da API são obrigatórios." });
-    }
-    
-    try {
-        const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-            model: 'openai/gpt-4o',
-            messages: [
-                { role: "system", content: "Você é um revisor de texto profissional. Receba um texto e corrija a gramática, ortografia, pontuação e fluidez da escrita. Não altere o significado ou o conteúdo, apenas melhore a forma. Não inclua nenhuma saudação ou texto adicional, apenas retorne o texto corrigido." },
-                { role: "user", content: text }
-            ]
-        }, {
-            headers: {
-                'Authorization': `Bearer ${openrouterKey}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        const correctedText = response.data.choices[0].message.content;
-        res.json({ text: correctedText });
-        
-    } catch (error) {
-        console.error("Erro na API da OpenRouter:", error.response?.data || error.message);
-        res.status(500).json({ message: error.response?.data?.error?.message || "Erro ao corrigir o texto. Verifique a chave da API." });
-    }
-});
-
 
 // 6. Rota Genérica (Catch-all) para servir o index.html
 app.get('*', (req, res) => {
@@ -335,4 +296,3 @@ app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
   initializeDb();
 });
-
