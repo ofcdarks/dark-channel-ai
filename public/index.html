@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v14.2</title>
+    <title>Darks Vips AI v14.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -311,7 +311,7 @@
                         ${novelBadge}
                     </div>
                     ${subScoresHtml}
-                    <p class="text-xs text-slate-500 mt-4"><strong class="text-slate-600">Sugestão:</strong> ${suggestion}</p>
+                    <p class="text-xs text-slate-500 mt-4"><strong class="text-slate-600">A Virada de Chave:</strong> ${suggestion}</p>
                 </div>`;
     };
 
@@ -334,7 +334,7 @@
         showProgressModal();
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const timeoutId = setTimeout(() => controller.abort(), 45000); // Increased timeout
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: controller.signal });
             clearTimeout(timeoutId);
 
@@ -448,16 +448,16 @@
         'generate-niches': async (output, append = false) => {
             const keyword = document.getElementById('niche-keyword').value || 'tópicos em alta';
             const country = document.getElementById('niche-country').value;
-            const prompt = `Gere 3 nichos para o YouTube sobre '${keyword}' no país ${country}.`;
+            const prompt = `Como um especialista em YouTube, gere 3 nichos promissores sobre '${keyword}' para o país ${country}. Foque em oportunidades com baixa concorrência. Para cada nicho, forneça uma sugestão estratégica que seja uma "virada de chave".`;
             const schema = {
                 type: "ARRAY",
                 items: {
                     type: "OBJECT",
                     properties: {
-                        niche_name: { type: "STRING", description: "Nome do nicho." },
-                        description: { type: "STRING", description: "Descrição do nicho." },
-                        unexplored_subniches: { type: "ARRAY", items: { type: "STRING" }, description: "Subnichos inexplorados." },
-                        rpm_estimate: { type: "STRING", description: "Estimativa de RPM em dólares." },
+                        niche_name: { type: "STRING" },
+                        description: { type: "STRING" },
+                        unexplored_subniches: { type: "ARRAY", items: { type: "STRING" } },
+                        rpm_estimate: { type: "STRING" },
                         scores: {
                             type: "OBJECT",
                             properties: {
@@ -466,12 +466,12 @@
                                 "Volume de Busca": { type: "NUMBER", description: "Pontuação de volume de busca (60-95)." }
                             }
                         },
-                        suggestion: { type: "STRING", description: "Sugestão para o nicho." }
+                        suggestion: { type: "STRING", description: "A 'virada de chave' para o sucesso no nicho." }
                     }
                 }
             };
             const result = await callGenerativeAPI(prompt, schema);
-            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: ${item.rpm_estimate}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Volume de Busca': item.scores['Volume de Busca'] }, item.suggestion)}</div>`).join('');
+            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: ${item.rpm_estimate || 'N/A'}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Volume de Busca': item.scores['Volume de Busca'] }, item.suggestion)}</div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
             document.getElementById('generate-more-niches').style.display = 'block';
         },
@@ -479,7 +479,7 @@
             const mainNiche = document.getElementById('main-niche').value.trim();
             const country = document.getElementById('subniche-country').value;
             if (!mainNiche) { output.innerHTML = `<p class="text-red-500">Insira um nicho principal.</p>`; return; }
-            const prompt = `Para o nicho principal de "${mainNiche}", no país ${country}, gere 5 subnichos inexplorados.`;
+            const prompt = `Para o nicho principal de "${mainNiche}", no país ${country}, gere 5 subnichos inexplorados e criativos. Para cada um, forneça uma sugestão que seja uma "virada de chave" e indique se é uma ideia inédita.`;
             const schema = {
                 type: "ARRAY",
                 items: {
@@ -488,6 +488,7 @@
                         subniche_name: { type: "STRING" },
                         description: { type: "STRING" },
                         video_ideas: { type: "ARRAY", items: { type: "STRING" } },
+                        is_novel: { type: "BOOLEAN", description: "Se o subnicho é uma ideia inédita e original." },
                         scores: {
                             type: "OBJECT",
                             properties: {
@@ -496,12 +497,12 @@
                                 "Volume de Busca": { type: "NUMBER", description: "Pontuação de volume de busca (60-95)." }
                             }
                         },
-                        suggestion: { type: "STRING" }
+                        suggestion: { type: "STRING", description: "A 'virada de chave' para o sucesso no subnicho." }
                     }
                 }
             };
             const result = await callGenerativeAPI(prompt, schema);
-            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.subniche_name} ${createCopyButton(item.subniche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">Ideias de Vídeo: ${item.video_ideas.join('; ')}</p></div>${renderScoreCard('Análise do Subnicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência': 100 - item.scores.Concorrência, 'Volume de Busca': item.scores['Volume de Busca'] }, item.suggestion)}</div>`).join('');
+            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.subniche_name} ${createCopyButton(item.subniche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">Ideias de Vídeo: ${item.video_ideas.join('; ')}</p></div>${renderScoreCard('Análise do Subnicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência': 100 - item.scores.Concorrência, 'Volume de Busca': item.scores['Volume de Busca'] }, item.suggestion, item.is_novel)}</div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
             document.getElementById('generate-more-subniches').style.display = 'block';
         },
@@ -510,7 +511,7 @@
             const country = document.getElementById('analysis-country').value;
             if (!niche) { output.innerHTML = `<p class="text-red-500">Insira um nicho para análise.</p>`; return; }
             
-            const prompt = `Analise o nicho "${niche}" para o país ${country}.`;
+            const prompt = `Analise profundamente o nicho "${niche}" para o país ${country}. Forneça uma sugestão estratégica que seja uma "virada de chave".`;
             const schema = {
                 type: "OBJECT",
                 properties: {
@@ -518,7 +519,7 @@
                     rpm_estimate_value: { type: "NUMBER" },
                     hype_score: { type: "NUMBER", description: "Pontuação de hype (70-95, >90 é raro)." },
                     reference_channels: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, url: { type: "STRING" } } } },
-                    suggestion: { type: "STRING" }
+                    suggestion: { type: "STRING", description: "A 'virada de chave' para o sucesso no nicho." }
                 }
             };
             
@@ -530,6 +531,11 @@
 
                 const channelsHtml = result.reference_channels.map(ch => `<a href="${ch.url}" target="_blank" class="text-indigo-600 hover:underline">${ch.name}</a>`).join(', ');
                 
+                const timelineData = trendsData.default.timelineData;
+                const labels = timelineData.map(d => new Date(d.time * 1000).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }));
+                const values = timelineData.map(d => d.value[0]);
+                const avgInterest = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+
                 output.innerHTML = `
                     <div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start">
                         <div class="flex-1">
@@ -537,16 +543,15 @@
                             <p class="text-sm mt-1">RPM Estimado: <strong>$${result.rpm_estimate_value.toFixed(2)}</strong></p>
                             <p class="text-sm mt-1">Canais de Referência: ${channelsHtml}</p>
                         </div>
-                        ${renderScoreCard('Análise de Nicho', result.hype_score, { 'Hype Score': result.hype_score, 'Potencial de RPM': result.rpm_estimate_value * 10 }, result.suggestion)}
+                        ${renderScoreCard('Análise de Nicho', result.hype_score, { 'Hype Score': result.hype_score, 'Potencial de RPM': result.rpm_estimate_value * 10, 'Busca Média': avgInterest }, result.suggestion)}
                     </div>
                     <div id="trends-chart-container" class="mt-6 bg-white p-4 rounded-lg border">
                         <h4 class="font-semibold text-slate-800 mb-2">Tendência de Interesse (Últimos 12 meses)</h4>
                         <div class="h-64 relative"><canvas id="trends-chart"></canvas></div>
+                        <div class="text-xs text-slate-500 mt-2 p-2 bg-slate-50 rounded-md">
+                         <strong>Legenda:</strong> O gráfico mostra o interesse de busca relativo (0-100) pelo tópico. <strong>Média de Interesse: ${avgInterest}/100</strong>. Picos podem indicar sazonalidade ou eventos virais. Uma linha estável ou crescente é um bom sinal.
+                        </div>
                     </div>`;
-
-                const timelineData = trendsData.default.timelineData;
-                const labels = timelineData.map(d => new Date(d.time * 1000).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }));
-                const values = timelineData.map(d => d.value[0]);
 
                 const ctx = document.getElementById('trends-chart').getContext('2d');
                 if (trendsChartInstance) trendsChartInstance.destroy();
@@ -582,7 +587,7 @@
                 const videoData = await apiRequest(`/api/video-details/${videoId}`, 'GET');
                 const { title, description, tags, channelTitle } = videoData;
 
-                const prompt = `Analise os dados de um vídeo e gere otimizações. Título Atual: "${title}". Descrição Atual: "${description}". Tags Atuais: "${tags.join(', ')}".`;
+                const prompt = `Como um especialista em YouTube, analise os dados de um vídeo e gere otimizações de alta performance. Seja criativo e forneça sugestões que sejam uma "virada de chave". Título Atual: "${title}". Descrição Atual: "${description}". Tags Atuais: "${tags.join(', ')}".`;
                 const schema = {
                     type: "OBJECT",
                     properties: {
@@ -593,7 +598,7 @@
                                 properties: {
                                     title: { type: "STRING", description: "Título otimizado (máx 100 chars)." },
                                     score: { type: "NUMBER", description: "Pontuação (70-95)." },
-                                    suggestion: { type: "STRING" }
+                                    suggestion: { type: "STRING", description: "A 'virada de chave' para este título." }
                                 }
                             }
                         },
@@ -603,7 +608,7 @@
                                 description: { type: "STRING", description: "Descrição formatada com parágrafos, emojis." },
                                 hashtags: { type: "STRING", description: "Linha de hashtags separadas por espaço." },
                                 score: { type: "NUMBER" },
-                                suggestion: { type: "STRING" }
+                                suggestion: { type: "STRING", description: "A 'virada de chave' para esta descrição." }
                             }
                         },
                         optimized_tags: {
@@ -611,7 +616,7 @@
                             properties: {
                                 tags: { type: "ARRAY", items: { type: "STRING" } },
                                 score: { type: "NUMBER" },
-                                suggestion: { type: "STRING" }
+                                suggestion: { type: "STRING", description: "A 'virada de chave' para estas tags." }
                             }
                         }
                     }
@@ -664,7 +669,7 @@
                 console.warn("Não foi possível buscar dados do Google Trends:", error.message);
             }
 
-            const prompt = `Crie 3 estruturas de títulos virais para "${topic}" no idioma ${lang}, com no MÁXIMO 100 caracteres. A nota de 'Busca' para este tópico é ${searchScore}.`;
+            const prompt = `Crie 3 estruturas de títulos virais para "${topic}" no idioma ${lang}, com no MÁXIMO 100 caracteres. A nota de 'Busca' para este tópico é ${searchScore}. Para cada estrutura, forneça uma sugestão que seja uma "virada de chave".`;
             const schema = {
                 type: "ARRAY",
                 items: {
@@ -674,14 +679,14 @@
                         structure: { type: "STRING" },
                         example_title: { type: "STRING", description: "Exemplo de título (máx 100 chars)." },
                         explanation: { type: "STRING" },
-                        viral_score: { type: "NUMBER", description: "Pontuação (70-95)." },
-                        suggestion: { type: "STRING" },
-                        is_novel: { type: "BOOLEAN", description: "Se a estrutura é inédita." }
+                        viral_score: { type: "NUMBER", description: "Pontuação (70-98)." },
+                        suggestion: { type: "STRING", description: "A 'virada de chave' para esta estrutura." },
+                        is_novel: { type: "BOOLEAN", description: "Se a estrutura é inédita e tem pontuação > 93." }
                     }
                 }
             };
             const result = await callGenerativeAPI(prompt, schema);
-            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score + 5, 'Clareza': item.viral_score - 2, 'Busca': searchScore }, item.suggestion, item.is_novel)}</div></div>`).join('');
+            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Busca': searchScore }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
             document.getElementById('generate-more-structures').style.display = 'block';
         },
@@ -728,7 +733,7 @@
                 'DALL-E 3': 'Seja conversacional e extremamente descritivo. "Crie uma imagem fotorrealista de um astronauta olhando para uma galáxia neon, com um sentimento de admiração. O estilo deve ser cinematográfico e escuro."',
                 'Freepik': 'Use termos comerciais e diretos. "Homem surpreso apontando para um gráfico de ações subindo, fundo de escritório, estilo de foto de banco de imagem, cores vibrantes."'
             };
-            const prompt = `Gere 2 prompts AVANÇADOS em INGLÊS para a IA '${platform}' para uma thumbnail sobre "${title}". Siga esta diretriz para o prompt: ${platformConfigs[platform]}.`;
+            const prompt = `Gere 2 prompts AVANÇADOS em INGLÊS para a IA '${platform}' para uma thumbnail sobre "${title}". Siga esta diretriz para o prompt: ${platformConfigs[platform]}. Forneça uma sugestão que seja uma "virada de chave".`;
             const schema = {
                 type: "ARRAY",
                 items: {
@@ -736,7 +741,7 @@
                     properties: {
                         prompt: { type: "STRING" },
                         score: { type: "NUMBER", description: "Pontuação (70-95)." },
-                        suggestion: { type: "STRING" },
+                        suggestion: { type: "STRING", description: "A 'virada de chave' para este prompt." },
                         ab_test_suggestion: { type: "STRING" }
                     }
                 }
@@ -750,14 +755,14 @@
             const title = document.getElementById('desc-title').value.trim();
             const topic = document.getElementById('desc-topic').value.trim();
             if (!title || !topic) { output.innerHTML = `<p class="text-red-500">Insira título e tópico.</p>`; return; }
-            const prompt = `Crie uma descrição de vídeo para o YouTube, altamente otimizada para SEO sobre o título "${title}" e o tópico "${topic}".`;
+            const prompt = `Crie uma descrição de vídeo para o YouTube, altamente otimizada para SEO sobre o título "${title}" e o tópico "${topic}". Forneça uma sugestão que seja uma "virada de chave".`;
             const schema = {
                 type: "OBJECT",
                 properties: {
                     description: { type: "STRING" },
                     hashtags: { type: "STRING" },
                     score: { type: "NUMBER" },
-                    suggestion: { type: "STRING" }
+                    suggestion: { type: "STRING", description: "A 'virada de chave' para esta descrição." }
                 }
             };
             const result = await callGenerativeAPI(prompt, schema);
@@ -784,13 +789,13 @@
             const topic = document.getElementById('tag-topic').value.trim();
             const lang = document.getElementById('tag-lang').value;
             if (!topic) { output.innerHTML = `<p class="text-red-500">Insira um tópico.</p>`; return; }
-            const prompt = `Gere 25 tags para o campo de tags do YouTube, sobre "${topic}" no idioma ${lang}. As tags devem ser retornadas como uma única string, separadas por vírgula, com no máximo 500 caracteres.`;
+            const prompt = `Gere 25 tags para o campo de tags do YouTube, sobre "${topic}" no idioma ${lang}. As tags devem ser retornadas como uma única string, separadas por vírgula, com no máximo 500 caracteres. Forneça uma sugestão que seja uma "virada de chave".`;
             const schema = {
                 type: "OBJECT",
                 properties: {
                     tags: { type: "STRING" },
                     score: { type: "NUMBER" },
-                    suggestion: { type: "STRING" }
+                    suggestion: { type: "STRING", description: "A 'virada de chave' para estas tags." }
                 }
             };
             const result = await callGenerativeAPI(prompt, schema);
