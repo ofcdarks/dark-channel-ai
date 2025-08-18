@@ -1,38 +1,29 @@
 // server.js
 
 // 1. Importação de Módulos
-// Express.js para criar o servidor e as rotas da API.
-// pg (node-postgres) para conectar e interagir com o banco de dados PostgreSQL.
-// path para lidar com caminhos de arquivos (ex: servir o index.html).
-// bcryptjs para criptografar as senhas dos usuários de forma segura.
 const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const { google } = require('googleapis');
+const googleTrends = require('google-trends-api');
 
 // 2. Configuração Inicial
 const app = express();
-// A porta será fornecida pelo EasyPanel via variável de ambiente, ou usamos 3000 para desenvolvimento local.
 const PORT = process.env.PORT || 3000;
 
-// Middlewares para o Express
-// Habilita o parsing de JSON no corpo das requisições (ex: vindo de um formulário de login).
+// Middlewares
 app.use(express.json());
-// Serve todos os arquivos estáticos (HTML, CSS, JS do cliente) da pasta 'public'.
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'))); 
 
 // 3. Conexão com o Banco de Dados PostgreSQL
-// O EasyPanel fornecerá a URL de conexão completa como uma variável de ambiente.
-// Isso mantém nossas credenciais seguras e fora do código.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Necessário para conexões em ambientes como Heroku/EasyPanel
+    rejectUnauthorized: false
   }
 });
 
-// Função para criar a tabela de usuários se ela não existir.
-// Isso garante que a aplicação funcione na primeira vez que for executada.
 const initializeDb = async () => {
   const client = await pool.connect();
   try {
@@ -52,52 +43,29 @@ const initializeDb = async () => {
   }
 };
 
-// 4. Rotas da API (Endpoints)
-
-// Rota para Registro de Novos Usuários
+// 4. Rotas da API (Autenticação e Configurações)
 app.post('/api/register', async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
-  }
-
-  try {
-    // Criptografa a senha antes de salvar no banco. Nunca salve senhas em texto plano!
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
-
-    const result = await pool.query(
-      'INSERT INTO users (email, password_hash, settings) VALUES ($1, $2, $3) RETURNING id, email',
-      [email, passwordHash, {}] // Inicia com configurações vazias
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    // Código '23505' é o erro de violação de unicidade (e-mail já existe)
-    if (err.code === '23505') {
-      return res.status(409).json({ message: 'Este e-mail já está em uso.' });
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
+    try {
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+        const result = await pool.query('INSERT INTO users (email, password_hash, settings) VALUES ($1, $2, $3) RETURNING id, email', [email, passwordHash, {}]);
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        if (err.code === '23505') return res.status(409).json({ message: 'Este e-mail já está em uso.' });
+        console.error(err);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
     }
-    console.error(err);
-    res.status(500).json({ message: 'Erro interno do servidor.' });
-  }
 });
 
-// Rota para Login de Usuários
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-        return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
-    }
-
+    if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
     try {
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = result.rows[0];
-
-        // Verifica se o usuário existe e se a senha está correta
         if (user && await bcrypt.compare(password, user.password_hash)) {
-            // Login bem-sucedido. Em uma app real, você geraria um token (JWT).
-            // Para simplificar, retornamos o ID e o e-mail.
             res.json({ id: user.id, email: user.email, message: 'Login bem-sucedido!' });
         } else {
             res.status(401).json({ message: 'Credenciais inválidas.' });
@@ -108,13 +76,12 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// Rota para Obter as Configurações de um Usuário
 app.get('/api/settings/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
         const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
         if (result.rows.length > 0) {
-            res.json(result.rows[0].settings || {}); // Retorna um objeto vazio se as configurações forem nulas
+            res.json(result.rows[0].settings || {});
         } else {
             res.status(404).json({ message: 'Usuário não encontrado.' });
         }
@@ -124,16 +91,11 @@ app.get('/api/settings/:userId', async (req, res) => {
     }
 });
 
-// Rota para Salvar as Configurações de um Usuário
 app.post('/api/settings/:userId', async (req, res) => {
     const { userId } = req.params;
-    const { settings } = req.body; // Espera um objeto JSON com as configurações
-
+    const { settings } = req.body;
     try {
-        const result = await pool.query(
-            'UPDATE users SET settings = $1 WHERE id = $2 RETURNING id',
-            [settings, userId]
-        );
+        const result = await pool.query('UPDATE users SET settings = $1 WHERE id = $2 RETURNING id', [settings, userId]);
         if (result.rowCount > 0) {
             res.json({ message: 'Configurações salvas com sucesso!' });
         } else {
@@ -145,17 +107,162 @@ app.post('/api/settings/:userId', async (req, res) => {
     }
 });
 
+// 5. Rotas da API (YouTube Data & Google Trends)
+const getGoogleApiKey = async (userId) => {
+    const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
+    if (result.rows.length > 0 && result.rows[0].settings) {
+        return result.rows[0].settings.google_api;
+    }
+    return null;
+};
 
-// 5. Rota Genérica (Catch-all)
-// Se nenhuma rota da API for correspondida, serve o arquivo `index.html`.
-// Isso é crucial para que a aplicação de página única (SPA) funcione corretamente.
+const formatStat = (stat) => stat ? parseInt(stat).toLocaleString('pt-BR') : '0';
+
+app.get('/api/video-details/:videoId', async (req, res) => {
+    const { videoId } = req.params;
+    const userId = req.headers['x-user-id']; 
+    if (!userId) return res.status(401).json({ message: "Usuário não autenticado." });
+
+    try {
+        const apiKey = await getGoogleApiKey(userId);
+        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
+
+        const youtube = google.youtube({ version: 'v3', auth: apiKey });
+        const response = await youtube.videos.list({
+            part: 'snippet,statistics',
+            id: videoId,
+        });
+
+        if (response.data.items.length === 0) {
+            return res.status(404).json({ message: 'Vídeo não encontrado.' });
+        }
+        const video = response.data.items[0];
+        const snippet = video.snippet;
+        const stats = video.statistics;
+        
+        res.json({
+            title: snippet.title,
+            description: snippet.description,
+            tags: snippet.tags || [],
+            channelTitle: snippet.channelTitle,
+            viewCount: formatStat(stats.viewCount),
+            likeCount: formatStat(stats.likeCount),
+            commentCount: formatStat(stats.commentCount),
+            detectedLanguage: snippet.defaultAudioLanguage || snippet.defaultLanguage || 'en'
+        });
+    } catch (error) {
+        console.error("Erro na API do YouTube:", error.message);
+        res.status(500).json({ message: "Erro ao buscar dados do vídeo. Verifique a chave da API e o ID do vídeo." });
+    }
+});
+
+app.get('/api/youtube-stats/:channelId', async (req, res) => {
+    const { channelId } = req.params;
+    const userId = req.headers['x-user-id'];
+    if (!userId) return res.status(401).json({ message: "Usuário não autenticado." });
+
+    try {
+        const apiKey = await getGoogleApiKey(userId);
+        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
+
+        const youtube = google.youtube({ version: 'v3', auth: apiKey });
+        const response = await youtube.channels.list({
+            part: 'statistics,snippet,contentDetails', 
+            id: channelId,
+        });
+
+        if (response.data.items.length === 0) {
+            return res.status(404).json({ message: 'Canal não encontrado.' });
+        }
+        const channel = response.data.items[0];
+        const stats = channel.statistics;
+        const snippet = channel.snippet;
+        
+        res.json({
+            subscriberCount: formatStat(stats.subscriberCount),
+            videoCount: formatStat(stats.videoCount),
+            viewCount: formatStat(stats.viewCount),
+            publishedAt: snippet.publishedAt ? new Date(snippet.publishedAt).toLocaleDateString('pt-BR') : 'N/A',
+            country: snippet.country || 'Não especificado',
+            uploadsPlaylistId: channel.contentDetails.relatedPlaylists.uploads
+        });
+    } catch (error) {
+        console.error("Erro na API do YouTube:", error.message);
+        res.status(500).json({ message: "Erro ao buscar dados do canal. Verifique a chave da API e o ID do canal." });
+    }
+});
+
+// [NOVA ROTA] Busca os vídeos mais recentes de um canal
+app.get('/api/youtube-recent-videos/:uploadsPlaylistId', async (req, res) => {
+    const { uploadsPlaylistId } = req.params;
+    const userId = req.headers['x-user-id'];
+    if (!userId) return res.status(401).json({ message: "Usuário não autenticado." });
+
+    try {
+        const apiKey = await getGoogleApiKey(userId);
+        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
+
+        const youtube = google.youtube({ version: 'v3', auth: apiKey });
+        
+        // 1. Buscar os 5 IDs de vídeo mais recentes da playlist de uploads
+        const playlistResponse = await youtube.playlistItems.list({
+            part: 'snippet',
+            playlistId: uploadsPlaylistId,
+            maxResults: 5
+        });
+
+        if (playlistResponse.data.items.length === 0) {
+            return res.json([]);
+        }
+        
+        const videoIds = playlistResponse.data.items.map(item => item.snippet.resourceId.videoId);
+
+        // 2. Buscar os detalhes e estatísticas desses vídeos
+        const videosResponse = await youtube.videos.list({
+            part: 'snippet,statistics',
+            id: videoIds.join(',')
+        });
+
+        const videosData = videosResponse.data.items.map(video => ({
+            id: video.id,
+            title: video.snippet.title,
+            thumbnail: video.snippet.thumbnails.default.url,
+            viewCount: formatStat(video.statistics.viewCount),
+            likeCount: formatStat(video.statistics.likeCount),
+            commentCount: formatStat(video.statistics.commentCount)
+        }));
+
+        res.json(videosData);
+    } catch (error) {
+        console.error("Erro na API do YouTube ao buscar vídeos recentes:", error.message);
+        res.status(500).json({ message: "Erro ao buscar vídeos recentes. Verifique a chave da API." });
+    }
+});
+
+
+app.get('/api/google-trends/:keyword/:country', async (req, res) => {
+    const { keyword, country } = req.params;
+    try {
+        const results = await googleTrends.interestOverTime({
+            keyword: keyword,
+            geo: country,
+            startTime: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) // Last 12 months
+        });
+        res.json(JSON.parse(results));
+    } catch (error) {
+        console.error("Erro na API do Google Trends:", error.message);
+        res.status(500).json({ message: "Erro ao buscar dados de tendências." });
+    }
+});
+
+
+// 6. Rota Genérica (Catch-all)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 6. Inicialização do Servidor
+// 7. Inicialização do Servidor
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
-  // Garante que a tabela do banco de dados exista antes de aceitar conexões.
   initializeDb();
 });

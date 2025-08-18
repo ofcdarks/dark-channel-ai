@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v14.0</title>
+    <title>Darks Vips AI v14.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -323,7 +323,24 @@
         }
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiKey}`;
         let payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
-        if (schema) payload.generationConfig = { responseMimeType: "application/json", responseSchema: schema };
+        if (schema) {
+            payload.generationConfig = { 
+                response_mime_type: "application/json",
+            };
+            payload.toolConfig = {
+                functionCallingConfig: {
+                    mode: "ANY",
+                    allowedFunctionNames: ["output_reviews"]
+                }
+            };
+            payload.tools = [{
+                functionDeclarations: [{
+                    name: "output_reviews",
+                    description: "Outputs a list of reviews with scores.",
+                    parameters: schema
+                }]
+            }];
+        }
 
         showProgressModal();
         try {
@@ -341,13 +358,23 @@
                 throw new Error(`Erro na API: ${response.status} - ${errorBody.error?.message || 'Verifique sua chave de API.'}`);
             }
             const result = await response.json();
+            
+            if (schema) {
+                 const call = result.candidates[0].content.parts[0].functionCall;
+                 if (call && call.name === 'output_reviews') {
+                    return call.args.reviews || call.args;
+                 }
+                 throw new Error("Resposta da API em formato JSON inesperado.");
+            }
+
             if (result.candidates?.[0]?.content?.parts?.[0]) {
                 const text = result.candidates[0].content.parts[0].text;
-                return schema ? JSON.parse(text) : { text };
+                return { text };
             }
             if (result.candidates?.[0]?.finishReason === 'SAFETY') throw new Error("A resposta foi bloqueada por políticas de segurança.");
             throw new Error("Resposta da API inválida ou vazia.");
         } catch (error) {
+            console.error("Erro detalhado na API:", error);
             if (error.name === 'AbortError') throw new Error("A requisição da API excedeu o tempo limite.");
             throw error;
         } finally {
@@ -439,8 +466,34 @@
         'generate-niches': async (output, append = false) => {
             const keyword = document.getElementById('niche-keyword').value || 'tópicos em alta';
             const country = document.getElementById('niche-country').value;
-            const prompt = `Atue como um especialista em YouTube extremamente criterioso. Analise o YouTube para '${keyword}' no país ${country}. Gere 3 nichos. Para cada um, em português (pt-BR): { "niche_name": "string", "description": "string", "unexplored_subniches": ["string"], "rpm_estimate": "uma string com o valor em dólares, ex: $4.50", "scores": { "Potencial": "um número INTEIRO e RIGOROSO entre 70 e 95, onde > 90 é raro", "Concorrência": "um número INTEIRO entre 10 e 60", "Volume de Busca": "um número INTEIRO entre 60 e 95" }, "suggestion": "uma sugestão em português" }`;
-            const schema = { type: "ARRAY", items: { type: "OBJECT", properties: { niche_name: { type: "STRING" }, description: { type: "STRING" }, unexplored_subniches: { type: "ARRAY", items: { type: "STRING" } }, rpm_estimate: { type: "STRING" }, scores: { type: "OBJECT", properties: { "Potencial": { type: "NUMBER" }, "Concorrência": { type: "NUMBER" }, "Volume de Busca": { type: "NUMBER" } } }, suggestion: { type: "STRING" } } } };
+            const prompt = `Gere 3 nichos para o YouTube sobre '${keyword}' no país ${country}.`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    reviews: {
+                        type: "ARRAY",
+                        description: "Uma lista de nichos.",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                niche_name: { type: "STRING", description: "Nome do nicho." },
+                                description: { type: "STRING", description: "Descrição do nicho." },
+                                unexplored_subniches: { type: "ARRAY", items: { type: "STRING" }, description: "Subnichos inexplorados." },
+                                rpm_estimate: { type: "STRING", description: "Estimativa de RPM em dólares." },
+                                scores: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        Potencial: { type: "NUMBER", description: "Pontuação de potencial (70-95, >90 é raro)." },
+                                        Concorrência: { type: "NUMBER", description: "Pontuação de concorrência (10-60)." },
+                                        "Volume de Busca": { type: "NUMBER", description: "Pontuação de volume de busca (60-95)." }
+                                    }
+                                },
+                                suggestion: { type: "STRING", description: "Sugestão para o nicho." }
+                            }
+                        }
+                    }
+                }
+            };
             const result = await callGenerativeAPI(prompt, schema);
             const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: ${item.rpm_estimate}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Volume de Busca': item.scores['Volume de Busca'] }, item.suggestion)}</div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
@@ -450,8 +503,33 @@
             const mainNiche = document.getElementById('main-niche').value.trim();
             const country = document.getElementById('subniche-country').value;
             if (!mainNiche) { output.innerHTML = `<p class="text-red-500">Insira um nicho principal.</p>`; return; }
-            const prompt = `Atue como um especialista em YouTube extremamente criterioso. Para o nicho principal de "${mainNiche}", no país ${country}, gere 5 subnichos inexplorados em português (pt-BR). Para cada um: { "subniche_name": "string", "description": "string", "video_ideas": ["string"], "scores": { "Potencial": "um número INTEIRO e RIGOROSO entre 70 e 95, onde > 90 é raro", "Concorrência": "um número INTEIRO entre 10 e 60", "Volume de Busca": "um número INTEIRO entre 60 e 95" }, "suggestion": "uma sugestão em português" }`;
-            const schema = { type: "ARRAY", items: { type: "OBJECT", properties: { subniche_name: { type: "STRING" }, description: { type: "STRING" }, video_ideas: { type: "ARRAY", items: { type: "STRING" } }, scores: { type: "OBJECT", properties: { "Potencial": { type: "NUMBER" }, "Concorrência": { type: "NUMBER" }, "Volume de Busca": { type: "NUMBER" } } }, suggestion: { type: "STRING" } } } };
+            const prompt = `Para o nicho principal de "${mainNiche}", no país ${country}, gere 5 subnichos inexplorados.`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    reviews: {
+                        type: "ARRAY",
+                        description: "Uma lista de subnichos.",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                subniche_name: { type: "STRING" },
+                                description: { type: "STRING" },
+                                video_ideas: { type: "ARRAY", items: { type: "STRING" } },
+                                scores: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        Potencial: { type: "NUMBER", description: "Pontuação de potencial (70-95, >90 é raro)." },
+                                        Concorrência: { type: "NUMBER", description: "Pontuação de concorrência (10-60)." },
+                                        "Volume de Busca": { type: "NUMBER", description: "Pontuação de volume de busca (60-95)." }
+                                    }
+                                },
+                                suggestion: { type: "STRING" }
+                            }
+                        }
+                    }
+                }
+            };
             const result = await callGenerativeAPI(prompt, schema);
             const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.subniche_name} ${createCopyButton(item.subniche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">Ideias de Vídeo: ${item.video_ideas.join('; ')}</p></div>${renderScoreCard('Análise do Subnicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência': 100 - item.scores.Concorrência, 'Volume de Busca': item.scores['Volume de Busca'] }, item.suggestion)}</div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
@@ -462,8 +540,17 @@
             const country = document.getElementById('analysis-country').value;
             if (!niche) { output.innerHTML = `<p class="text-red-500">Insira um nicho para análise.</p>`; return; }
             
-            const prompt = `Atue como um especialista em YouTube extremamente criterioso. Analise o nicho "${niche}" para o país ${country} em português (pt-BR). Forneça: { "niche_name": "string", "rpm_estimate_value": "um número para o RPM médio em USD, ex: 4.50", "hype_score": "um número INTEIRO e RIGOROSO entre 70 e 95, onde > 90 é raro", "reference_channels": [{ "name": "string (nome de um canal proeminente sobre o nicho no país ${country})", "url": "string (URL completa do canal)" }], "suggestion": "uma sugestão em português" }`;
-            const schema = { type: "OBJECT", properties: { niche_name: { type: "STRING" }, rpm_estimate_value: { type: "NUMBER" }, hype_score: { type: "NUMBER" }, reference_channels: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, url: { type: "STRING" } } } }, suggestion: { type: "STRING" } } };
+            const prompt = `Analise o nicho "${niche}" para o país ${country}.`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    niche_name: { type: "STRING" },
+                    rpm_estimate_value: { type: "NUMBER" },
+                    hype_score: { type: "NUMBER", description: "Pontuação de hype (70-95, >90 é raro)." },
+                    reference_channels: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, url: { type: "STRING" } } } },
+                    suggestion: { type: "STRING" }
+                }
+            };
             
             try {
                 const [result, trendsData] = await Promise.all([
@@ -525,8 +612,40 @@
                 const videoData = await apiRequest(`/api/video-details/${videoId}`, 'GET');
                 const { title, description, tags, channelTitle } = videoData;
 
-                const prompt = `Atue como um especialista em YouTube extremamente criterioso. Analise os dados reais de um vídeo e gere otimizações de alta performance em português (pt-BR). Título Atual: "${title}". Descrição Atual: "${description}". Tags Atuais: "${tags.join(', ')}". Gere um resultado no formato: { "optimized_titles": [{ "title": "string (máx 100 chars)", "score": "um número INTEIRO e RIGOROSO entre 70 e 95, onde > 90 é raro", "suggestion": "string" }], "optimized_description": { "description": "string (bem formatada com parágrafos, quebras de linha e emojis)", "hashtags": "string (uma linha de hashtags separadas por espaço, ex: #seo #youtube)", "score": "um número INTEIRO e RIGOROSO entre 70 e 95", "suggestion": "string" }, "optimized_tags": { "tags": ["string"], "score": "um número INTEIRO e RIGOROSO entre 70 e 95", "suggestion": "string" } }`;
-                const schema = { type: "OBJECT", properties: { optimized_titles: { type: "ARRAY", items: { type: "OBJECT", properties: { title: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } } }, optimized_description: { type: "OBJECT", properties: { description: { type: "STRING" }, hashtags: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } }, optimized_tags: { type: "OBJECT", properties: { tags: { type: "ARRAY", items: { type: "STRING" } }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } } } };
+                const prompt = `Analise os dados de um vídeo e gere otimizações. Título Atual: "${title}". Descrição Atual: "${description}". Tags Atuais: "${tags.join(', ')}".`;
+                const schema = {
+                    type: "OBJECT",
+                    properties: {
+                        optimized_titles: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    title: { type: "STRING", description: "Título otimizado (máx 100 chars)." },
+                                    score: { type: "NUMBER", description: "Pontuação (70-95)." },
+                                    suggestion: { type: "STRING" }
+                                }
+                            }
+                        },
+                        optimized_description: {
+                            type: "OBJECT",
+                            properties: {
+                                description: { type: "STRING", description: "Descrição formatada com parágrafos, emojis." },
+                                hashtags: { type: "STRING", description: "Linha de hashtags separadas por espaço." },
+                                score: { type: "NUMBER" },
+                                suggestion: { type: "STRING" }
+                            }
+                        },
+                        optimized_tags: {
+                            type: "OBJECT",
+                            properties: {
+                                tags: { type: "ARRAY", items: { type: "STRING" } },
+                                score: { type: "NUMBER" },
+                                suggestion: { type: "STRING" }
+                            }
+                        }
+                    }
+                };
                 
                 const result = await callGenerativeAPI(prompt, schema);
 
@@ -575,8 +694,27 @@
                 console.warn("Não foi possível buscar dados do Google Trends:", error.message);
             }
 
-            const prompt = `Crie 3 estruturas de títulos virais para "${topic}" no idioma ${lang}, com no MÁXIMO 100 caracteres. A explicação e sugestão DEVEM ser em português (pt-BR). Seja EXTREMAMENTE CRITERIOSO com as notas, reservando > 90 apenas para ideias excepcionais. A nota de 'Busca' para este tópico é ${searchScore}. Formato: { "structure_name": "string", "structure": "string", "example_title": "string (máx 100 chars)", "explanation": "string", "viral_score": "number (entre 70-95)", "suggestion": "string", "is_novel": "boolean" }`;
-            const schema = { type: "ARRAY", items: { type: "OBJECT", properties: { structure_name: { type: "STRING" }, structure: { type: "STRING" }, example_title: { type: "STRING" }, explanation: { type: "STRING" }, viral_score: { type: "NUMBER" }, suggestion: { type: "STRING" }, is_novel: { type: "BOOLEAN" } } } };
+            const prompt = `Crie 3 estruturas de títulos virais para "${topic}" no idioma ${lang}, com no MÁXIMO 100 caracteres. A nota de 'Busca' para este tópico é ${searchScore}.`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    reviews: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                structure_name: { type: "STRING" },
+                                structure: { type: "STRING" },
+                                example_title: { type: "STRING", description: "Exemplo de título (máx 100 chars)." },
+                                explanation: { type: "STRING" },
+                                viral_score: { type: "NUMBER", description: "Pontuação (70-95)." },
+                                suggestion: { type: "STRING" },
+                                is_novel: { type: "BOOLEAN", description: "Se a estrutura é inédita." }
+                            }
+                        }
+                    }
+                }
+            };
             const result = await callGenerativeAPI(prompt, schema);
             const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score + 5, 'Clareza': item.viral_score - 2, 'Busca': searchScore }, item.suggestion, item.is_novel)}</div></div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
@@ -599,10 +737,27 @@
         'generate-storyboard': async (output) => {
             const script = document.getElementById('storyboard-script').value.trim();
             if (!script) { output.innerHTML = `<p class="text-red-500">Cole um roteiro.</p>`; return; }
-            const prompt = `Divida o roteiro a seguir em cenas e para cada uma, crie um prompt detalhado para uma IA de vídeo. ROTEIRO: "${script}". Formato: { "scenes": [{ "scene_number": "number", "script_excerpt": "string", "vo3_prompt_sfx": "string", "suggestion": "string" }] }`;
-            const schema = { type: "OBJECT", properties: { scenes: { type: "ARRAY", items: { type: "OBJECT", properties: { scene_number: { type: "NUMBER" }, script_excerpt: { type: "STRING" }, vo3_prompt_sfx: { type: "STRING" }, suggestion: { type: "STRING" } } } } } };
+            const prompt = `Divida o roteiro a seguir em cenas e para cada uma, crie um prompt detalhado para uma IA de vídeo. ROTEIRO: "${script}"`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    reviews: {
+                        type: "ARRAY",
+                        description: "Lista de cenas para o storyboard.",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                scene_number: { type: "NUMBER" },
+                                script_excerpt: { type: "STRING" },
+                                vo3_prompt_sfx: { type: "STRING", description: "Prompt para IA de vídeo." },
+                                suggestion: { type: "STRING" }
+                            }
+                        }
+                    }
+                }
+            };
             const result = await callGenerativeAPI(prompt, schema);
-            output.innerHTML = result.scenes.map(scene => `<div class="p-4 rounded-lg mb-2 ${scene.scene_number % 2 === 0 ? 'bg-slate-100' : 'bg-white border'}"><p class="font-semibold text-slate-800">Cena ${scene.scene_number}: <span class="font-normal text-slate-600 italic">"${scene.script_excerpt}"</span></p><div class="mt-2 bg-slate-800 text-white p-3 rounded-md font-mono text-xs relative group">${scene.vo3_prompt_sfx} <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(scene.vo3_prompt_sfx)}</div></div><p class="text-xs mt-2 text-slate-500"><strong>Sugestão:</strong> ${scene.suggestion}</p></div>`).join('');
+            output.innerHTML = result.map(scene => `<div class="p-4 rounded-lg mb-2 ${scene.scene_number % 2 === 0 ? 'bg-slate-100' : 'bg-white border'}"><p class="font-semibold text-slate-800">Cena ${scene.scene_number}: <span class="font-normal text-slate-600 italic">"${scene.script_excerpt}"</span></p><div class="mt-2 bg-slate-800 text-white p-3 rounded-md font-mono text-xs relative group">${scene.vo3_prompt_sfx} <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(scene.vo3_prompt_sfx)}</div></div><p class="text-xs mt-2 text-slate-500"><strong>Sugestão:</strong> ${scene.suggestion}</p></div>`).join('');
         },
         'generate-prompts': async (output, append = false) => {
             const title = document.getElementById('thumb-title').value.trim();
@@ -614,8 +769,24 @@
                 'DALL-E 3': 'Seja conversacional e extremamente descritivo. "Crie uma imagem fotorrealista de um astronauta olhando para uma galáxia neon, com um sentimento de admiração. O estilo deve ser cinematográfico e escuro."',
                 'Freepik': 'Use termos comerciais e diretos. "Homem surpreso apontando para um gráfico de ações subindo, fundo de escritório, estilo de foto de banco de imagem, cores vibrantes."'
             };
-            const prompt = `Atue como um especialista em design de thumbnails extremamente criterioso. Gere 2 prompts AVANÇADOS em INGLÊS para a IA '${platform}' para uma thumbnail sobre "${title}". A sugestão deve ser em português (pt-BR). Seja RIGOROSO com a nota, reservando > 90 para ideias excepcionais. Siga esta diretriz para o prompt: ${platformConfigs[platform]}. Formato: { "prompt": "string", "score": "number (entre 70-95)", "suggestion": "string", "ab_test_suggestion": "string" }`;
-            const schema = { type: "ARRAY", items: { type: "OBJECT", properties: { prompt: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" }, ab_test_suggestion: { type: "STRING" } } } };
+            const prompt = `Gere 2 prompts AVANÇADOS em INGLÊS para a IA '${platform}' para uma thumbnail sobre "${title}". Siga esta diretriz para o prompt: ${platformConfigs[platform]}.`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    reviews: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                prompt: { type: "STRING" },
+                                score: { type: "NUMBER", description: "Pontuação (70-95)." },
+                                suggestion: { type: "STRING" },
+                                ab_test_suggestion: { type: "STRING" }
+                            }
+                        }
+                    }
+                }
+            };
             const result = await callGenerativeAPI(prompt, schema);
             const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="font-mono text-sm bg-slate-200 p-2 rounded relative group">${item.prompt}<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(item.prompt)}</div></div><p class="text-xs mt-2 text-slate-600"><strong>Teste A/B:</strong> ${item.ab_test_suggestion}</p></div>${renderScoreCard('Potencial de CTR', item.score, { 'Impacto Visual': item.score + 4, 'Clareza': item.score - 3 }, item.suggestion)}</div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
@@ -625,8 +796,16 @@
             const title = document.getElementById('desc-title').value.trim();
             const topic = document.getElementById('desc-topic').value.trim();
             if (!title || !topic) { output.innerHTML = `<p class="text-red-500">Insira título e tópico.</p>`; return; }
-            const prompt = `Crie uma descrição de vídeo para o YouTube, em português (pt-BR), altamente otimizada para SEO sobre o título "${title}" e o tópico "${topic}". A descrição deve ser bem formatada, com parágrafos curtos, quebras de linha e emojis relevantes. Seja EXTREMAMENTE CRITERIOSO com a nota, reservando > 90 apenas para resultados excepcionais. Formato: { "description": "string", "hashtags": "string (uma linha de hashtags separadas por espaço, ex: #seo #youtube)", "score": "number (entre 70-95)", "suggestion": "string" }`;
-            const schema = { type: "OBJECT", properties: { description: { type: "STRING" }, hashtags: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } };
+            const prompt = `Crie uma descrição de vídeo para o YouTube, altamente otimizada para SEO sobre o título "${title}" e o tópico "${topic}".`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    description: { type: "STRING" },
+                    hashtags: { type: "STRING" },
+                    score: { type: "NUMBER" },
+                    suggestion: { type: "STRING" }
+                }
+            };
             const result = await callGenerativeAPI(prompt, schema);
             output.innerHTML = `
                 <div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start">
@@ -651,8 +830,15 @@
             const topic = document.getElementById('tag-topic').value.trim();
             const lang = document.getElementById('tag-lang').value;
             if (!topic) { output.innerHTML = `<p class="text-red-500">Insira um tópico.</p>`; return; }
-            const prompt = `Gere 25 tags para o campo de tags do YouTube, altamente otimizadas sobre "${topic}" no idioma ${lang}. As tags devem ser retornadas como uma única string, separadas por vírgula. O total de caracteres não deve passar de 500. Seja EXTREMAMENTE CRITERIOSO com a nota. Formato: { "tags": "string", "score": "number (entre 70-95)", "suggestion": "string" }`;
-            const schema = { type: "OBJECT", properties: { tags: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } };
+            const prompt = `Gere 25 tags para o campo de tags do YouTube, sobre "${topic}" no idioma ${lang}. As tags devem ser retornadas como uma única string, separadas por vírgula, com no máximo 500 caracteres.`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    tags: { type: "STRING" },
+                    score: { type: "NUMBER" },
+                    suggestion: { type: "STRING" }
+                }
+            };
             const result = await callGenerativeAPI(prompt, schema);
             output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Tags Geradas</h4>${createCopyButton(result.tags)}</div><p class="text-sm text-slate-700 p-2 bg-white rounded border">${result.tags}</p></div>${renderScoreCard('Qualidade', result.score, { 'Relevância': result.score + 5, 'Volume': result.score - 3 }, result.suggestion)}</div>`;
         }
