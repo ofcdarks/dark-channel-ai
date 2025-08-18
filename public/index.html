@@ -656,7 +656,7 @@
             } catch (error) { output.innerHTML = `<p class="text-red-500">Erro ao analisar o nicho: ${error.message}</p>`; }
             finally { hideProgressModal(); }
         },
-        'analyze-video': async (output) => {
+        'video-optimizer': async (output) => {
             const url = document.getElementById('video-url').value.trim();
             if (!url) { output.innerHTML = `<p class="text-red-500">Insira uma URL válida do YouTube.</p>`; return; }
             const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/);
@@ -709,7 +709,7 @@
             } catch (error) { output.innerHTML = `<p class="text-red-500">Erro: ${error.message}</p>`; }
             finally { hideProgressModal(); }
         },
-        'analyze-competitor': async (output) => {
+        'competitor-analysis': async (output) => {
             const channelId = document.getElementById('competitor-channel-id').value.trim();
             if (!channelId) { output.innerHTML = `<p class="text-red-500">Insira o ID do canal concorrente.</p>`; return; }
             showProgressModal();
@@ -1267,7 +1267,7 @@
             }
             const updatesBtn = e.target.closest('.show-updates-btn');
             if(updatesBtn) {
-                const toolId = updatesBtn.dataset.tool-id;
+                const toolId = updatesBtn.dataset.toolId;
                 const tool = tools[toolId];
                 ELEMENTS.updatesModalTitle.textContent = `Atualizações de ${tool.title}`;
                 ELEMENTS.updatesModalContent.innerHTML = TOOL_UPDATES[toolId] || TOOL_UPDATES['default'];
