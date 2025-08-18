@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v17.0</title>
+    <title>Darks Vips AI v15.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -257,26 +257,22 @@
     function buildSidebar() {
         const navItems = [
             { id: 'dashboard', icon: '📈', label: 'Dashboard' },
-            { type: 'divider', label: 'PESQUISA E ESTRATÉGIA' },
+            { type: 'divider', label: 'PESQUISA' },
             { id: 'niche-finder', icon: '🔎', label: 'Localizador de Nichos' },
             { id: 'subniche-finder', icon: '💎', label: 'Explorador de Subnichos' },
             { id: 'niche-analysis', icon: '📊', label: 'Análise de Nicho' },
             { id: 'video-optimizer', icon: '🚀', label: 'Analisador de Vídeo' },
-            { id: 'competitor-analysis', icon: '🕵️', label: 'Análise de Concorrência' },
-            { id: 'comment-analyzer', icon: '💬', label: 'Análise de Comentários' },
-            { type: 'divider', label: 'CRIAÇÃO E CONTEÚDO' },
+            { type: 'divider', label: 'CRIAÇÃO' },
             { id: 'title-structures', icon: '🏗️', label: 'Estruturas de Títulos' },
             { id: 'script-writer', icon: '📜', label: 'Criador de Roteiros' },
-            { id: 'shorts-script-writer', icon: '⚡', label: 'Roteiros para Shorts' },
-            { id: 'content-recycler', icon: '♻️', label: 'Reciclador de Conteúdo' },
             { id: 'visual-storyboard', icon: '🎬', label: 'Storyboard Visual' },
             { id: 'thumbnail-prompts', icon: '🎨', label: 'Prompts de Thumbnail' },
-            { type: 'divider', label: 'OTIMIZAÇÃO E GESTÃO' },
+            { type: 'divider', label: 'OTIMIZAÇÃO' },
             { id: 'description-optimizer', icon: '📄', label: 'Otimizador de Descrição' },
             { id: 'tag-generator', icon: '🏷️', label: 'Gerador de Tags' },
+            { type: 'divider', label: 'GERENCIAMENTO' },
             { id: 'channel-organizer', icon: '📺', label: 'Organizador de Canais' },
             { id: 'planner', icon: '🗓️', label: 'Planejador de Conteúdo' },
-            { id: 'monetization-helper', icon: '💰', label: 'Ideias de Monetização' },
             { id: 'settings', icon: '⚙️', label: 'Configurações' },
         ];
 
@@ -405,19 +401,14 @@
         },
         "niche-analysis": { title: "Análise de Nicho (RPM/Hype)", desc: "Analise o potencial de um nicho específico.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="analysis-niche" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nicho a ser analisado"><select id="analysis-country" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="BR">Brasil</option><option value="US">EUA</option><option value="PT">Portugal</option><option value="ES">Espanha</option><option value="DE">Alemanha</option><option value="FR">França</option></select></div><button id="analyze-niche" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">📊 Analisar Nicho</button><div id="output" class="mt-6"></div></div>` },
         "video-optimizer": { title: "Analisador de Vídeo (URL)", desc: "Otimize títulos, descrições e tags a partir de uma URL do YouTube.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="url" id="video-url" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="https://www.youtube.com/watch?v=..."><button id="analyze-video" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">🚀 Otimizar Vídeo</button><div id="output" class="mt-6"></div></div>` },
-        "competitor-analysis": { title: "Análise de Concorrência", desc: "Analise a estratégia de canais concorrentes para encontrar oportunidades.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="text" id="competitor-channel-id" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="ID do Canal concorrente (Ex: UC_x5XG1OV2P6uZZ5FSM9Ttw)"><button id="analyze-competitor" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">🕵️ Analisar Concorrente</button><div id="output" class="mt-6"></div></div>` },
-        "comment-analyzer": { title: "Análise de Comentários", desc: "Entenda o sentimento do público e extraia ideias dos comentários de um vídeo.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="url" id="comment-video-url" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="URL do vídeo para analisar os comentários"><button id="analyze-comments" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">💬 Analisar Comentários</button><div id="output" class="mt-6"></div></div>` },
         "title-structures": { title: "Estruturas de Títulos Virais", desc: "Gere estruturas de títulos com alto potencial de clique.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="structure-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico. Ex: Produtividade"><select id="structure-lang" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português</option><option value="en-US">Inglês</option><option value="es-ES">Espanhol</option></select></div><button id="generate-structures" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">🏗️ Gerar Estruturas</button><div id="output" class="mt-6 space-y-4"></div><button id="generate-more-structures" class="hidden w-full mt-4 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700">Gerar Mais</button></div>` },
         "script-writer": { title: "Criador de Roteiros", desc: "Gere roteiros com foco em alta retenção.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="space-y-4"><input type="text" id="script-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico do Vídeo"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="number" id="script-duration" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Duração (minutos)"><input type="number" id="script-parts" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nº de Partes"></div><div class="flex items-center"><input id="script-narration-only" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded"><label for="script-narration-only" class="ml-2 block text-sm text-gray-900">Apenas Narração (sem diálogos)</label></div><button id="generate-script" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">📜 Gerar Roteiro</button></div><div id="output" class="mt-6"></div></div>` },
-        "shorts-script-writer": { title: "Roteiros para Shorts", desc: "Crie roteiros rápidos e dinâmicos para vídeos verticais (Shorts, Reels, TikTok).", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="text" id="shorts-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="Tópico do vídeo curto"><button id="generate-shorts-script" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">⚡ Gerar Roteiro de Short</button><div id="output" class="mt-6"></div></div>` },
-        "content-recycler": { title: "Reciclador de Conteúdo", desc: "Transforme um roteiro de vídeo longo em várias ideias para vídeos curtos.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><textarea id="recycler-script" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" rows="10" placeholder="Cole aqui o roteiro do seu vídeo longo..."></textarea><button id="recycle-content" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">♻️ Reciclar Conteúdo</button><div id="output" class="mt-6"></div></div>` },
         "visual-storyboard": { title: "Storyboard Visual", desc: "Transforme seu roteiro em um guia de cenas e visuais.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><textarea id="storyboard-script" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" rows="8" placeholder="Cole seu roteiro aqui..."></textarea><button id="generate-storyboard" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">🎬 Criar Storyboard</button><div id="output" class="mt-6"></div></div>` },
         "thumbnail-prompts": { title: "Prompts de Thumbnail", desc: "Gere prompts otimizados para IAs de imagem.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="space-y-4"><input type="text" id="thumb-title" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Título do Vídeo"><select id="thumb-platform" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="Midjourney">Midjourney</option><option value="Leonardo.AI">Leonardo.AI</option><option value="DALL-E 3">DALL-E 3</option><option value="Freepik">Freepik</option></select></div><button id="generate-prompts" class="w-full mt-4 bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">🎨 Gerar Prompts</button><div id="output" class="mt-6 space-y-4"></div><button id="generate-more-prompts" class="hidden w-full mt-4 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700">Gerar Mais</button></div>` },
         "description-optimizer": { title: "Otimizador de Descrição", desc: "Crie descrições com SEO e CTAs eficazes.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="text" id="desc-title" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="Título do Vídeo"><textarea id="desc-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" rows="4" placeholder="Resumo do vídeo e palavras-chave..."></textarea><button id="generate-description" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">📄 Gerar Descrição</button><div id="output" class="mt-6"></div></div>` },
         "tag-generator": { title: "Gerador de Tags", desc: "Gere tags relevantes para maximizar o alcance.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="tag-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico do Vídeo"><select id="tag-lang" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português</option><option value="en-US">Inglês</option><option value="es-ES">Espanhol</option></select></div><button id="generate-tags" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">🏷️ Gerar Tags</button><div id="output" class="mt-6"></div></div>` },
         "channel-organizer": { title: "Organizador de Canais", desc: "Adicione e gerencie as informações e estratégias dos seus canais.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border mb-6"><h3 class="text-lg font-semibold mb-4">Adicionar Novo Canal</h3><form id="channel-form" class="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="text" id="org-channel-name" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nome do Canal" required><input type="text" id="org-channel-niche" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nicho Principal" required><select id="org-channel-lang" class="px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português (BR)</option><option value="en-US">Inglês (US)</option><option value="es-ES">Espanhol (ES)</option></select><input type="number" id="org-videos-week" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Vídeos por Semana" required><input type="text" id="org-post-time" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Horário de Postagem. Ex: 18:00"><input type="number" id="org-backlog-qty" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Qtd. de Vídeos no Backlog"><button type="submit" class="md:col-span-2 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">Adicionar Canal</button></form></div><div id="organizer-output" class="space-y-4"></div>` },
         "planner": { title: "Planejador de Conteúdo", desc: "Organize suas ideias de vídeo e acompanhe seu progresso.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border mb-6"><h3 class="text-lg font-semibold mb-4">Adicionar Nova Ideia</h3><form id="planner-form" class="space-y-4"><select id="planner-channel-select" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" required><option value="">Selecione um Canal</option></select><input type="text" id="idea-title" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Título da ideia de vídeo" required><button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">Adicionar ao Planejamento</button></form></div><div id="planner-output" class="space-y-4"></div>` },
-        "monetization-helper": { title: "Ideias de Monetização", desc: "Descubra novas formas de monetizar seu canal além do AdSense.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><select id="monetization-channel-select" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4"><option value="">Selecione um canal cadastrado</option></select><button id="generate-monetization-ideas" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">💰 Gerar Ideias</button><div id="output" class="mt-6"></div></div>` },
         "settings": { 
             title: "Configurações", 
             desc: "Gerencie suas chaves de API.", 
@@ -486,49 +477,36 @@
             document.getElementById('generate-more-niches').style.display = 'block';
         },
         'find-subniches': async (output, append = false) => {
-            try {
-                let mainNiche = document.getElementById('main-niche').value.trim();
-                const country = document.getElementById('subniche-country').value;
-                if (!mainNiche) { mainNiche = "qualquer nicho com alta demanda e baixa concorrência" }
-                
-                const prompt = `Para o nicho principal de "${mainNiche}", no país ${country}, gere 3 subnichos inexplorados e criativos. Para cada um, forneça uma sugestão "virada de chave", pontuações e indique se é uma ideia inédita.`;
-                const schema = {
-                    type: "ARRAY",
-                    items: {
-                        type: "OBJECT",
-                        properties: {
-                            subniche_name: { type: "STRING" },
-                            description: { type: "STRING" },
-                            video_ideas: { type: "ARRAY", items: { type: "STRING" } },
-                            is_novel: { type: "BOOLEAN" },
-                            scores: {
-                                type: "OBJECT",
-                                properties: {
-                                    Potencial: { type: "NUMBER" },
-                                    Concorrência: { type: "NUMBER" },
-                                    "Originalidade": { type: "NUMBER" }
-                                }
-                            },
-                            suggestion: { type: "STRING" }
-                        }
+            let mainNiche = document.getElementById('main-niche').value.trim();
+            const country = document.getElementById('subniche-country').value;
+            if (!mainNiche) { mainNiche = "qualquer nicho com alta demanda e baixa concorrência" }
+            
+            const prompt = `Para o nicho principal de "${mainNiche}", no país ${country}, gere 5 subnichos inexplorados e criativos. Para cada um, forneça uma sugestão que seja uma "virada de chave", pontuações de análise e indique se é uma ideia inédita.`;
+            const schema = {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        subniche_name: { type: "STRING" },
+                        description: { type: "STRING" },
+                        video_ideas: { type: "ARRAY", items: { type: "STRING" } },
+                        is_novel: { type: "BOOLEAN", description: "Se o subnicho é uma ideia inédita e original." },
+                        scores: {
+                            type: "OBJECT",
+                            properties: {
+                                Potencial: { type: "NUMBER", description: "Pontuação de potencial (70-95, >90 é raro)." },
+                                Concorrência: { type: "NUMBER", description: "Pontuação de concorrência (10-60)." },
+                                "Originalidade": { type: "NUMBER", description: "Pontuação de originalidade (60-95)." }
+                            }
+                        },
+                        suggestion: { type: "STRING", description: "A 'virada de chave' para o sucesso no subnicho." }
                     }
-                };
-                const result = await callGenerativeAPI(prompt, schema);
-                const html = result.map(item => {
-                    // Adicionando uma verificação para garantir que 'scores' existe
-                    if (!item.scores) {
-                        console.error("Item sem 'scores':", item);
-                        item.scores = { Potencial: 50, Concorrência: 50, Originalidade: 50 }; // Valores padrão
-                    }
-                    return `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.subniche_name} ${createCopyButton(item.subniche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">Ideias de Vídeo: ${item.video_ideas.join('; ')}</p></div>${renderScoreCard('Análise do Subnicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Originalidade': item.scores.Originalidade }, item.suggestion, item.is_novel)}</div>`;
-                }).join('');
-
-                if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
-                document.getElementById('generate-more-subniches').style.display = 'block';
-            } catch (error) {
-                console.error("Erro no Explorador de Subnichos:", error);
-                output.innerHTML = `<p class="text-red-500">Ocorreu um erro ao buscar os subnichos. A IA pode estar sobrecarregada ou a chave de API é inválida. Tente novamente em alguns instantes. Detalhe: ${error.message}</p>`;
-            }
+                }
+            };
+            const result = await callGenerativeAPI(prompt, schema);
+            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.subniche_name} ${createCopyButton(item.subniche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">Ideias de Vídeo: ${item.video_ideas.join('; ')}</p></div>${renderScoreCard('Análise do Subnicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Originalidade': item.scores.Originalidade }, item.suggestion, item.is_novel)}</div>`).join('');
+            if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
+            document.getElementById('generate-more-subniches').style.display = 'block';
         },
         'analyze-niche': async (output) => {
             const niche = document.getElementById('analysis-niche').value.trim();
@@ -609,11 +587,9 @@
             showProgressModal();
             try {
                 const videoData = await apiRequest(`/api/video-details/${videoId}`, 'GET');
-                const { title, description, tags, detectedLanguage } = videoData;
-                const lang = detectedLanguage || 'a língua original do texto';
-                const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+                const { title, description, tags } = videoData;
 
-                const prompt = `Como um especialista em SEO para YouTube, analise criticamente os metadados de um vídeo e depois crie versões otimizadas. Gere TODAS as respostas e otimizações no idioma: "${lang}".
+                const prompt = `Como um especialista em SEO para YouTube, analise criticamente os metadados de um vídeo e depois crie versões otimizadas.
                 
                 DADOS ATUAIS:
                 - Título: "${title}"
@@ -653,16 +629,6 @@
                 const { analysis, optimizations } = result;
 
                 output.innerHTML = `
-                    <div class="mb-6">
-                        <h3 class="text-xl font-bold mb-2">Vídeo Analisado</h3>
-                        <div class="flex flex-col md:flex-row gap-4 bg-slate-100 p-4 rounded-lg">
-                            <img src="${thumbnailUrl}" onerror="this.style.display='none'" class="rounded-md w-full md:w-48 h-auto object-cover"/>
-                            <div class="flex-1">
-                                <h4 class="font-semibold">${title}</h4>
-                                <p class="text-xs text-slate-500 mt-1">Idioma Detectado: ${lang}</p>
-                            </div>
-                        </div>
-                    </div>
                     <div class="space-y-8">
                         <!-- TÍTULO -->
                         <div>
@@ -731,67 +697,6 @@
                 hideProgressModal();
             }
         },
-        'analyze-competitor': async (output) => {
-            const channelId = document.getElementById('competitor-channel-id').value.trim();
-            if (!channelId) { output.innerHTML = `<p class="text-red-500">Insira o ID de um canal concorrente.</p>`; return; }
-
-            try {
-                const stats = await apiRequest(`/api/youtube-stats/${channelId}`, 'GET');
-                const recentVideos = stats.uploadsPlaylistId ? await apiRequest(`/api/youtube-recent-videos/${stats.uploadsPlaylistId}`, 'GET') : [];
-                
-                const videosInfo = recentVideos.map(v => `- Título: "${v.title}", Views: ${v.viewCount}`).join('\n');
-                
-                const prompt = `Baseado nos dados reais de um canal concorrente, faça uma análise estratégica.
-                DADOS DO CANAL:
-                - Inscritos: ${stats.subscriberCount}
-                - Vídeos Totais: ${stats.videoCount}
-                - Views Totais: ${stats.viewCount}
-                - Vídeos Recentes:
-                ${videosInfo}
-
-                SUA ANÁLISE:
-                1.  **Estratégia de Conteúdo:** Qual parece ser o foco principal do canal?
-                2.  **Pontos Fortes:** O que este canal faz muito bem?
-                3.  **Oportunidades (Brechas):** Com base nos títulos e performance, sugira 3 tipos de vídeos ou ângulos que este canal NÃO está explorando e que poderiam ter sucesso.`;
-
-                const result = await callGenerativeAPI(prompt);
-                output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Análise de Concorrência</h4><div class="prose whitespace-pre-wrap">${result.text}</div></div>`;
-
-            } catch (error) {
-                output.innerHTML = `<p class="text-red-500">Erro ao analisar concorrente: ${error.message}</p>`;
-            }
-        },
-        'analyze-comments': async (output) => {
-            const url = document.getElementById('comment-video-url').value.trim();
-            if (!url) { output.innerHTML = `<p class="text-red-500">Insira a URL de um vídeo.</p>`; return; }
-            const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/);
-            if (!videoIdMatch) { output.innerHTML = `<p class="text-red-500">URL inválida.</p>`; return; }
-            const videoId = videoIdMatch[1];
-
-            try {
-                const comments = await apiRequest(`/api/video-comments/${videoId}`, 'GET');
-                if (comments.length === 0) {
-                    output.innerHTML = `<p class="text-slate-500">Este vídeo não tem comentários ou eles estão desativados.</p>`;
-                    return;
-                }
-                const commentsText = comments.map(c => `- "${c}"`).join('\n');
-                const prompt = `Analise a seguinte lista de comentários REAIS de um vídeo do YouTube.
-                COMENTÁRIOS:
-                ${commentsText}
-
-                SUA ANÁLISE:
-                1.  **Sentimento Geral:** Qual a percepção do público (Positiva, Negativa, Mista)? Justifique.
-                2.  **Principais Elogios:** Quais os 3 pontos mais elogiados?
-                3.  **Principais Dúvidas/Críticas:** Quais as 3 principais questões ou críticas levantadas?
-                4.  **Ideias para Novos Vídeos:** Sugira 3 títulos de novos vídeos baseados diretamente nas dúvidas e interesses dos comentários.`;
-                
-                const result = await callGenerativeAPI(prompt);
-                output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Análise de Comentários</h4><div class="prose whitespace-pre-wrap">${result.text}</div></div>`;
-
-            } catch (error) {
-                output.innerHTML = `<p class="text-red-500">Erro ao analisar comentários: ${error.message}</p>`;
-            }
-        },
         'generate-structures': async (output, append = false) => {
             const topic = document.getElementById('structure-topic').value.trim();
             const langSelect = document.getElementById('structure-lang');
@@ -846,20 +751,6 @@
             prompt += ` Foque em storytelling e hooks emocionais para alta retenção.`;
             const result = await callGenerativeAPI(prompt);
             output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Roteiro Gerado</h4>${createCopyButton(result.text)}</div><div class="prose h-96 overflow-y-auto whitespace-pre-wrap p-2 bg-white rounded border">${result.text}</div></div>`;
-        },
-        'generate-shorts-script': async (output) => {
-            const topic = document.getElementById('shorts-topic').value.trim();
-            if (!topic) { output.innerHTML = `<p class="text-red-500">Insira um tópico.</p>`; return; }
-            const prompt = `Crie um roteiro para um vídeo curto (Shorts/Reels) de até 60 segundos sobre "${topic}". O roteiro deve ser dividido em 3 partes: 1. Gancho Rápido (primeiros 3 segundos), 2. Desenvolvimento (conteúdo principal), 3. CTA (Chamada para Ação). Inclua sugestões de cenas/visuais para cada parte.`;
-            const result = await callGenerativeAPI(prompt);
-            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Roteiro de Short Gerado</h4>${createCopyButton(result.text)}</div><div class="prose h-96 overflow-y-auto whitespace-pre-wrap p-2 bg-white rounded border">${result.text}</div></div>`;
-        },
-        'recycle-content': async (output) => {
-            const script = document.getElementById('recycler-script').value.trim();
-            if (!script) { output.innerHTML = `<p class="text-red-500">Cole um roteiro para reciclar.</p>`; return; }
-            const prompt = `Analise o seguinte roteiro de vídeo longo e extraia 5 ideias de vídeos curtos (Shorts/Reels). Para cada ideia, forneça um título para o short e o trecho específico do roteiro original que pode ser usado. ROTEIRO: """${script}"""`;
-            const result = await callGenerativeAPI(prompt);
-            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Ideias de Conteúdo Reciclado</h4><div class="prose whitespace-pre-wrap">${result.text}</div></div>`;
         },
         'generate-storyboard': async (output) => {
             const script = document.getElementById('storyboard-script').value.trim();
@@ -957,14 +848,6 @@
             };
             const result = await callGenerativeAPI(prompt, schema);
             output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Tags Geradas</h4>${createCopyButton(result.tags)}</div><p class="text-sm text-slate-700 p-2 bg-white rounded border">${result.tags}</p></div>${renderScoreCard('Qualidade', result.score, { 'Relevância': result.score, 'Volume': result.score > 10 ? result.score - 8 : result.score }, result.suggestion)}</div>`;
-        },
-        'generate-monetization-ideas': async (output) => {
-            const select = document.getElementById('monetization-channel-select');
-            const niche = select.value;
-            if (!niche) { output.innerHTML = `<p class="text-red-500">Selecione um canal cadastrado.</p>`; return; }
-            const prompt = `Como um consultor de negócios para criadores de conteúdo, gere uma lista de 5 ideias de monetização para um canal do YouTube sobre "${niche}", além do AdSense. Para cada ideia, explique a estratégia e o público-alvo. Formate a resposta de forma clara e organizada.`;
-            const result = await callGenerativeAPI(prompt);
-            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Ideias de Monetização para ${niche}</h4><div class="prose whitespace-pre-wrap p-2 bg-white rounded border">${result.text}</div></div>`;
         }
     };
     
@@ -982,7 +865,6 @@
         if (tabId === 'dashboard') initializeDashboard();
         if (tabId === 'channel-organizer') initializeChannelOrganizer();
         if (tabId === 'planner') initializePlanner();
-        if (tabId === 'monetization-helper') initializeMonetizationHelper();
         if (tabId === 'niche-analysis') {
             const nicheInput = document.getElementById('analysis-niche');
             nicheInput.addEventListener('input', () => {
@@ -1242,17 +1124,6 @@
             }
         });
         renderPlanner();
-    }
-
-    function initializeMonetizationHelper() {
-        const channelSelect = document.getElementById('monetization-channel-select');
-        if(appState.userChannels.length > 0) {
-            channelSelect.innerHTML = '<option value="">Selecione um canal cadastrado</option>' + appState.userChannels.map(ch => `<option value="${ch.niche}">${ch.name} (${ch.niche})</option>`).join('');
-        } else {
-            channelSelect.innerHTML = '<option value="">Nenhum canal cadastrado</option>';
-            channelSelect.disabled = true;
-            document.getElementById('generate-monetization-ideas').disabled = true;
-        }
     }
 
     async function saveSettings() {
