@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v17.2</title>
+    <title>Darks Vips AI v17.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -346,19 +346,33 @@
         return `<button class="correct-btn text-xs bg-slate-500 text-white px-2 py-1 rounded hover:bg-slate-600 ml-2" data-correct-text="${encodeURIComponent(text)}">Revisar com OpenRouter</button>`;
     };
     
+    const getTrendLevel = (score) => {
+        if (score > 66) return "Alto";
+        if (score > 33) return "Médio";
+        return "Baixo";
+    };
+
     const renderScoreCard = (title, mainScore, subScores, suggestion, isNovel = false) => {
         const intMainScore = Math.round(Math.min(100, mainScore || 0));
         const novelBadge = isNovel ? '<span class="inline-flex items-center rounded-md bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700">✨ Inédita</span>' : '';
         const subScoresHtml = Object.entries(subScores).map(([key, value]) => {
-            if (typeof value === 'string') {
-                const color = value === 'Alto' ? 'text-green-500' : value === 'Médio' ? 'text-yellow-500' : 'text-red-500';
-                return `<div class="mb-2"><div class="flex justify-between items-center text-sm mb-1"><span class="text-slate-600">${key}</span><span class="font-semibold ${color}">${value}</span></div></div>`;
+            let displayValue = typeof value === 'number' ? `${Math.round(value)}/100` : value;
+            let color = 'text-slate-700';
+            if (key === 'Busca') {
+                 displayValue = getTrendLevel(value);
+                 color = displayValue === 'Alto' ? 'text-green-500' : displayValue === 'Médio' ? 'text-yellow-500' : 'text-red-500';
+            } else if (typeof value === 'number') {
+                color = getScoreTextColor(value);
+            } else {
+                 color = value === 'Positiva' ? 'text-green-500' : value === 'Negativa' ? 'text-red-500' : value === 'Mista' ? 'text-yellow-500' : 'text-slate-700';
             }
-            const cappedValue = Math.min(100, Math.round(value || 0));
+            
+            const progress = typeof value === 'number' ? `<div class="progress-bar-container"><div class="progress-bar-inner ${getScoreColor(value)}" style="width: ${value}%;"></div></div>` : '';
+
             return `
             <div class="mb-2">
-                <div class="flex justify-between items-center text-sm mb-1"><span class="text-slate-600">${key}</span><span class="font-semibold text-slate-700">${cappedValue}/100</span></div>
-                <div class="progress-bar-container"><div class="progress-bar-inner ${getScoreColor(cappedValue)}" style="width: ${cappedValue}%;"></div></div>
+                <div class="flex justify-between items-center text-sm mb-1"><span class="text-slate-600">${key}</span><span class="font-semibold ${color}">${displayValue}</span></div>
+                ${progress}
             </div>`;
         }).join('');
         return `<div class="bg-white p-4 rounded-lg border w-full md:w-72 flex-shrink-0">
@@ -430,7 +444,13 @@
         const openrouterKey = appState.apiKeys.openrouter || "";
         if (!openrouterKey) {
             hideProgressModal();
-            alert("Chave da API OpenRouter não encontrada. Por favor, adicione-a nas Configurações.");
+            // Using a custom modal/feedback instead of alert
+            const feedbackDiv = document.createElement('div');
+            feedbackDiv.textContent = "Chave da API OpenRouter não encontrada. Por favor, adicione-a nas Configurações.";
+            feedbackDiv.className = 'text-red-500 mt-2 text-sm';
+            const outputEl = document.getElementById('output');
+            if (outputEl) outputEl.prepend(feedbackDiv);
+            setTimeout(() => feedbackDiv.remove(), 5000);
             return text;
         }
         showProgressModal();
@@ -561,7 +581,7 @@
                     }
                 };
                 const result = await callGenerativeAPI(prompt, schema);
-                const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: $${(item.rpm_estimate_value || 0).toFixed(2)}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Volume de Busca': item.scores['Volume de Busca'] }, item.suggestion)}</div>`).join('');
+                const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: $${(item.rpm_estimate_value || 0).toFixed(2)}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Busca': item.scores['Volume de Busca'] }, item.suggestion)}</div>`).join('');
                 if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
                 document.getElementById('generate-more-niches').style.display = 'block';
             } catch(error) {
@@ -654,7 +674,7 @@
                             <p class="text-sm mt-1">RPM Estimado: <strong>$${(result.rpm_estimate_value || 0).toFixed(2)}</strong></p>
                             <p class="text-sm mt-1">Canais de Referência: ${channelsHtml}</p>
                         </div>
-                        ${renderScoreCard('Análise de Nicho', result.hype_score, { 'Hype Score': result.hype_score, 'Potencial de RPM': (result.rpm_estimate_value || 0) * 10, 'Busca Média': avgInterest, 'Tendência de Busca': trendLevelText }, result.suggestion)}
+                        ${renderScoreCard('Análise de Nicho', result.hype_score, { 'Hype Score': result.hype_score, 'Potencial de RPM': (result.rpm_estimate_value || 0) * 10, 'Busca': avgInterest }, result.suggestion)}
                     </div>
                     <div id="trends-chart-container" class="mt-6 bg-white p-4 rounded-lg border">
                         <h4 class="font-semibold text-slate-800 mb-2">Tendência de Interesse (Últimos 12 meses)</h4>
@@ -827,7 +847,7 @@
                 
                 const videosInfo = recentVideos.map(v => `- Título: "${v.title}", Views: ${v.viewCount}`).join('\n');
                 
-                const prompt = `Baseado nos dados reais de um canal concorrente, faça uma análise estratégica.
+                const prompt = `Baseado nos dados de um canal concorrente, faça uma análise estratégica e concisa.
                 DADOS DO CANAL:
                 - Inscritos: ${stats.subscriberCount}
                 - Vídeos Totais: ${stats.videoCount}
@@ -835,10 +855,10 @@
                 - Vídeos Recentes:
                 ${videosInfo}
 
-                SUA ANÁLISE:
-                1.  **Estratégia de Conteúdo:** Qual parece ser o foco principal do canal? Responda de forma concisa.
-                2.  **Pontos Fortes:** O que este canal faz muito bem? Responda de forma concisa.
-                3.  **Oportunidades (Brechas):** Com base nos títulos e performance, sugira 3 tipos de vídeos ou ângulos que este canal NÃO está explorando e que poderiam ter sucesso. Responda de forma concisa.
+                SUA ANÁLISE (Responda de forma resumida e concisa):
+                1.  **Estratégia de Conteúdo:** Resuma o foco principal do canal.
+                2.  **Pontos Fortes:** Cite 3 pontos fortes.
+                3.  **Oportunidades (Brechas):** Sugira 3 tipos de vídeos ou ângulos que este canal NÃO está explorando.
                 4. **Pontuação:** Dê uma pontuação geral de 0 a 100 para a estratégia do canal.`
 
                 const schema = {
@@ -846,8 +866,8 @@
                     properties: {
                         overall_score: { type: "NUMBER", description: "Pontuação geral da estratégia do canal." },
                         content_strategy: { type: "STRING" },
-                        strengths: { type: "STRING" },
-                        opportunities: { type: "STRING" }
+                        strengths: { type: "ARRAY", items: { type: "STRING" } },
+                        opportunities: { type: "ARRAY", items: { type: "STRING" } }
                     }
                 };
 
@@ -859,8 +879,8 @@
                             <h4 class="font-semibold text-lg mb-4">Análise Detalhada</h4>
                             <div class="space-y-4">
                                 <div><strong class="text-indigo-600">Estratégia de Conteúdo:</strong><p class="mt-1 prose whitespace-pre-wrap">${result.content_strategy}</p></div>
-                                <div><strong class="text-indigo-600">Pontos Fortes:</strong><p class="mt-1 prose whitespace-pre-wrap">${result.strengths}</p></div>
-                                <div><strong class="text-indigo-600">Oportunidades (Brechas):</strong><p class="mt-1 prose whitespace-pre-wrap">${result.opportunities}</p></div>
+                                <div><strong class="text-indigo-600">Pontos Fortes:</strong><ul class="list-disc list-inside prose mt-1">${result.strengths.map(item => `<li>${item}</li>`).join('')}</ul></div>
+                                <div><strong class="text-indigo-600">Oportunidades (Brechas):</strong><ul class="list-disc list-inside prose mt-1">${result.opportunities.map(item => `<li>${item}</li>`).join('')}</ul></div>
                             </div>
                         </div>
                     </div>`;
@@ -887,11 +907,11 @@
                 COMENTÁRIOS:
                 ${commentsText}
 
-                SUA ANÁLISE:
-                1.  **Sentimento Geral:** Qual a percepção do público (Positiva, Negativa, Mista)? Responda de forma concisa.
-                2.  **Principais Elogios:** Quais os 3 pontos mais elogiados? Responda de forma concisa.
-                3.  **Principais Dúvidas/Críticas:** Quais as 3 principais questões ou críticas levantadas? Responda de forma concisa.
-                4.  **Ideias para Novos Vídeos:** Sugira 3 títulos de novos vídeos baseados diretamente nas dúvidas e interesses dos comentários. Responda de forma concisa.
+                SUA ANÁLISE (Responda de forma resumida e concisa):
+                1.  **Sentimento Geral:** Qual a percepção do público (Positiva, Negativa, Mista)?
+                2.  **Principais Elogios:** Quais os 3 pontos mais elogiados?
+                3.  **Principais Dúvidas/Críticas:** Quais as 3 principais questões ou críticas levantadas?
+                4.  **Ideias para Novos Vídeos:** Sugira 3 títulos de novos vídeos baseados diretamente nas dúvidas e interesses dos comentários.
                 5. **Pontuação de Saúde da Comunidade:** Dê uma pontuação geral de 0 a 100 para a saúde da comunidade do canal, baseada no sentimento dos comentários.`;
                 
                 const schema = {
@@ -908,11 +928,10 @@
                 const result = await callGenerativeAPI(prompt, schema);
                 output.innerHTML = `
                     <div class="flex flex-col md:flex-row gap-6 mb-6">
-                        ${renderScoreCard('Saúde da Comunidade', result.community_score, {}, 'Baseado no sentimento geral e na relevância dos comentários.')}
+                        ${renderScoreCard('Saúde da Comunidade', result.community_score, {'Sentimento Geral': result.general_sentiment}, 'Baseado no sentimento geral e na relevância dos comentários.')}
                         <div class="flex-1 bg-white p-6 rounded-xl shadow-sm border">
                             <h4 class="font-semibold text-lg mb-4">Análise Detalhada</h4>
                             <div class="space-y-4">
-                                <div><strong class="text-indigo-600">Sentimento Geral:</strong><p class="mt-1 prose whitespace-pre-wrap">${result.general_sentiment}</p></div>
                                 <div><strong class="text-indigo-600">Principais Elogios:</strong><ul class="list-disc list-inside prose mt-1">${result.praise.map(item => `<li>${item}</li>`).join('')}</ul></div>
                                 <div><strong class="text-indigo-600">Principais Dúvidas/Críticas:</strong><ul class="list-disc list-inside prose mt-1">${result.criticism.map(item => `<li>${item}</li>`).join('')}</ul></div>
                                 <div><strong class="text-indigo-600">Ideias para Novos Vídeos:</strong><ul class="list-disc list-inside prose mt-1">${result.new_video_ideas.map(item => `<li>${item}</li>`).join('')}</ul></div>
@@ -1080,6 +1099,9 @@
             };
             try {
                 const result = await callGenerativeAPI(prompt, schema);
+                const descriptionText = result.description.replace(/\n/g, '<br>'); // Separar por quebra de linha
+                const hashtagsList = result.hashtags.split(',').map(tag => tag.trim()); // Separar as tags por vírgula
+                
                 output.innerHTML = `
                     <div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start">
                         <div class="flex-1">
@@ -1088,13 +1110,13 @@
                                 ${createCopyButton(result.description + '\n\n' + result.hashtags)}
                                 ${createCorrectButton(result.description + '\n\n' + result.hashtags)}
                             </div>
-                            <div class="prose whitespace-pre-wrap text-sm">${result.description}</div>
+                            <div class="prose text-sm p-2 bg-white rounded border whitespace-pre-wrap">${descriptionText}</div>
                             <div class="mt-4">
                                 <h5 class="font-semibold text-sm flex justify-between items-center">
                                     <span>Hashtags</span>
                                     ${createCopyButton(result.hashtags)}
                                 </h5>
-                                <p class="text-sm text-slate-700 p-2 bg-white rounded border mt-1">${result.hashtrags}</p>
+                                <p class="text-sm text-slate-700 p-2 bg-white rounded border mt-1">${hashtagsList.join(', ')}</p>
                             </div>
                         </div>
                         ${renderScoreCard('Otimização', result.score, { 'SEO': result.score, 'Engajamento': result.score > 10 ? result.score - 4 : result.score }, result.suggestion)}
@@ -1118,7 +1140,17 @@
             };
             try {
                 const result = await callGenerativeAPI(prompt, schema);
-                output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Tags Geradas</h4>${createCopyButton(result.tags)}</div><p class="text-sm text-slate-700 p-2 bg-white rounded border">${result.tags}</p></div>${renderScoreCard('Qualidade', result.score, { 'Relevância': result.score, 'Volume': result.score > 10 ? result.score - 8 : result.score }, result.suggestion)}</div>`;
+                output.innerHTML = `
+                    <div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start">
+                        <div class="flex-1">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-semibold">Tags Geradas</h4>
+                                ${createCopyButton(result.tags)}
+                            </div>
+                            <p class="text-sm text-slate-700 p-2 bg-white rounded border">${result.tags}</p>
+                        </div>
+                        ${renderScoreCard('Qualidade', result.score, { 'Relevância': result.score, 'Volume': result.score > 10 ? result.score - 8 : result.score }, result.suggestion)}
+                    </div>`;
             } catch(error) {
                 output.innerHTML = `<p class="text-red-500">Erro: ${error.message}</p>`;
             }
@@ -1189,10 +1221,9 @@
         outputEl.addEventListener('click', async (e) => {
             if (e.target.classList.contains('correct-btn')) {
                 const button = e.target;
-                const parentDiv = button.closest('div'); // Pega o div pai mais próximo
+                const parentDiv = button.closest('div');
                 let textElement;
 
-                // Tenta encontrar o elemento de texto dentro do contêiner do botão
                 if (parentDiv.previousElementSibling && parentDiv.previousElementSibling.classList.contains('prose')) {
                     textElement = parentDiv.previousElementSibling;
                 } else if (parentDiv.closest('.bg-slate-100')) {
@@ -1207,7 +1238,6 @@
                         button.textContent = 'Revisado!';
                         button.disabled = true;
                     } catch (error) {
-                         // Use um modal ou div de feedback em vez de alert
                         const feedbackDiv = document.createElement('div');
                         feedbackDiv.textContent = `Erro ao revisar o texto: ${error.message}`;
                         feedbackDiv.className = 'text-red-500 mt-2 text-sm';
