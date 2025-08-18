@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v17.9</title>
+    <title>Darks Vips AI v17.8</title>
     <!-- Favicon -->
     <link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔮</text></svg>">
     
@@ -106,19 +106,17 @@
             <div class="relative flex py-2 items-center"><div class="flex-grow border-t border-slate-200"></div><span class="flex-shrink mx-4 text-slate-400 text-xs">OU</span><div class="flex-grow border-t border-slate-200"></div></div>
             
             <!-- Botão de Login com Google -->
-            <div class="flex justify-center">
-                <div id="g_id_onload"
-                     data-client_id="SEU_GOOGLE_CLIENT_ID.apps.googleusercontent.com" <!-- IMPORTANTE: Substituir -->
-                     data-callback="handleGoogleCredentialResponse">
-                </div>
-                <div class="g_id_signin"
-                     data-type="standard"
-                     data-size="large"
-                     data-theme="outline"
-                     data-text="sign_in_with"
-                     data-shape="rectangular"
-                     data-logo_alignment="left">
-                </div>
+            <div id="g_id_onload"
+                 data-client_id="483231613006-31cqno4qts2p5ut9i0s7rrnpl488aiqc.apps.googleusercontent.com" <!-- IMPORTANTE: Substituir -->
+                 data-callback="handleGoogleCredentialResponse">
+            </div>
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-size="large"
+                 data-theme="outline"
+                 data-text="sign_in_with"
+                 data-shape="rectangular"
+                 data-logo_alignment="left">
             </div>
 
             <p class="text-center text-sm mt-4">Não tem uma conta? <a href="#" id="show-register" class="font-medium text-indigo-600 hover:text-indigo-500">Registre-se</a></p>
@@ -256,7 +254,7 @@
     // --- Global State Management ---
     let appState = {
         currentUser: null,
-        token: null, // <-- Para armazenar o JWT
+        token: null, // <-- NOVO: Para armazenar o JWT
         apiKeys: { 
             gemini: "", 
             gemini_backup1: "",
@@ -321,7 +319,7 @@
     async function apiRequest(endpoint, method, body = null) {
         log(`Iniciando requisição ${method} para ${endpoint}`);
         const headers = { 'Content-Type': 'application/json' };
-        // Adiciona o token de autenticação se estiver disponível
+        // [MODIFICADO] Adiciona o token de autenticação se estiver disponível
         if (appState.token) {
             headers['Authorization'] = `Bearer ${appState.token}`;
         }
@@ -388,7 +386,7 @@
         }
     }
 
-    // Callback do Login com Google
+    // [NOVA FUNÇÃO] Callback do Login com Google
     async function handleGoogleCredentialResponse(response) {
         log('Recebida credencial do Google. Enviando para o backend...');
         try {
@@ -411,10 +409,7 @@
 
     // --- App Initialization ---
     async function initializeApp() {
-        if (!appState.currentUser || !appState.token) {
-            log('Falha na inicialização: usuário ou token ausente.', 'error');
-            return;
-        }
+        if (!appState.currentUser) return;
         log(`Inicializando aplicação para ${appState.currentUser.email}...`);
         
         try {
@@ -574,6 +569,7 @@
                         log('API Gemini respondeu com sucesso.', 'success');
                         hideProgressModal();
                         const text = result.candidates[0].content.parts[0].text;
+                        // [CORREÇÃO] Adiciona try-catch para JSON malformado
                         try {
                             return schema ? JSON.parse(text) : { text };
                         } catch (jsonError) {
@@ -589,7 +585,7 @@
                 if (response.status === 429) {
                     log(`Cota da chave #${appState.currentGeminiKeyIndex + 1} excedida. Tentando a próxima...`, 'warn');
                     appState.currentGeminiKeyIndex++;
-                    if (i < availableKeys.length - 1) continue;
+                    if (i < availableKeys.length - 1) continue; // Tenta a próxima chave
                     throw new Error("Todas as chaves da API Gemini excederam a cota.");
                 }
                 
@@ -602,7 +598,7 @@
                     hideProgressModal();
                     throw new Error("A requisição da API excedeu o tempo limite.");
                 }
-                if (i === availableKeys.length - 1) {
+                if (i === availableKeys.length - 1) { // Se for a última chave e falhou
                     hideProgressModal();
                     throw error;
                 }
@@ -755,6 +751,7 @@
             try {
                 const keyword = document.getElementById('niche-keyword').value || 'tópicos em alta';
                 const country = document.getElementById('niche-country').value;
+                // [CORREÇÃO] Prompt mais focado para evitar respostas amplas.
                 const prompt = `Como um especialista em YouTube, gere EXATAMENTE 3 nichos promissores para o YouTube sobre '${keyword}' para o país ${country}. Foque em oportunidades com baixa concorrência e que sejam adequadas para monetização. Para cada nicho, forneça uma sugestão estratégica que seja uma "virada de chave" e uma estimativa de RPM em dólares americanos.`;
                 const schema = {
                     type: "ARRAY",
@@ -953,6 +950,7 @@
                 const result = await callGenerativeAPI(prompt, schema);
                 const { analysis, optimizations } = result;
 
+                // [CORREÇÃO] Adiciona fallbacks para evitar erros de 'undefined'
                 const analysisTitleScore = analysis?.title?.score ?? 0;
                 const analysisTitleCritique = analysis?.title?.critique ?? 'Não foi possível analisar.';
                 const analysisDescScore = analysis?.description?.score ?? 0;
@@ -1572,11 +1570,6 @@
         try {
             const stats = await apiRequest(`/api/youtube-stats/${channelId}`, 'GET');
             
-            // [CORREÇÃO] Verifica se a API retornou os dados antes de tentar renderizar
-            if (!stats) {
-                throw new Error("Não foi possível obter as estatísticas do canal. Verifique o ID e a chave da API.");
-            }
-
             contentContainer.innerHTML = `
                 <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border">
                     <h3 class="font-semibold mb-4">Visualizações e Inscritos (Tendência Simulada)</h3>
@@ -1838,6 +1831,7 @@
         document.getElementById('logo-container-register').innerHTML = logo;
         document.getElementById('logo-container-sidebar').innerHTML = logo;
 
+        // Request notification permission on first load
         if ("Notification" in window && Notification.permission === "default") {
             setTimeout(() => Notification.requestPermission(), 5000);
         }
@@ -1850,6 +1844,7 @@
     ELEMENTS.logoutBtn.addEventListener('click', handleLogout);
     ELEMENTS.closeLegendModal.addEventListener('click', () => ELEMENTS.legendModal.style.display = 'none');
     
+    // Ticket Modal Listeners
     ELEMENTS.openTicketBtn.addEventListener('click', () => ELEMENTS.ticketModal.style.display = 'flex');
     ELEMENTS.closeTicketModal.addEventListener('click', () => ELEMENTS.ticketModal.style.display = 'none');
     ELEMENTS.ticketForm.addEventListener('submit', (e) => {
@@ -1861,6 +1856,7 @@
             log('Captura de tela gerada.', 'success');
             const subject = "Report de Erro - Darks Vips AI";
             const body = `Descrição do Problema:\n${description}\n\n--- NÃO EDITE ABAIXO ---\nPrint da tela está anexado.`;
+            // [CORREÇÃO] E-mail de suporte atualizado
             const mailtoLink = `mailto:suporte@canaisdarks.com.br?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             window.location.href = mailtoLink;
             ELEMENTS.ticketModal.style.display = 'none';
@@ -1869,6 +1865,7 @@
         });
     });
 
+    // Log Panel Listeners
     ELEMENTS.logHeader.addEventListener('click', () => {
         ELEMENTS.logPanel.classList.toggle('open');
         ELEMENTS.logToggleIcon.textContent = ELEMENTS.logPanel.classList.contains('open') ? '▼' : '▲';
@@ -1907,6 +1904,7 @@
         }
     });
 
+    // Mobile Menu Listeners
     ELEMENTS.openMenuBtn.addEventListener('click', () => {
         ELEMENTS.sidebar.classList.add('open');
         ELEMENTS.menuOverlay.style.display = 'block';
@@ -1920,6 +1918,7 @@
         ELEMENTS.menuOverlay.style.display = 'none';
     });
 
+    // Basic Security: Disable Dev Tools
     document.addEventListener('keydown', function (e) {
         if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
             e.preventDefault();
