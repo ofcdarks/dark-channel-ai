@@ -1,0 +1,112 @@
+/* style.css */
+body { 
+    font-family: 'Poppins', sans-serif; 
+    background-color: #f8fafc; 
+}
+
+.sidebar-btn { 
+    transition: all 0.2s ease-in-out; 
+}
+
+.sidebar-btn:hover { 
+    background-color: #f1f5f9; 
+    color: #334155; 
+}
+
+.sidebar-btn-active { 
+    background-color: #eef2ff; 
+    color: #4f46e5; 
+    font-weight: 600; 
+}
+
+.fade-in { 
+    animation: fadeIn 0.5s ease-in-out; 
+}
+
+@keyframes fadeIn { 
+    from { opacity: 0; transform: translateY(10px); } 
+    to { opacity: 1; transform: translateY(0); } 
+}
+
+.progress-bar-container { 
+    background-color: #e0e7ff; 
+    border-radius: 9999px; 
+    height: 8px; 
+    overflow: hidden; 
+}
+
+.progress-bar-inner { 
+    height: 100%; 
+    border-radius: 9999px; 
+    transition: width 0.5s ease-in-out; 
+}
+
+.progress-bar-indeterminate { 
+    background-size: 200% 100%; 
+    background-image: linear-gradient(to right, #e0e7ff 0%, #c7d2fe 50%, #e0e7ff 100%); 
+    animation: move-bg 2s linear infinite; 
+}
+
+@keyframes move-bg { 
+    0% { background-position: 200% 0; } 
+    100% { background-position: -200% 0; } 
+}
+
+#login-container { display: flex; }
+#register-container, #app-container, #progress-modal, #ticket-modal { display: none; }
+
+.copy-btn.copied { 
+    background-color: #10b981; 
+    color: white; 
+}
+
+.app-title-gradient {
+    background: linear-gradient(45deg, #4f46e5, #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+#log-panel {
+    position: fixed; bottom: 0; left: 0; right: 0; background-color: #1e293b;
+    color: #e2e8f0; z-index: 100; transition: max-height 0.3s ease-in-out;
+    max-height: 40px; overflow: hidden; border-top: 1px solid #334155;
+}
+
+#log-panel.open { 
+    max-height: 300px; 
+}
+
+#log-header { 
+    cursor: pointer; 
+}
+
+#log-content { 
+    height: 240px; 
+    overflow-y: auto; 
+    font-family: monospace; 
+    font-size: 12px; 
+}
+
+.log-entry { 
+    border-bottom: 1px solid #334155; 
+}
+
+.log-info { color: #93c5fd; } 
+.log-success { color: #4ade80; }
+.log-error { color: #f87171; } 
+.log-warn { color: #facc15; }
+
+@media (max-width: 768px) {
+    #app-container { flex-direction: column; }
+    #sidebar { 
+        position: fixed; left: -100%; top: 0; height: 100%; z-index: 40;
+        transition: left 0.3s ease-in-out; width: 288px;
+    }
+    #sidebar.open { left: 0; }
+    #main-content { margin-left: 0; }
+    #menu-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(0,0,0,0.5); z-index: 30;
+    }
+    #app-container { padding-bottom: 40px; }
+}

@@ -1,14 +1,14 @@
 {
   "name": "darks-vips-ai-backend",
-  "version": "3.2.0",
+  "version": "4.0.0",
   "description": "Backend for Darks Vips AI",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Darks Vips",
+  "license": "UNLICENSED",
   "dependencies": {
     "axios": "^1.6.8",
     "bcryptjs": "^2.4.3",
@@ -17,6 +17,7 @@
     "google-trends-api": "^4.9.2",
     "googleapis": "^126.0.1",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
     "pg": "^8.11.3"
   },
   "devDependencies": {
