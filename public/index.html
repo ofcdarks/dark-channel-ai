@@ -590,6 +590,7 @@
         "settings": { title: "Configurações", desc: "Gerencie suas chaves de API.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border space-y-6"><div><h3 class="text-lg font-semibold">Chaves de API</h3><div class="space-y-4 mt-2"><div><label class="block text-sm font-medium text-slate-700">Gemini API Key (Principal)</label><input type="password" id="gemini-key" class="mt-1 block w-full px-3 py-2 border rounded-md"><a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-indigo-600 hover:underline">Obter chave do Google AI Studio</a></div><div><label class="block text-sm font-medium text-slate-700">Gemini API Key (Reserva 1)</label><input type="password" id="gemini-key-backup1" class="mt-1 block w-full px-3 py-2 border rounded-md"></div><div><label class="block text-sm font-medium text-slate-700">Gemini API Key (Reserva 2)</label><input type="password" id="gemini-key-backup2" class="mt-1 block w-full px-3 py-2 border rounded-md"></div><div><label class="block text-sm font-medium text-slate-700">OpenRouter API Key (Opcional)</label><input type="password" id="openrouter-key" class="mt-1 block w-full px-3 py-2 border rounded-md"><a href="https://openrouter.ai/keys" target="_blank" class="text-xs text-indigo-600 hover:underline">Obter chave da OpenRouter</a></div><div><label class="block text-sm font-medium text-slate-700">Google API Key (YouTube Data)</label><input type="password" id="google-api-key" class="mt-1 block w-full px-3 py-2 border rounded-md"><p class="text-xs text-slate-500 mt-1">Usada para buscar dados de canais e vídeos do YouTube.</p><a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="text-xs text-indigo-600 hover:underline">Obter chave do Google Cloud (com YouTube Data API v3 ativada)</a></div></div></div><button id="save-settings" class="w-full bg-indigo-800 text-white font-bold py-3 px-4 rounded-lg mt-6">Salvar Configurações</button><div id="settings-feedback" class="mt-4 min-h-[20px]"></div></div>` },
     };
     
+    // --- Handlers para as ferramentas
     const handlers = {
         'generate-niches': async (output, append = false) => {
             try {
@@ -605,6 +606,7 @@
                 if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
                 document.getElementById('generate-more-niches').style.display = 'block';
             } catch(error) { output.innerHTML = `<p class="text-red-500">Erro: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
         },
         'find-subniches': async (output, append = false) => {
             try {
@@ -621,15 +623,18 @@
                 if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
                 document.getElementById('generate-more-subniches').style.display = 'block';
             } catch (error) { output.innerHTML = `<p class="text-red-500">Ocorreu um erro ao buscar os subnichos: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
         },
         'analyze-niche': async (output) => {
             const niche = document.getElementById('analysis-niche').value.trim();
             const country = document.getElementById('analysis-country').value;
             if (!niche) { output.innerHTML = `<p class="text-red-500">Insira um nicho para análise.</p>`; return; }
+            showProgressModal();
             try {
                 const prompt = `Analise o nicho "${niche}" para YouTube no país ${country}. Forneça uma estimativa de RPM, canais de referência, uma sugestão estratégica e uma pontuação de "hype" (potencial de viralização) realista e NÃO-ZERADA entre 50 e 98.`;
                 const schema = { type: "OBJECT", properties: { niche_name: { type: "STRING" }, rpm_estimate_value: { type: "NUMBER" }, hype_score: { type: "NUMBER" }, reference_channels: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, url: { type: "STRING" } } } }, suggestion: { type: "STRING" } } };
                 const [result, trendsData] = await Promise.all([ callGenerativeAPI(prompt, schema), apiRequest(`/api/google-trends/${encodeURIComponent(niche)}/${country}`, 'GET') ]);
+                
                 const channelsHtml = result.reference_channels.map(ch => `<a href="${ch.url}" target="_blank" class="text-indigo-600 hover:underline">${ch.name}</a>`).join(', ');
                 
                 let avgInterest = 50, trendsChartHtml = '<p class="text-xs text-slate-500 mt-2">Dados de tendência indisponíveis.</p>', labels = [], values = [];
@@ -649,6 +654,7 @@
                     trendsChartInstance = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: `Interesse em "${niche}"`, data: values, borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false } });
                 }
             } catch (error) { output.innerHTML = `<p class="text-red-500">Erro ao analisar o nicho: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
         },
         'analyze-video': async (output) => {
             const url = document.getElementById('video-url').value.trim();
@@ -656,20 +662,265 @@
             const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/);
             if (!videoIdMatch) { output.innerHTML = `<p class="text-red-500">URL inválida.</p>`; return; }
             const videoId = videoIdMatch[1];
+            showProgressModal();
             try {
                 const videoData = await apiRequest(`/api/video-details/${videoId}`, 'GET');
                 const { title, description, tags } = videoData;
                 const prompt = `Analise os metadados de um vídeo e crie versões otimizadas. DADOS: Título: "${title}", Descrição: "${description}", Tags: "${tags.join(', ')}". TAREFA: 1. Analise cada item e dê uma pontuação de 0 a 100. 2. Crie 3 novos títulos, 1 nova descrição e 1 novo conjunto de tags, com pontuações melhoradas.`;
                 const schema = { type: "OBJECT", properties: { analysis: { type: "OBJECT", properties: { title: { type: "OBJECT", properties: { score: { type: "NUMBER" }, critique: { type: "STRING" } } }, description: { type: "OBJECT", properties: { score: { type: "NUMBER" }, critique: { type: "STRING" } } }, tags: { type: "OBJECT", properties: { score: { type: "NUMBER" }, critique: { type: "STRING" } } } } }, optimizations: { type: "OBJECT", properties: { titles: { type: "ARRAY", items: { type: "OBJECT", properties: { title: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } } }, description: { type: "OBJECT", properties: { text: { type: "STRING" }, hashtags: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } }, tags: { type: "OBJECT", properties: { tag_list: { type: "ARRAY", items: { type: "STRING" } }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } } } } } };
                 const result = await callGenerativeAPI(prompt, schema);
-                // A renderização do HTML de resultado foi omitida por brevidade, mas deve ser inserida aqui
-                output.innerHTML = `<!-- O HTML complexo de resultado do analisador de vídeo vai aqui -->`;
+                const html = `
+                    <div class="bg-white p-4 rounded-lg shadow-sm border mb-6">
+                        <h3 class="font-bold text-xl mb-2">Análise do Vídeo Original</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            ${renderScoreCard('Título Original', result.analysis.title.score, {}, result.analysis.title.critique)}
+                            ${renderScoreCard('Descrição Original', result.analysis.description.score, {}, result.analysis.description.critique)}
+                            ${renderScoreCard('Tags Originais', result.analysis.tags.score, {}, result.analysis.tags.critique)}
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow-sm border">
+                        <h3 class="font-bold text-xl mb-4">Versões Otimizadas pela IA</h3>
+                        <div class="space-y-6">
+                            <div>
+                                <h4 class="font-semibold text-lg mb-2">Novos Títulos</h4>
+                                <div class="space-y-4">
+                                    ${result.optimizations.titles.map(t => `<div class="bg-slate-100 p-3 rounded-lg flex items-center justify-between"><span class="flex-1">${t.title}</span><div class="ml-4 flex-shrink-0 flex items-center">${createCopyButton(t.title)}</div></div>`).join('')}
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-lg mb-2">Nova Descrição</h4>
+                                <div class="bg-slate-100 p-3 rounded-lg relative">
+                                    <p class="text-sm whitespace-pre-wrap">${result.optimizations.description.text}</p>
+                                    <p class="text-xs text-indigo-700 mt-2">${result.optimizations.description.hashtags}</p>
+                                    <div class="absolute top-2 right-2">${createCopyButton(result.optimizations.description.text + ' ' + result.optimizations.description.hashtags)}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-lg mb-2">Novas Tags</h4>
+                                <div class="bg-slate-100 p-3 rounded-lg flex items-center justify-between">
+                                    <p class="flex-1 text-sm">${result.optimizations.tags.tag_list.join(', ')}</p>
+                                    <div class="ml-4 flex-shrink-0">${createCopyButton(result.optimizations.tags.tag_list.join(', '))}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                output.innerHTML = html;
             } catch (error) { output.innerHTML = `<p class="text-red-500">Erro: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
         },
-        // ... outros handlers
+        'analyze-competitor': async (output) => {
+            const channelId = document.getElementById('competitor-channel-id').value.trim();
+            if (!channelId) { output.innerHTML = `<p class="text-red-500">Insira o ID do canal concorrente.</p>`; return; }
+            showProgressModal();
+            try {
+                const videoData = await apiRequest(`/api/youtube-recent-videos/${channelId}`, 'GET');
+                const titles = videoData.map(v => v.title).join('; ');
+                const prompt = `Analise os títulos dos vídeos recentes de um canal concorrente e identifique a estratégia de conteúdo, as palavras-chave mais usadas e 5 ideias de vídeos que seriam bem-sucedidas neste canal. TÍTULOS: ${titles}.`;
+                const schema = { type: "OBJECT", properties: { strategy_analysis: { type: "STRING" }, keywords: { type: "ARRAY", items: { type: "STRING" } }, new_video_ideas: { type: "ARRAY", items: { type: "STRING" } } } };
+                const result = await callGenerativeAPI(prompt, schema);
+                const html = `
+                    <div class="bg-white p-4 rounded-lg shadow-sm border space-y-4">
+                        <h3 class="font-bold text-lg mb-2">Análise de Estratégia</h3>
+                        <p class="text-sm">${result.strategy_analysis}</p>
+                        <h4 class="font-semibold">Palavras-chave Relevantes:</h4>
+                        <p class="text-sm">${result.keywords.join(', ')}</p>
+                        <h4 class="font-semibold">Ideias de Vídeos Potenciais:</h4>
+                        <ul class="list-disc list-inside text-sm">
+                            ${result.new_video_ideas.map(idea => `<li>${idea}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+                output.innerHTML = html;
+            } catch (error) { output.innerHTML = `<p class="text-red-500">Erro ao analisar o concorrente: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
+        },
+        'analyze-comments': async (output) => {
+            const url = document.getElementById('comment-video-url').value.trim();
+            if (!url) { output.innerHTML = `<p class="text-red-500">Insira uma URL válida do YouTube.</p>`; return; }
+            const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/);
+            if (!videoIdMatch) { output.innerHTML = `<p class="text-red-500">URL inválida.</p>`; return; }
+            const videoId = videoIdMatch[1];
+            showProgressModal();
+            try {
+                const comments = await apiRequest(`/api/video-comments/${videoId}`, 'GET');
+                const prompt = `Analise o sentimento e a intenção dos seguintes comentários de um vídeo do YouTube. Resuma o sentimento geral (Positivo, Negativo, Misto) e extraia 3 perguntas ou ideias de conteúdo mais frequentes. COMENTÁRIOS: ${comments.join('; ')}`;
+                const schema = { type: "OBJECT", properties: { sentiment: { type: "STRING" }, summary: { type: "STRING" }, ideas: { type: "ARRAY", items: { type: "STRING" } } } };
+                const result = await callGenerativeAPI(prompt, schema);
+                const html = `
+                    <div class="bg-white p-4 rounded-lg shadow-sm border space-y-4">
+                        <h3 class="font-bold text-lg mb-2">Análise de Sentimento</h3>
+                        <p class="text-sm">Sentimento Geral: <strong class="${getScoreTextColor(result.sentiment === 'Positivo' ? 80 : result.sentiment === 'Misto' ? 50 : 20)}">${result.sentiment}</strong></p>
+                        <p class="text-sm">${result.summary}</p>
+                        <h4 class="font-semibold">Ideias e Perguntas Recorrentes:</h4>
+                        <ul class="list-disc list-inside text-sm">
+                            ${result.ideas.map(idea => `<li>${idea}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+                output.innerHTML = html;
+            } catch (error) { output.innerHTML = `<p class="text-red-500">Erro ao analisar os comentários: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
+        },
+        'generate-structures': async (output, append = false) => {
+            try {
+                const topic = document.getElementById('structure-topic').value;
+                const lang = document.getElementById('structure-lang').value;
+                const prompt = `Gere 5 estruturas de títulos virais sobre o tópico "${topic}" em ${lang}. Para cada estrutura, adicione uma breve explicação de por que ela funciona.`;
+                const schema = { type: "ARRAY", items: { type: "OBJECT", properties: { structure: { type: "STRING" }, explanation: { type: "STRING" } } } };
+                const result = await callGenerativeAPI(prompt, schema);
+                const html = result.map(item => `
+                    <div class="bg-slate-100 p-4 rounded-lg">
+                        <h4 class="font-semibold text-indigo-600 mb-1">${item.structure}</h4>
+                        <p class="text-sm text-slate-700">${item.explanation}</p>
+                    </div>
+                `).join('');
+                if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
+                document.getElementById('generate-more-structures').style.display = 'block';
+            } catch (error) { output.innerHTML = `<p class="text-red-500">Erro ao gerar estruturas: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
+        },
+        'script-writer': async (output) => {
+            const topic = document.getElementById('script-topic').value.trim();
+            const duration = document.getElementById('script-duration').value;
+            const parts = document.getElementById('script-parts').value;
+            const narrationOnly = document.getElementById('script-narration-only').checked;
+            if (!topic) { output.innerHTML = `<p class="text-red-500">Insira um tópico para o roteiro.</p>`; return; }
+            showProgressModal();
+            try {
+                const prompt = `Escreva um roteiro de vídeo para o YouTube sobre "${topic}", com foco em manter a atenção do espectador. O roteiro deve ter aproximadamente ${duration} minutos e ser dividido em ${parts} partes. Inclua sugestões de cenas e efeitos visuais. Se for apenas narração, não inclua diálogos.`;
+                const result = await callGenerativeAPI(prompt);
+                output.innerHTML = `<div class="bg-white p-4 rounded-lg shadow-sm border"><h3 class="font-bold text-lg mb-2">Roteiro Gerado</h3><p class="text-sm whitespace-pre-wrap">${result.text}</p></div>`;
+            } catch (error) { output.innerHTML = `<p class="text-red-500">Erro ao gerar roteiro: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
+        },
+        'shorts-script-writer': async (output) => {
+            const topic = document.getElementById('shorts-topic').value.trim();
+            if (!topic) { output.innerHTML = `<p class="text-red-500">Insira um tópico para o vídeo curto.</p>`; return; }
+            showProgressModal();
+            try {
+                const prompt = `Escreva um roteiro de vídeo curto (Shorts, Reels) de 30 a 60 segundos sobre "${topic}", com uma introdução forte, pontos diretos e um gancho para o próximo vídeo.`;
+                const result = await callGenerativeAPI(prompt);
+                output.innerHTML = `<div class="bg-white p-4 rounded-lg shadow-sm border"><h3 class="font-bold text-lg mb-2">Roteiro de Short Gerado</h3><p class="text-sm whitespace-pre-wrap">${result.text}</p></div>`;
+            } catch (error) { output.innerHTML = `<p class="text-red-500">Erro ao gerar roteiro de short: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
+        },
+        'content-recycler': async (output) => {
+            const script = document.getElementById('recycler-script').value.trim();
+            if (!script) { output.innerHTML = `<p class="text-red-500">Cole um roteiro para reciclar.</p>`; return; }
+            showProgressModal();
+            try {
+                const prompt = `A partir do roteiro de vídeo longo a seguir, gere 3 ideias para vídeos curtos (shorts) que possam ser derivados dele, com títulos e um breve resumo. ROTEIRO: "${script}"`;
+                const schema = { type: "ARRAY", items: { type: "OBJECT", properties: { title: { type: "STRING" }, summary: { type: "STRING" } } } };
+                const result = await callGenerativeAPI(prompt, schema);
+                const html = `
+                    <div class="bg-white p-4 rounded-lg shadow-sm border space-y-4">
+                        <h3 class="font-bold text-lg mb-2">Ideias de Shorts</h3>
+                        ${result.map(idea => `
+                            <div class="bg-slate-100 p-3 rounded-lg">
+                                <h4 class="font-semibold text-indigo-600">${idea.title}</h4>
+                                <p class="text-sm">${idea.summary}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                output.innerHTML = html;
+            } catch (error) { output.innerHTML = `<p class="text-red-500">Erro ao reciclar conteúdo: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
+        },
+        'visual-storyboard': async (output) => {
+            const script = document.getElementById('storyboard-script').value.trim();
+            if (!script) { output.innerHTML = `<p class="text-red-500">Cole um roteiro para criar o storyboard.</p>`; return; }
+            showProgressModal();
+            try {
+                const prompt = `Transforme o roteiro a seguir em um storyboard visual. Para cada cena, descreva a ação visual, o áudio e a duração. ROTEIRO: "${script}"`;
+                const result = await callGenerativeAPI(prompt);
+                output.innerHTML = `<div class="bg-white p-4 rounded-lg shadow-sm border"><h3 class="font-bold text-lg mb-2">Storyboard Gerado</h3><p class="text-sm whitespace-pre-wrap">${result.text}</p></div>`;
+            } catch (error) { output.innerHTML = `<p class="text-red-500">Erro ao gerar storyboard: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
+        },
+        'thumbnail-prompts': async (output, append = false) => {
+            const title = document.getElementById('thumb-title').value.trim();
+            const platform = document.getElementById('thumb-platform').value;
+            if (!title) { output.innerHTML = `<p class="text-red-500">Insira um título para o vídeo.</p>`; return; }
+            showProgressModal();
+            try {
+                const prompt = `Gere 3 prompts de inteligência artificial para thumbnail de YouTube com foco em alto CTR (Click-Through Rate), baseados no título "${title}", otimizados para a plataforma ${platform}.`;
+                const schema = { type: "ARRAY", items: { type: "STRING" } };
+                const result = await callGenerativeAPI(prompt, schema);
+                const html = `
+                    <div class="bg-white p-4 rounded-lg shadow-sm border space-y-4">
+                        <h3 class="font-bold text-lg mb-2">Prompts de Thumbnail para ${platform}</h3>
+                        ${result.map(p => `
+                            <div class="bg-slate-100 p-3 rounded-lg flex items-center justify-between">
+                                <p class="text-sm flex-1">${p}</p>
+                                <div class="ml-4 flex-shrink-0">${createCopyButton(p)}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
+                document.getElementById('generate-more-prompts').style.display = 'block';
+            } catch (error) { output.innerHTML = `<p class="text-red-500">Erro ao gerar prompts: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
+        },
+        'description-optimizer': async (output) => {
+            const title = document.getElementById('desc-title').value.trim();
+            const topic = document.getElementById('desc-topic').value.trim();
+            if (!title || !topic) { output.innerHTML = `<p class="text-red-500">Preencha o título e o resumo.</p>`; return; }
+            showProgressModal();
+            try {
+                const prompt = `Crie uma descrição completa para um vídeo do YouTube com o título "${title}" e o resumo "${topic}". A descrição deve ter 3 parágrafos, incluir um CTA (Call to Action) para o público se inscrever e seguir nas redes sociais, e um conjunto de 10 hashtags relevantes.`;
+                const result = await callGenerativeAPI(prompt);
+                output.innerHTML = `<div class="bg-white p-4 rounded-lg shadow-sm border"><h3 class="font-bold text-lg mb-2">Descrição Gerada</h3><p class="text-sm whitespace-pre-wrap">${result.text}</p></div>`;
+            } catch (error) { output.innerHTML = `<p class="text-red-500">Erro ao gerar descrição: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
+        },
+        'tag-generator': async (output) => {
+            const topic = document.getElementById('tag-topic').value.trim();
+            const lang = document.getElementById('tag-lang').value;
+            if (!topic) { output.innerHTML = `<p class="text-red-500">Insira um tópico para as tags.</p>`; return; }
+            showProgressModal();
+            try {
+                const prompt = `Gere 10 tags relevantes e de alta procura em ${lang} para um vídeo sobre o tópico "${topic}".`;
+                const schema = { type: "ARRAY", items: { type: "STRING" } };
+                const result = await callGenerativeAPI(prompt, schema);
+                const html = `
+                    <div class="bg-white p-4 rounded-lg shadow-sm border">
+                        <h3 class="font-bold text-lg mb-2">Tags Geradas</h3>
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm flex-1">${result.join(', ')}</p>
+                            <div class="ml-4 flex-shrink-0">${createCopyButton(result.join(', '))}</div>
+                        </div>
+                    </div>
+                `;
+                output.innerHTML = html;
+            } catch (error) { output.innerHTML = `<p class="text-red-500">Erro ao gerar tags: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
+        },
+        'monetization-helper': async (output) => {
+            const niche = document.getElementById('monetization-channel-select').value;
+            if (!niche) { output.innerHTML = `<p class="text-red-500">Selecione um canal para obter ideias de monetização.</p>`; return; }
+            showProgressModal();
+            try {
+                const prompt = `Gere 5 ideias de monetização além do AdSense para um canal no nicho de ${niche}.`;
+                const schema = { type: "ARRAY", items: { type: "STRING" } };
+                const result = await callGenerativeAPI(prompt, schema);
+                const html = `
+                    <div class="bg-white p-4 rounded-lg shadow-sm border">
+                        <h3 class="font-bold text-lg mb-2">Ideias de Monetização para o Nicho de ${niche}</h3>
+                        <ul class="list-disc list-inside text-sm">
+                            ${result.map(idea => `<li>${idea}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+                output.innerHTML = html;
+            } catch (error) { output.innerHTML = `<p class="text-red-500">Erro ao gerar ideias de monetização: ${error.message}</p>`; }
+            finally { hideProgressModal(); }
+        }
     };
     
-    // --- [CORREÇÃO GERAL] Central de Event Listeners e Renderização ---
+    // --- Funções de Inicialização para as abas
     function renderTabContent(tabId) {
         const tool = tools[tabId];
         if (!tool) return;
@@ -683,14 +934,7 @@
         ELEMENTS.sidebar.classList.remove('open');
         ELEMENTS.menuOverlay.style.display = 'none';
 
-        // [CORRIGIDO] Chama o inicializador específico da aba
-        if (tabId === 'settings') initializeSettings();
-        else if (tabId === 'dashboard') initializeDashboard();
-        else if (tabId === 'channel-organizer') initializeChannelOrganizer();
-        else if (tabId === 'planner') initializePlanner();
-        else if (tabId === 'monetization-helper') initializeMonetizationHelper();
-        
-        // [CORRIGIDO] Anexa os listeners dos botões da ferramenta atual
+        // Anexa os listeners dos botões da ferramenta atual
         const outputEl = document.getElementById('output');
         const toolActionMapping = {
             'niche-finder': { btn: 'generate-niches', handler: handlers['generate-niches'], moreBtn: 'generate-more-niches' },
@@ -700,14 +944,14 @@
             'competitor-analysis': { btn: 'analyze-competitor', handler: handlers['analyze-competitor'] },
             'comment-analyzer': { btn: 'analyze-comments', handler: handlers['analyze-comments'] },
             'title-structures': { btn: 'generate-structures', handler: handlers['generate-structures'], moreBtn: 'generate-more-structures' },
-            'script-writer': { btn: 'generate-script', handler: handlers['generate-script'] },
+            'script-writer': { btn: 'generate-script', handler: handlers['script-writer'] },
             'shorts-script-writer': { btn: 'generate-shorts-script', handler: handlers['shorts-script-writer'] },
-            'content-recycler': { btn: 'recycle-content', handler: handlers['recycle-content'] },
-            'visual-storyboard': { btn: 'generate-storyboard', handler: handlers['generate-storyboard'] },
-            'thumbnail-prompts': { btn: 'generate-prompts', handler: handlers['generate-prompts'], moreBtn: 'generate-more-prompts' },
-            'description-optimizer': { btn: 'generate-description', handler: handlers['generate-description'] },
-            'tag-generator': { btn: 'generate-tags', handler: handlers['generate-tags'] },
-            'monetization-helper': { btn: 'generate-monetization-ideas', handler: handlers['generate-monetization-ideas'] }
+            'content-recycler': { btn: 'recycle-content', handler: handlers['content-recycler'] },
+            'visual-storyboard': { btn: 'generate-storyboard', handler: handlers['visual-storyboard'] },
+            'thumbnail-prompts': { btn: 'generate-prompts', handler: handlers['thumbnail-prompts'], moreBtn: 'generate-more-prompts' },
+            'description-optimizer': { btn: 'generate-description', handler: handlers['description-optimizer'] },
+            'tag-generator': { btn: 'generate-tags', handler: handlers['tag-generator'] },
+            'monetization-helper': { btn: 'generate-monetization-ideas', handler: handlers['monetization-helper'] }
         };
         const currentTool = toolActionMapping[tabId];
         if (currentTool && document.getElementById(currentTool.btn)) {
@@ -717,11 +961,18 @@
             }
         }
         
+        // Chamadas para inicializar handlers específicos que precisam de dados
+        if (tabId === 'settings') initializeSettings();
+        else if (tabId === 'dashboard') initializeDashboard();
+        else if (tabId === 'channel-organizer') initializeChannelOrganizer();
+        else if (tabId === 'planner') initializePlanner();
+        else if (tabId === 'monetization-helper') initializeMonetizationHelper();
+        
+        // Listener para o modal de legendas
         const showLegendBtn = document.getElementById('show-legend-btn');
         if (showLegendBtn) { showLegendBtn.style.display = 'inline-block'; showLegendBtn.addEventListener('click', () => ELEMENTS.legendModal.style.display = 'flex'); }
     }
 
-    // --- [CORRIGIDO] Função central para salvar todos os dados do usuário ---
     async function saveAllUserSettings() {
         if (!appState.currentUser) return;
         const settingsToSave = { 
@@ -930,6 +1181,7 @@
         const channelSelect = document.getElementById('monetization-channel-select');
         if(appState.userChannels.length > 0) {
             channelSelect.innerHTML = '<option value="">Selecione um canal cadastrado</option>' + appState.userChannels.map(ch => `<option value="${ch.niche}">${ch.name} (${ch.niche})</option>`).join('');
+            document.getElementById('generate-monetization-ideas').disabled = false;
         } else {
             channelSelect.innerHTML = '<option value="">Nenhum canal cadastrado</option>';
             channelSelect.disabled = true;
@@ -939,398 +1191,100 @@
 
     // --- Event Listeners Globais ---
     document.addEventListener('DOMContentLoaded', () => {
+        // Renderiza o SVG do logo
         const logo = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" /><stop offset="100%" style="stop-color:#818cf8;stop-opacity:1" /></linearGradient></defs><circle cx="50" cy="50" r="45" fill="url(#grad)" stroke="#fff" stroke-width="5"/><path d="M35 30 L65 50 L35 70 Z" fill="#fff"/></svg>`;
         document.getElementById('logo-container-login').innerHTML = logo;
         document.getElementById('logo-container-register').innerHTML = logo;
         document.getElementById('logo-container-sidebar').innerHTML = logo;
-    });
-    
-    ELEMENTS.loginForm.addEventListener('submit', handleLogin);
-    ELEMENTS.registerForm.addEventListener('submit', handleRegister);
-    ELEMENTS.showRegister.addEventListener('click', (e) => { e.preventDefault(); showRegisterScreen(); });
-    ELEMENTS.showLogin.addEventListener('click', (e) => { e.preventDefault(); showLoginScreen(); });
-    ELEMENTS.logoutBtn.addEventListener('click', handleLogout);
-    ELEMENTS.closeLegendModal.addEventListener('click', () => ELEMENTS.legendModal.style.display = 'none');
-    ELEMENTS.closeUpdatesModal.addEventListener('click', () => ELEMENTS.updatesModal.style.display = 'none');
-    
-    ELEMENTS.openTicketBtn.addEventListener('click', () => {
-        ELEMENTS.ticketForm.reset();
-        ELEMENTS.screenshotPreview.style.display = 'none';
-        ELEMENTS.screenshotPreview.src = '';
-        ELEMENTS.ticketModal.style.display = 'flex';
-    });
-    ELEMENTS.closeTicketModal.addEventListener('click', () => ELEMENTS.ticketModal.style.display = 'none');
-    
-    ELEMENTS.screenshotInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                ELEMENTS.screenshotPreview.src = event.target.result;
-                ELEMENTS.screenshotPreview.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        } else {
-            ELEMENTS.screenshotPreview.style.display = 'none';
-        }
-    });
 
-    ELEMENTS.ticketForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const description = document.getElementById('ticket-description').value;
-        const subject = "Report de Erro - Darks Vips AI";
-        let body = `Descrição do Problema:\n${description}\n\n--- Fim da Descrição ---`;
-        const mailtoLink = `mailto:suporte@canaisdarks.com.br?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.location.href = mailtoLink;
-        ELEMENTS.ticketModal.style.display = 'none';
-    });
-
-    ELEMENTS.logHeader.addEventListener('click', () => {
-        ELEMENTS.logPanel.classList.toggle('open');
-        ELEMENTS.logToggleIcon.textContent = ELEMENTS.logPanel.classList.contains('open') ? '▼' : '▲';
-    });
-
-    ELEMENTS.sidebarNav.addEventListener('click', (event) => {
-        const clickedButton = event.target.closest('.sidebar-btn');
-        if (clickedButton) {
-            ELEMENTS.sidebarNav.querySelectorAll('.sidebar-btn').forEach(btn => btn.classList.remove('sidebar-btn-active'));
-            clickedButton.classList.add('sidebar-btn-active');
-            renderTabContent(clickedButton.getAttribute('data-tab'));
-        }
-    });
-
-    ELEMENTS.tabContent.addEventListener('click', (e) => {
-        const copyBtn = e.target.closest('.copy-btn');
-        if (copyBtn) {
-            const text = decodeURIComponent(copyBtn.dataset.copyText);
-            navigator.clipboard.writeText(text).then(() => {
-                copyBtn.textContent = 'Copiado!';
-                copyBtn.classList.add('copied');
-                setTimeout(() => {
-                    copyBtn.textContent = 'Copiar';
-                    copyBtn.classList.remove('copied');
-                }, 2000);
-            });
-        }
+        // Adiciona listeners para os formulários de autenticação
+        ELEMENTS.loginForm.addEventListener('submit', handleLogin);
+        ELEMENTS.registerForm.addEventListener('submit', handleRegister);
+        ELEMENTS.showRegister.addEventListener('click', (e) => { e.preventDefault(); showRegisterScreen(); });
+        ELEMENTS.showLogin.addEventListener('click', (e) => { e.preventDefault(); showLoginScreen(); });
         
-        const updatesBtn = e.target.closest('.show-updates-btn');
-        if(updatesBtn) {
-            const toolId = updatesBtn.dataset.toolId;
-            const tool = tools[toolId];
-            ELEMENTS.updatesModalTitle.textContent = `Atualizações de ${tool.title}`;
-            ELEMENTS.updatesModalContent.innerHTML = TOOL_UPDATES[toolId] || TOOL_UPDATES['default'];
-            ELEMENTS.updatesModal.style.display = 'flex';
-        }
-    });
+        // Adiciona listeners para botões de navegação
+        ELEMENTS.logoutBtn.addEventListener('click', handleLogout);
+        ELEMENTS.sidebarNav.addEventListener('click', (event) => {
+            const clickedButton = event.target.closest('.sidebar-btn');
+            if (clickedButton) {
+                ELEMENTS.sidebarNav.querySelectorAll('.sidebar-btn').forEach(btn => btn.classList.remove('sidebar-btn-active'));
+                clickedButton.classList.add('sidebar-btn-active');
+                renderTabContent(clickedButton.getAttribute('data-tab'));
+            }
+        });
+        
+        // Adiciona listeners para modais e logs
+        ELEMENTS.closeLegendModal.addEventListener('click', () => ELEMENTS.legendModal.style.display = 'none');
+        ELEMENTS.closeUpdatesModal.addEventListener('click', () => ELEMENTS.updatesModal.style.display = 'none');
+        ELEMENTS.openTicketBtn.addEventListener('click', () => {
+            ELEMENTS.ticketForm.reset();
+            ELEMENTS.screenshotPreview.style.display = 'none';
+            ELEMENTS.screenshotPreview.src = '';
+            ELEMENTS.ticketModal.style.display = 'flex';
+        });
+        ELEMENTS.closeTicketModal.addEventListener('click', () => ELEMENTS.ticketModal.style.display = 'none');
+        ELEMENTS.screenshotInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    ELEMENTS.screenshotPreview.src = event.target.result;
+                    ELEMENTS.screenshotPreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                ELEMENTS.screenshotPreview.style.display = 'none';
+            }
+        });
+        ELEMENTS.ticketForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const description = document.getElementById('ticket-description').value;
+            const subject = "Report de Erro - Darks Vips AI";
+            let body = `Descrição do Problema:\n${description}\n\n--- Fim da Descrição ---`;
+            const mailtoLink = `mailto:suporte@canaisdarks.com.br?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.location.href = mailtoLink;
+            ELEMENTS.ticketModal.style.display = 'none';
+        });
+        ELEMENTS.logHeader.addEventListener('click', () => {
+            ELEMENTS.logPanel.classList.toggle('open');
+            ELEMENTS.logToggleIcon.textContent = ELEMENTS.logPanel.classList.contains('open') ? '▼' : '▲';
+        });
+        
+        // Listener para botões de copiar e de updates
+        ELEMENTS.tabContent.addEventListener('click', (e) => {
+            const copyBtn = e.target.closest('.copy-btn');
+            if (copyBtn) {
+                const text = decodeURIComponent(copyBtn.dataset.copyText);
+                navigator.clipboard.writeText(text).then(() => {
+                    copyBtn.textContent = 'Copiado!';
+                    copyBtn.classList.add('copied');
+                    setTimeout(() => {
+                        copyBtn.textContent = 'Copiar';
+                        copyBtn.classList.remove('copied');
+                    }, 2000);
+                });
+            }
+            const updatesBtn = e.target.closest('.show-updates-btn');
+            if(updatesBtn) {
+                const toolId = updatesBtn.dataset.tool-id;
+                const tool = tools[toolId];
+                ELEMENTS.updatesModalTitle.textContent = `Atualizações de ${tool.title}`;
+                ELEMENTS.updatesModalContent.innerHTML = TOOL_UPDATES[toolId] || TOOL_UPDATES['default'];
+                ELEMENTS.updatesModal.style.display = 'flex';
+            }
+        });
 
-    ELEMENTS.openMenuBtn.addEventListener('click', () => { ELEMENTS.sidebar.classList.add('open'); ELEMENTS.menuOverlay.style.display = 'block'; });
-    ELEMENTS.closeMenuBtn.addEventListener('click', () => { ELEMENTS.sidebar.classList.remove('open'); ELEMENTS.menuOverlay.style.display = 'none'; });
-    ELEMENTS.menuOverlay.addEventListener('click', () => { ELEMENTS.sidebar.classList.remove('open'); ELEMENTS.menuOverlay.style.display = 'none'; });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key.toUpperCase()))) e.preventDefault();
+        // Listeners para o menu mobile
+        ELEMENTS.openMenuBtn.addEventListener('click', () => { ELEMENTS.sidebar.classList.add('open'); ELEMENTS.menuOverlay.style.display = 'block'; });
+        ELEMENTS.closeMenuBtn.addEventListener('click', () => { ELEMENTS.sidebar.classList.remove('open'); ELEMENTS.menuOverlay.style.display = 'none'; });
+        ELEMENTS.menuOverlay.addEventListener('click', () => { ELEMENTS.sidebar.classList.remove('open'); ELEMENTS.menuOverlay.style.display = 'none'; });
+        
+        // Prevenção do F12 e DevTools
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key.toUpperCase()))) e.preventDefault();
+        });
     });
     </script>
 </body>
 </html>
-```
-
-Most up-to-date Immersive Artifact for "darks-vips-server-js-google" is:
-
-```javascript
-// server.js
-
-// 1. Importação de Módulos
-const express = require('express');
-const { Pool } = require('pg');
-const path = require('path');
-const bcrypt = require('bcryptjs');
-const { google } = require('googleapis');
-const googleTrends = require('google-trends-api');
-const axios = require('axios');
-const { OAuth2Client } = require('google-auth-library');
-const jwt = require('jsonwebtoken');
-
-// 2. Configuração Inicial
-const app = express();
-const PORT = process.env.PORT || 3000;
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const JWT_SECRET = process.env.JWT_SECRET;
-const client = new OAuth2Client(GOOGLE_CLIENT_ID);
-
-// [NOVO] Verificação de variáveis de ambiente essenciais
-if (!GOOGLE_CLIENT_ID || !JWT_SECRET) {
-    console.warn("\n[AVISO] Variáveis de ambiente GOOGLE_CLIENT_ID e/ou JWT_SECRET não estão definidas.");
-    console.warn("A autenticação, especialmente com o Google, PODE NÃO FUNCIONAR corretamente.\n");
-}
-
-// Middlewares
-app.use(express.json({ limit: '10mb' })); // Aumenta o limite para o upload de screenshots
-app.use(express.static(path.join(__dirname, 'public')));
-
-// 3. Conexão com o Banco de Dados PostgreSQL
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
-
-const initializeDb = async () => {
-  const dbClient = await pool.connect();
-  try {
-    await dbClient.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        name VARCHAR(255),
-        google_id VARCHAR(255) UNIQUE,
-        password_hash VARCHAR(255),
-        settings JSONB
-      );
-    `);
-    console.log('Tabela "users" verificada/criada com sucesso.');
-  } catch (err) {
-    console.error('Erro ao inicializar o banco de dados:', err);
-  } finally {
-    dbClient.release();
-  }
-};
-
-// 4. Middleware de Autenticação JWT
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (token == null) return res.sendStatus(401);
-
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403);
-        req.user = user;
-        next();
-    });
-};
-
-// 5. Rotas da API (Autenticação e Configurações)
-app.post('/api/register', async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
-    try {
-        const salt = await bcrypt.genSalt(10);
-        const passwordHash = await bcrypt.hash(password, salt);
-        const result = await pool.query('INSERT INTO users (email, password_hash, settings) VALUES ($1, $2, $3) RETURNING id, email', [email, passwordHash, {}]);
-        const user = result.rows[0];
-        const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-        res.status(201).json({ user, accessToken });
-    } catch (err) {
-        if (err.code === '23505') return res.status(409).json({ message: 'Este e-mail já está em uso.' });
-        console.error(err);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
-    }
-});
-
-app.post('/api/login', async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
-    try {
-        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        const user = result.rows[0];
-        if (user && user.password_hash && await bcrypt.compare(password, user.password_hash)) {
-            const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-            res.json({ user: {id: user.id, email: user.email, name: user.name}, accessToken });
-        } else {
-            res.status(401).json({ message: 'Credenciais inválidas.' });
-        }
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
-    }
-});
-
-app.post('/api/google-login', async (req, res) => {
-    const { credential } = req.body;
-    if (!GOOGLE_CLIENT_ID) {
-        return res.status(500).json({ message: "ID de Cliente do Google não configurado no servidor." });
-    }
-    try {
-        const ticket = await client.verifyIdToken({
-            idToken: credential,
-            audience: GOOGLE_CLIENT_ID,
-        });
-        const payload = ticket.getPayload();
-        const { sub: google_id, email, name } = payload;
-        let result = await pool.query('SELECT * FROM users WHERE google_id = $1', [google_id]);
-        let user = result.rows[0];
-
-        if (!user) {
-            result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-            user = result.rows[0];
-            if (user) {
-                // [CORRIGIDO] Vincula a conta e refaz a busca para pegar o usuário atualizado
-                await pool.query('UPDATE users SET google_id = $1, name = $2 WHERE email = $3', [google_id, name, email]);
-                user = (await pool.query('SELECT * FROM users WHERE email = $1', [email])).rows[0];
-            } else {
-                // Cria um novo usuário
-                result = await pool.query('INSERT INTO users (email, name, google_id, settings) VALUES ($1, $2, $3, $4) RETURNING *', [email, name, google_id, {}]);
-                user = result.rows[0];
-            }
-        }
-        const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-        res.json({ user: {id: user.id, email: user.email, name: user.name}, accessToken });
-    } catch (error) {
-        console.error("Erro no login com Google:", error);
-        res.status(500).json({ message: "Falha na autenticação com o Google." });
-    }
-});
-
-app.get('/api/settings/:userId', authenticateToken, async (req, res) => {
-    if (req.user.id.toString() !== req.params.userId) return res.sendStatus(403);
-    const { userId } = req.params;
-    try {
-        const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
-        if (result.rows.length > 0) res.json(result.rows[0].settings || {});
-        else res.status(404).json({ message: 'Usuário não encontrado.' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
-    }
-});
-
-app.post('/api/settings/:userId', authenticateToken, async (req, res) => {
-    if (req.user.id.toString() !== req.params.userId) return res.sendStatus(403);
-    const { userId } = req.params;
-    const { settings } = req.body;
-    try {
-        const result = await pool.query('UPDATE users SET settings = $1 WHERE id = $2 RETURNING id', [settings, userId]);
-        if (result.rowCount > 0) res.json({ message: 'Configurações salvas com sucesso!' });
-        else res.status(404).json({ message: 'Usuário não encontrado.' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
-    }
-});
-
-// 6. Rotas da API (YouTube, Trends, etc.)
-const getGoogleApiKey = async (userId) => {
-    const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
-    return result.rows.length > 0 ? result.rows[0].settings?.google_api : null;
-};
-
-app.get('/api/youtube-stats/:channelId', authenticateToken, async (req, res) => {
-    const { channelId } = req.params;
-    try {
-        const apiKey = await getGoogleApiKey(req.user.id);
-        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
-        const youtube = google.youtube({ version: 'v3', auth: apiKey });
-        const response = await youtube.channels.list({ part: 'snippet,statistics,contentDetails', id: channelId });
-        if (response.data.items.length === 0) return res.status(404).json({ message: 'Canal não encontrado.' });
-        const channel = response.data.items[0];
-        res.json({
-            subscriberCount: channel.statistics.subscriberCount,
-            viewCount: channel.statistics.viewCount,
-            videoCount: channel.statistics.videoCount,
-            uploadsPlaylistId: channel.contentDetails.relatedPlaylists.uploads
-        });
-    } catch (error) {
-        console.error("Erro na API do YouTube (Stats):", error.message);
-        res.status(500).json({ message: "Erro ao buscar estatísticas do canal." });
-    }
-});
-
-app.get('/api/youtube-recent-videos/:playlistId', authenticateToken, async (req, res) => {
-    const { playlistId } = req.params;
-    try {
-        const apiKey = await getGoogleApiKey(req.user.id);
-        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
-        const youtube = google.youtube({ version: 'v3', auth: apiKey });
-        const response = await youtube.playlistItems.list({ part: 'snippet,contentDetails', playlistId: playlistId, maxResults: 10 });
-        const videoIds = response.data.items.map(item => item.contentDetails.videoId).join(',');
-        const videosResponse = await youtube.videos.list({ part: 'statistics,snippet', id: videoIds });
-        res.json(videosResponse.data.items.map(v => ({
-            id: v.id,
-            title: v.snippet.title,
-            thumbnail: v.snippet.thumbnails.medium.url,
-            viewCount: v.statistics.viewCount,
-            likeCount: v.statistics.likeCount,
-            commentCount: v.statistics.commentCount
-        })));
-    } catch (error) {
-        console.error("Erro na API do YouTube (Videos):", error.message);
-        res.status(500).json({ message: "Erro ao buscar vídeos recentes." });
-    }
-});
-
-app.get('/api/video-comments/:videoId', authenticateToken, async (req, res) => {
-    const { videoId } = req.params;
-    try {
-        const apiKey = await getGoogleApiKey(req.user.id);
-        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
-        const youtube = google.youtube({ version: 'v3', auth: apiKey });
-        const response = await youtube.commentThreads.list({ part: 'snippet', videoId: videoId, maxResults: 50, order: 'relevance' });
-        res.json(response.data.items.map(item => item.snippet.topLevelComment.snippet.textDisplay));
-    } catch (error) {
-        console.error("Erro na API do YouTube (Comments):", error.message);
-        res.status(500).json({ message: "Erro ao buscar comentários." });
-    }
-});
-
-app.get('/api/video-details/:videoId', authenticateToken, async (req, res) => {
-    const { videoId } = req.params;
-    try {
-        const apiKey = await getGoogleApiKey(req.user.id);
-        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
-        const youtube = google.youtube({ version: 'v3', auth: apiKey });
-        const response = await youtube.videos.list({ part: 'snippet,statistics', id: videoId });
-        if (response.data.items.length === 0) return res.status(404).json({ message: 'Vídeo não encontrado.' });
-        const video = response.data.items[0];
-        res.json({
-            title: video.snippet.title,
-            description: video.snippet.description,
-            tags: video.snippet.tags || [],
-            detectedLanguage: video.snippet.defaultAudioLanguage || video.snippet.defaultLanguage || 'pt'
-        });
-    } catch (error) {
-        console.error("Erro na API do YouTube (Details):", error.message);
-        res.status(500).json({ message: "Erro ao buscar dados do vídeo." });
-    }
-});
-
-app.get('/api/google-trends/:keyword/:geo', authenticateToken, async (req, res) => {
-    const { keyword, geo } = req.params;
-    try {
-        const result = await googleTrends.interestOverTime({
-            keyword,
-            geo: geo.toUpperCase(),
-            startTime: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
-        });
-        res.json(JSON.parse(result));
-    } catch (error) {
-        console.error('Erro no Google Trends:', error.message);
-        res.status(500).json({ message: 'Falha ao buscar dados de tendência.' });
-    }
-});
-
-app.post('/api/correct-text', authenticateToken, async (req, res) => {
-    const { text, openrouterKey } = req.body;
-    if (!openrouterKey || !text) return res.status(400).json({ message: 'Chave e texto são obrigatórios.' });
-    try {
-        const response = await axios.post("https://openrouter.ai/api/v1/chat/completions", {
-            model: "openai/gpt-3.5-turbo",
-            messages: [{ role: "user", content: `Revise e corrija o seguinte texto em português, mantendo o tom original e a formatação. Apenas retorne o texto corrigido, sem comentários adicionais:\n\n${text}` }],
-        }, { headers: { 'Authorization': `Bearer ${openrouterKey}` } });
-        res.json({ text: response.data.choices[0].message.content });
-    } catch (error) {
-        console.error('Erro na API OpenRouter:', error.response ? error.response.data : error.message);
-        res.status(500).json({ message: 'Erro ao revisar o texto.' });
-    }
-});
-
-// 7. Rota Genérica (Catch-all) para servir o index.html
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// 8. Inicialização do Servidor
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-  initializeDb();
-});

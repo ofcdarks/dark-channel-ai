@@ -1,4 +1,5 @@
 // server.js
+// Backend para Darks Vips AI, corrigido e otimizado.
 
 // 1. Importação de Módulos
 const express = require('express');
@@ -18,14 +19,9 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const JWT_SECRET = process.env.JWT_SECRET;
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
-if (!GOOGLE_CLIENT_ID || !JWT_SECRET) {
-    console.warn("\n[AVISO] Variáveis de ambiente GOOGLE_CLIENT_ID e/ou JWT_SECRET não estão definidas.");
-    console.warn("A autenticação, especialmente com o Google, PODE NÃO FUNCIONAR corretamente.\n");
-}
-
-// Middlewares
-app.use(express.json({ limit: '10mb' }));
+// Middleware para servir arquivos estáticos do diretório 'public'
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json({ limit: '10mb' }));
 
 // 3. Conexão com o Banco de Dados PostgreSQL
 const pool = new Pool({
@@ -124,7 +120,7 @@ app.post('/api/google-login', async (req, res) => {
             result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
             user = result.rows[0];
             if (user) {
-                // [CORRIGIDO] Vincula a conta e refaz a busca para pegar o usuário atualizado
+                // Vincula a conta e refaz a busca para pegar o usuário atualizado
                 await pool.query('UPDATE users SET google_id = $1, name = $2 WHERE email = $3', [google_id, name, email]);
                 user = (await pool.query('SELECT * FROM users WHERE email = $1', [email])).rows[0];
             } else {
@@ -142,6 +138,7 @@ app.post('/api/google-login', async (req, res) => {
 });
 
 app.get('/api/settings/:userId', authenticateToken, async (req, res) => {
+    // Verifica se o usuário autenticado é o mesmo da requisição
     if (req.user.id.toString() !== req.params.userId) return res.sendStatus(403);
     const { userId } = req.params;
     try {
@@ -155,6 +152,7 @@ app.get('/api/settings/:userId', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/settings/:userId', authenticateToken, async (req, res) => {
+    // Verifica se o usuário autenticado é o mesmo da requisição
     if (req.user.id.toString() !== req.params.userId) return res.sendStatus(403);
     const { userId } = req.params;
     const { settings } = req.body;
