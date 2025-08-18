@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v17.7</title>
+    <title>Darks Vips AI v17.6</title>
     <!-- Favicon -->
     <link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔮</text></svg>">
     
@@ -261,7 +261,6 @@
         registerFeedback: document.getElementById('register-feedback'),
         showRegister: document.getElementById('show-register'),
         showLogin: document.getElementById('show-login'),
-        googleLoginBtn: document.getElementById('google-login-btn'),
         sidebar: document.getElementById('sidebar'),
         sidebarNav: document.getElementById('sidebar-nav'),
         tabContent: document.getElementById('tab-content'),
@@ -719,8 +718,7 @@
             try {
                 const keyword = document.getElementById('niche-keyword').value || 'tópicos em alta';
                 const country = document.getElementById('niche-country').value;
-                // [CORREÇÃO] Prompt mais focado para evitar respostas amplas.
-                const prompt = `Como um especialista em YouTube, gere EXATAMENTE 3 nichos promissores para o YouTube sobre '${keyword}' para o país ${country}. Foque em oportunidades com baixa concorrência e que sejam adequadas para monetização. Para cada nicho, forneça uma sugestão estratégica que seja uma "virada de chave" e uma estimativa de RPM em dólares americanos.`;
+                const prompt = `Como um especialista em YouTube, gere 3 nichos promissores sobre '${keyword}' para o país ${country}. Foque em oportunidades com baixa concorrência. Para cada nicho, forneça uma sugestão estratégica que seja uma "virada de chave" e uma estimativa de RPM em dólares americanos.`;
                 const schema = {
                     type: "ARRAY",
                     items: {
@@ -918,14 +916,6 @@
                 const result = await callGenerativeAPI(prompt, schema);
                 const { analysis, optimizations } = result;
 
-                // [CORREÇÃO] Adiciona fallbacks para evitar erros de 'undefined'
-                const analysisTitleScore = analysis?.title?.score ?? 0;
-                const analysisTitleCritique = analysis?.title?.critique ?? 'Não foi possível analisar.';
-                const analysisDescScore = analysis?.description?.score ?? 0;
-                const analysisDescCritique = analysis?.description?.critique ?? 'Não foi possível analisar.';
-                const analysisTagsScore = analysis?.tags?.score ?? 0;
-                const analysisTagsCritique = analysis?.tags?.critique ?? 'Não foi possível analisar.';
-
                 output.innerHTML = `
                     <div class="mb-6">
                         <h3 class="text-xl font-bold mb-2">Vídeo Analisado</h3>
@@ -945,11 +935,11 @@
                                 <div class="bg-slate-100 p-4 rounded-lg">
                                     <h4 class="font-semibold mb-2">Título Atual</h4>
                                     <p class="text-sm bg-white p-2 rounded border">${title}</p>
-                                    <div class="mt-4">${renderScoreCard('Pontuação Atual', analysisTitleScore, { 'SEO & CTR': analysisTitleScore }, analysisTitleCritique)}</div>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.title.score, { 'SEO & CTR': analysis.title.score }, analysis.title.critique)}</div>
                                 </div>
                                 <div class="bg-green-50 p-4 rounded-lg border border-green-200">
                                     <h4 class="font-semibold mb-2 text-green-800">Sugestões Otimizadas</h4>
-                                    ${(optimizations?.titles || []).map(t => `
+                                    ${optimizations.titles.map(t => `
                                         <div class="mb-4">
                                             <div class="flex justify-between items-start gap-2">
                                                 <p class="text-sm bg-white p-2 rounded border flex-1">${t.title} ${createCopyButton(t.title)}</p>
@@ -972,13 +962,13 @@
                                 <div class="bg-slate-100 p-4 rounded-lg">
                                     <h4 class="font-semibold mb-2">Descrição Atual</h4>
                                     <div class="text-sm bg-white p-2 rounded border prose whitespace-pre-wrap max-h-48 overflow-y-auto">${description}</div>
-                                    <div class="mt-4">${renderScoreCard('Pontuação Atual', analysisDescScore, { 'SEO & Clareza': analysisDescScore }, analysisDescCritique)}</div>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.description.score, { 'SEO & Clareza': analysis.description.score }, analysis.description.critique)}</div>
                                 </div>
                                 <div class="bg-green-50 p-4 rounded-lg border border-green-200">
-                                    <h4 class="font-semibold mb-2 text-green-800">Descrição Otimizada ${createCopyButton((optimizations?.description?.text || '') + '\n\n' + (optimizations?.description?.hashtags || ''))}</h4>
-                                    <div class="text-sm bg-white p-2 rounded border prose whitespace-pre-wrap max-h-48 overflow-y-auto">${optimizations?.description?.text || ''}</div>
-                                    <p class="text-sm bg-white p-2 rounded border mt-2 font-semibold">${optimizations?.description?.hashtags || ''}</p>
-                                    <div class="mt-4">${renderScoreCard('Pontuação Otimizada', optimizations?.description?.score || 0, { 'SEO & Engajamento': optimizations?.description?.score || 0 }, optimizations?.description?.suggestion || '')}</div>
+                                    <h4 class="font-semibold mb-2 text-green-800">Descrição Otimizada ${createCopyButton(optimizations.description.text + '\n\n' + optimizations.description.hashtags)}</h4>
+                                    <div class="text-sm bg-white p-2 rounded border prose whitespace-pre-wrap max-h-48 overflow-y-auto">${optimizations.description.text}</div>
+                                    <p class="text-sm bg-white p-2 rounded border mt-2 font-semibold">${optimizations.description.hashtags}</p>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Otimizada', optimizations.description.score, { 'SEO & Engajamento': optimizations.description.score }, optimizations.description.suggestion)}</div>
                                 </div>
                             </div>
                         </div>
@@ -990,12 +980,12 @@
                                 <div class="bg-slate-100 p-4 rounded-lg">
                                     <h4 class="font-semibold mb-2">Tags Atuais</h4>
                                     <p class="text-sm bg-white p-2 rounded border">${tags.join(', ')}</p>
-                                    <div class="mt-4">${renderScoreCard('Pontuação Atual', analysisTagsScore, { 'Relevância': analysisTagsScore }, analysisTagsCritique)}</div>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.tags.score, { 'Relevância': analysis.tags.score }, analysis.tags.critique)}</div>
                                 </div>
                                 <div class="bg-green-50 p-4 rounded-lg border border-green-200">
-                                    <h4 class="font-semibold mb-2 text-green-800">Tags Otimizadas ${createCopyButton((optimizations?.tags?.tag_list || []).join(', '))}</h4>
-                                    <p class="text-sm bg-white p-2 rounded border">${(optimizations?.tags?.tag_list || []).join(', ')}</p>
-                                    <div class="mt-4">${renderScoreCard('Pontuação Otimizada', optimizations?.tags?.score || 0, { 'Relevância & Volume': optimizations?.tags?.score || 0 }, optimizations?.tags?.suggestion || '')}</div>
+                                    <h4 class="font-semibold mb-2 text-green-800">Tags Otimizadas ${createCopyButton(optimizations.tags.tag_list.join(', '))}</h4>
+                                    <p class="text-sm bg-white p-2 rounded border">${optimizations.tags.tag_list.join(', ')}</p>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Otimizada', optimizations.tags.score, { 'Relevância & Volume': optimizations.tags.score }, optimizations.tags.suggestion)}</div>
                                 </div>
                             </div>
                         </div>
@@ -1812,14 +1802,6 @@
     ELEMENTS.logoutBtn.addEventListener('click', handleLogout);
     ELEMENTS.closeLegendModal.addEventListener('click', () => ELEMENTS.legendModal.style.display = 'none');
     
-    // [CORREÇÃO] Listener do botão de login do Google
-    ELEMENTS.googleLoginBtn.addEventListener('click', () => {
-        const feedback = ELEMENTS.loginFeedback;
-        feedback.textContent = 'Login com Google em desenvolvimento. Por favor, use e-mail e senha.';
-        feedback.className = 'text-blue-500 text-sm text-center min-h-[20px]';
-        setTimeout(() => feedback.textContent = '', 5000);
-    });
-    
     // Ticket Modal Listeners
     ELEMENTS.openTicketBtn.addEventListener('click', () => ELEMENTS.ticketModal.style.display = 'flex');
     ELEMENTS.closeTicketModal.addEventListener('click', () => ELEMENTS.ticketModal.style.display = 'none');
@@ -1831,9 +1813,8 @@
             const screenshot = canvas.toDataURL('image/png');
             log('Captura de tela gerada.', 'success');
             const subject = "Report de Erro - Darks Vips AI";
-            const body = `Descrição do Problema:\n${description}\n\n--- NÃO EDITE ABAIXO ---\nPrint da tela está anexado.`;
-            // [CORREÇÃO] E-mail de suporte atualizado
-            const mailtoLink = `mailto:suporte@canaisdarks.com.br?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            const body = `Descrição do Problema:\n${description}\n\n(A imagem do print está anexada se o seu cliente de e-mail suportar)`;
+            const mailtoLink = `mailto:suporte@seusite.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             window.location.href = mailtoLink;
             ELEMENTS.ticketModal.style.display = 'none';
         }).catch(err => {
@@ -1903,4 +1884,3 @@
     </script>
 </body>
 </html>
-"
