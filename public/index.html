@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v18.2</title>
+    <title>Darks Vips AI v18.3</title>
     <!-- Favicon -->
     <link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔮</text></svg>">
     
@@ -520,7 +520,8 @@
                         try { return schema ? JSON.parse(text) : { text }; }
                         catch (jsonError) {
                             log(`Erro ao parsear JSON da API: ${jsonError.message}`, 'error');
-                            throw new Error("A resposta da API não é um JSON válido.");
+                            log(`Resposta de texto recebida: ${text}`, 'info');
+                            throw new Error("A IA retornou uma resposta em formato inesperado. Tente novamente.");
                         }
                     }
                     if (result.candidates?.[0]?.finishReason === 'SAFETY') throw new Error("A resposta foi bloqueada por políticas de segurança.");
@@ -594,10 +595,13 @@
             try {
                 const keyword = document.getElementById('niche-keyword').value || 'tópicos em alta';
                 const country = document.getElementById('niche-country').value;
-                const prompt = `Como um especialista em YouTube, gere EXATAMENTE 3 nichos promissores para o YouTube sobre '${keyword}' para o país ${country}. Para cada nicho, atribua pontuações realistas e NÃO-ZERADAS de 60 a 95 para "Potencial", de 10 a 80 para "Concorrência" (onde 10 é baixo e 80 é alto), e de 50 a 95 para "Volume de Busca". O score de Potencial deve ser o principal indicador de qualidade.`;
+                const prompt = `Como um especialista em YouTube, gere EXATAMENTE 3 nichos promissores para o YouTube sobre '${keyword}' para o país ${country}. Para cada nicho, atribua pontuações realistas e NÃO-ZERADAS de 60 a 95 para "Potencial", de 10 a 80 para "Concorrência" (onde 10 é baixo e 80 é alto), e de 50 a 95 para "Volume de Busca". O score de Potencial deve ser o principal indicador de qualidade. Forneça também uma estimativa de RPM realista (ex: 4.50), não pode ser zero.`;
                 const schema = { type: "ARRAY", items: { type: "OBJECT", properties: { niche_name: { type: "STRING" }, description: { type: "STRING" }, unexplored_subniches: { type: "ARRAY", items: { type: "STRING" } }, rpm_estimate_value: { type: "NUMBER" }, scores: { type: "OBJECT", properties: { Potencial: { type: "NUMBER" }, Concorrência: { type: "NUMBER" }, "Volume de Busca": { type: "NUMBER" } } }, suggestion: { type: "STRING" } } } };
                 const result = await callGenerativeAPI(prompt, schema);
-                const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: $${(item.rpm_estimate_value || 0).toFixed(2)}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Busca': item.scores['Volume de Busca'] }, item.suggestion)}</div>`).join('');
+                const html = result.map(item => {
+                    const concorrencia = item.scores?.Concorrência ?? 50;
+                    return `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description || 'Sem descrição.'}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: $${(item.rpm_estimate_value || 0).toFixed(2)}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${(item.unexplored_subniches || []).join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - concorrencia, 'Busca': item.scores['Volume de Busca'] }, item.suggestion)}</div>`;
+                }).join('');
                 if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
                 document.getElementById('generate-more-niches').style.display = 'block';
             } catch(error) { output.innerHTML = `<p class="text-red-500">Erro: ${error.message}</p>`; }
@@ -693,8 +697,17 @@
             'subniche-finder': { btn: 'find-subniches', handler: handlers['find-subniches'], moreBtn: 'generate-more-subniches' },
             'niche-analysis': { btn: 'analyze-niche', handler: handlers['analyze-niche'] },
             'video-optimizer': { btn: 'analyze-video', handler: handlers['analyze-video'] },
+            'competitor-analysis': { btn: 'analyze-competitor', handler: handlers['analyze-competitor'] },
+            'comment-analyzer': { btn: 'analyze-comments', handler: handlers['analyze-comments'] },
             'title-structures': { btn: 'generate-structures', handler: handlers['generate-structures'], moreBtn: 'generate-more-structures' },
-            // ... Mapeamento para TODAS as outras ferramentas
+            'script-writer': { btn: 'generate-script', handler: handlers['generate-script'] },
+            'shorts-script-writer': { btn: 'generate-shorts-script', handler: handlers['shorts-script-writer'] },
+            'content-recycler': { btn: 'recycle-content', handler: handlers['recycle-content'] },
+            'visual-storyboard': { btn: 'generate-storyboard', handler: handlers['generate-storyboard'] },
+            'thumbnail-prompts': { btn: 'generate-prompts', handler: handlers['generate-prompts'], moreBtn: 'generate-more-prompts' },
+            'description-optimizer': { btn: 'generate-description', handler: handlers['generate-description'] },
+            'tag-generator': { btn: 'generate-tags', handler: handlers['generate-tags'] },
+            'monetization-helper': { btn: 'generate-monetization-ideas', handler: handlers['generate-monetization-ideas'] }
         };
         const currentTool = toolActionMapping[tabId];
         if (currentTool && document.getElementById(currentTool.btn)) {
@@ -768,8 +781,43 @@
         });
     }
 
-    async function initializeDashboard() { /* ...código como antes... */ }
-    async function renderDashboardData(channelId) { /* ...código como antes... */ }
+    async function initializeDashboard() {
+        const container = document.getElementById('dashboard-container');
+        if (!appState.userChannels || appState.userChannels.length === 0) {
+            container.innerHTML = `<div class="text-center p-8 bg-white rounded-lg border"><p>Nenhum canal adicionado. Vá para <button class="text-indigo-600 font-semibold" onclick="renderTabContent('channel-organizer')">Organizador de Canais</button> para começar.</p></div>`;
+            return;
+        }
+        
+        const options = appState.userChannels.map(ch => `<option value="${ch.id}">${ch.name}</option>`).join('');
+        container.innerHTML = `<div class="mb-6"><select id="channel-selector" class="p-2 border rounded-md bg-white">${options}</select></div><div id="dashboard-content"></div>`;
+        
+        const selector = document.getElementById('channel-selector');
+        selector.addEventListener('change', (e) => renderDashboardData(e.target.value));
+        renderDashboardData(selector.value);
+    }
+    async function renderDashboardData(channelId) {
+        const contentContainer = document.getElementById('dashboard-content');
+        contentContainer.innerHTML = `<div class="text-center p-8"><p>Buscando dados do canal...</p></div>`;
+        try {
+            const stats = await apiRequest(`/api/youtube-stats/${channelId}`, 'GET');
+            if (!stats) throw new Error("Não foi possível obter as estatísticas do canal.");
+
+            contentContainer.innerHTML = `<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white p-4 rounded-lg border"><p class="text-sm text-slate-500">Inscritos</p><p class="text-2xl font-bold">${Number(stats.subscriberCount).toLocaleString('pt-BR')}</p></div>
+                <div class="bg-white p-4 rounded-lg border"><p class="text-sm text-slate-500">Visualizações</p><p class="text-2xl font-bold">${Number(stats.viewCount).toLocaleString('pt-BR')}</p></div>
+                <div class="bg-white p-4 rounded-lg border"><p class="text-sm text-slate-500">Vídeos</p><p class="text-2xl font-bold">${Number(stats.videoCount).toLocaleString('pt-BR')}</p></div>
+            </div>`;
+            
+            if (stats.uploadsPlaylistId) {
+                const recentVideos = await apiRequest(`/api/youtube-recent-videos/${stats.uploadsPlaylistId}`, 'GET');
+                contentContainer.innerHTML += `<h3 class="text-xl font-bold mt-8 mb-4">Últimos Vídeos</h3><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                    ${recentVideos.map(video => `<div class="bg-white p-4 rounded-lg border shadow-sm"><a href="https://www.youtube.com/watch?v=${video.id}" target="_blank"><img src="${video.thumbnail}" alt="${video.title}" class="rounded-md mb-2 w-full aspect-video object-cover"><h4 class="font-semibold text-sm leading-tight truncate">${video.title}</h4></a><div class="text-xs text-slate-500 mt-2 flex justify-between"><span>👁️ ${Number(video.viewCount).toLocaleString('pt-BR')}</span><span>👍 ${Number(video.likeCount).toLocaleString('pt-BR')}</span><span>💬 ${Number(video.commentCount).toLocaleString('pt-BR')}</span></div></div>`).join('')}
+                </div>`;
+            }
+        } catch (error) {
+            contentContainer.innerHTML = `<div class="text-center p-8 bg-red-50 rounded-lg"><p class="text-red-600">${error.message}</p><p class="text-sm text-slate-500 mt-2">Verifique se o ID do canal está correto no Organizador de Canais e se sua chave da API do Google está configurada.</p></div>`;
+        }
+    }
     
     function initializeChannelOrganizer() {
         const form = document.getElementById('channel-form');
@@ -878,7 +926,16 @@
         renderPlanner();
     }
     
-    function initializeMonetizationHelper() { /* ...código como antes... */ }
+    function initializeMonetizationHelper() {
+        const channelSelect = document.getElementById('monetization-channel-select');
+        if(appState.userChannels.length > 0) {
+            channelSelect.innerHTML = '<option value="">Selecione um canal cadastrado</option>' + appState.userChannels.map(ch => `<option value="${ch.niche}">${ch.name} (${ch.niche})</option>`).join('');
+        } else {
+            channelSelect.innerHTML = '<option value="">Nenhum canal cadastrado</option>';
+            channelSelect.disabled = true;
+            document.getElementById('generate-monetization-ideas').disabled = true;
+        }
+    }
 
     // --- Event Listeners Globais ---
     document.addEventListener('DOMContentLoaded', () => {
@@ -976,3 +1033,304 @@
     </script>
 </body>
 </html>
+```
+
+Most up-to-date Immersive Artifact for "darks-vips-server-js-google" is:
+
+```javascript
+// server.js
+
+// 1. Importação de Módulos
+const express = require('express');
+const { Pool } = require('pg');
+const path = require('path');
+const bcrypt = require('bcryptjs');
+const { google } = require('googleapis');
+const googleTrends = require('google-trends-api');
+const axios = require('axios');
+const { OAuth2Client } = require('google-auth-library');
+const jwt = require('jsonwebtoken');
+
+// 2. Configuração Inicial
+const app = express();
+const PORT = process.env.PORT || 3000;
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const JWT_SECRET = process.env.JWT_SECRET;
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+// [NOVO] Verificação de variáveis de ambiente essenciais
+if (!GOOGLE_CLIENT_ID || !JWT_SECRET) {
+    console.warn("\n[AVISO] Variáveis de ambiente GOOGLE_CLIENT_ID e/ou JWT_SECRET não estão definidas.");
+    console.warn("A autenticação, especialmente com o Google, PODE NÃO FUNCIONAR corretamente.\n");
+}
+
+// Middlewares
+app.use(express.json({ limit: '10mb' })); // Aumenta o limite para o upload de screenshots
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 3. Conexão com o Banco de Dados PostgreSQL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+const initializeDb = async () => {
+  const dbClient = await pool.connect();
+  try {
+    await dbClient.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        name VARCHAR(255),
+        google_id VARCHAR(255) UNIQUE,
+        password_hash VARCHAR(255),
+        settings JSONB
+      );
+    `);
+    console.log('Tabela "users" verificada/criada com sucesso.');
+  } catch (err) {
+    console.error('Erro ao inicializar o banco de dados:', err);
+  } finally {
+    dbClient.release();
+  }
+};
+
+// 4. Middleware de Autenticação JWT
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token == null) return res.sendStatus(401);
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.sendStatus(403);
+        req.user = user;
+        next();
+    });
+};
+
+// 5. Rotas da API (Autenticação e Configurações)
+app.post('/api/register', async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
+    try {
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+        const result = await pool.query('INSERT INTO users (email, password_hash, settings) VALUES ($1, $2, $3) RETURNING id, email', [email, passwordHash, {}]);
+        const user = result.rows[0];
+        const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+        res.status(201).json({ user, accessToken });
+    } catch (err) {
+        if (err.code === '23505') return res.status(409).json({ message: 'Este e-mail já está em uso.' });
+        console.error(err);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+app.post('/api/login', async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
+    try {
+        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        const user = result.rows[0];
+        if (user && user.password_hash && await bcrypt.compare(password, user.password_hash)) {
+            const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+            res.json({ user: {id: user.id, email: user.email, name: user.name}, accessToken });
+        } else {
+            res.status(401).json({ message: 'Credenciais inválidas.' });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+app.post('/api/google-login', async (req, res) => {
+    const { credential } = req.body;
+    if (!GOOGLE_CLIENT_ID) {
+        return res.status(500).json({ message: "ID de Cliente do Google não configurado no servidor." });
+    }
+    try {
+        const ticket = await client.verifyIdToken({
+            idToken: credential,
+            audience: GOOGLE_CLIENT_ID,
+        });
+        const payload = ticket.getPayload();
+        const { sub: google_id, email, name } = payload;
+        let result = await pool.query('SELECT * FROM users WHERE google_id = $1', [google_id]);
+        let user = result.rows[0];
+
+        if (!user) {
+            result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+            user = result.rows[0];
+            if (user) {
+                // [CORRIGIDO] Vincula a conta e refaz a busca para pegar o usuário atualizado
+                await pool.query('UPDATE users SET google_id = $1, name = $2 WHERE email = $3', [google_id, name, email]);
+                user = (await pool.query('SELECT * FROM users WHERE email = $1', [email])).rows[0];
+            } else {
+                // Cria um novo usuário
+                result = await pool.query('INSERT INTO users (email, name, google_id, settings) VALUES ($1, $2, $3, $4) RETURNING *', [email, name, google_id, {}]);
+                user = result.rows[0];
+            }
+        }
+        const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+        res.json({ user: {id: user.id, email: user.email, name: user.name}, accessToken });
+    } catch (error) {
+        console.error("Erro no login com Google:", error);
+        res.status(500).json({ message: "Falha na autenticação com o Google." });
+    }
+});
+
+app.get('/api/settings/:userId', authenticateToken, async (req, res) => {
+    if (req.user.id.toString() !== req.params.userId) return res.sendStatus(403);
+    const { userId } = req.params;
+    try {
+        const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
+        if (result.rows.length > 0) res.json(result.rows[0].settings || {});
+        else res.status(404).json({ message: 'Usuário não encontrado.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+app.post('/api/settings/:userId', authenticateToken, async (req, res) => {
+    if (req.user.id.toString() !== req.params.userId) return res.sendStatus(403);
+    const { userId } = req.params;
+    const { settings } = req.body;
+    try {
+        const result = await pool.query('UPDATE users SET settings = $1 WHERE id = $2 RETURNING id', [settings, userId]);
+        if (result.rowCount > 0) res.json({ message: 'Configurações salvas com sucesso!' });
+        else res.status(404).json({ message: 'Usuário não encontrado.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+// 6. Rotas da API (YouTube, Trends, etc.)
+const getGoogleApiKey = async (userId) => {
+    const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
+    return result.rows.length > 0 ? result.rows[0].settings?.google_api : null;
+};
+
+app.get('/api/youtube-stats/:channelId', authenticateToken, async (req, res) => {
+    const { channelId } = req.params;
+    try {
+        const apiKey = await getGoogleApiKey(req.user.id);
+        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
+        const youtube = google.youtube({ version: 'v3', auth: apiKey });
+        const response = await youtube.channels.list({ part: 'snippet,statistics,contentDetails', id: channelId });
+        if (response.data.items.length === 0) return res.status(404).json({ message: 'Canal não encontrado.' });
+        const channel = response.data.items[0];
+        res.json({
+            subscriberCount: channel.statistics.subscriberCount,
+            viewCount: channel.statistics.viewCount,
+            videoCount: channel.statistics.videoCount,
+            uploadsPlaylistId: channel.contentDetails.relatedPlaylists.uploads
+        });
+    } catch (error) {
+        console.error("Erro na API do YouTube (Stats):", error.message);
+        res.status(500).json({ message: "Erro ao buscar estatísticas do canal." });
+    }
+});
+
+app.get('/api/youtube-recent-videos/:playlistId', authenticateToken, async (req, res) => {
+    const { playlistId } = req.params;
+    try {
+        const apiKey = await getGoogleApiKey(req.user.id);
+        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
+        const youtube = google.youtube({ version: 'v3', auth: apiKey });
+        const response = await youtube.playlistItems.list({ part: 'snippet,contentDetails', playlistId: playlistId, maxResults: 10 });
+        const videoIds = response.data.items.map(item => item.contentDetails.videoId).join(',');
+        const videosResponse = await youtube.videos.list({ part: 'statistics,snippet', id: videoIds });
+        res.json(videosResponse.data.items.map(v => ({
+            id: v.id,
+            title: v.snippet.title,
+            thumbnail: v.snippet.thumbnails.medium.url,
+            viewCount: v.statistics.viewCount,
+            likeCount: v.statistics.likeCount,
+            commentCount: v.statistics.commentCount
+        })));
+    } catch (error) {
+        console.error("Erro na API do YouTube (Videos):", error.message);
+        res.status(500).json({ message: "Erro ao buscar vídeos recentes." });
+    }
+});
+
+app.get('/api/video-comments/:videoId', authenticateToken, async (req, res) => {
+    const { videoId } = req.params;
+    try {
+        const apiKey = await getGoogleApiKey(req.user.id);
+        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
+        const youtube = google.youtube({ version: 'v3', auth: apiKey });
+        const response = await youtube.commentThreads.list({ part: 'snippet', videoId: videoId, maxResults: 50, order: 'relevance' });
+        res.json(response.data.items.map(item => item.snippet.topLevelComment.snippet.textDisplay));
+    } catch (error) {
+        console.error("Erro na API do YouTube (Comments):", error.message);
+        res.status(500).json({ message: "Erro ao buscar comentários." });
+    }
+});
+
+app.get('/api/video-details/:videoId', authenticateToken, async (req, res) => {
+    const { videoId } = req.params;
+    try {
+        const apiKey = await getGoogleApiKey(req.user.id);
+        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
+        const youtube = google.youtube({ version: 'v3', auth: apiKey });
+        const response = await youtube.videos.list({ part: 'snippet,statistics', id: videoId });
+        if (response.data.items.length === 0) return res.status(404).json({ message: 'Vídeo não encontrado.' });
+        const video = response.data.items[0];
+        res.json({
+            title: video.snippet.title,
+            description: video.snippet.description,
+            tags: video.snippet.tags || [],
+            detectedLanguage: video.snippet.defaultAudioLanguage || video.snippet.defaultLanguage || 'pt'
+        });
+    } catch (error) {
+        console.error("Erro na API do YouTube (Details):", error.message);
+        res.status(500).json({ message: "Erro ao buscar dados do vídeo." });
+    }
+});
+
+app.get('/api/google-trends/:keyword/:geo', authenticateToken, async (req, res) => {
+    const { keyword, geo } = req.params;
+    try {
+        const result = await googleTrends.interestOverTime({
+            keyword,
+            geo: geo.toUpperCase(),
+            startTime: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+        });
+        res.json(JSON.parse(result));
+    } catch (error) {
+        console.error('Erro no Google Trends:', error.message);
+        res.status(500).json({ message: 'Falha ao buscar dados de tendência.' });
+    }
+});
+
+app.post('/api/correct-text', authenticateToken, async (req, res) => {
+    const { text, openrouterKey } = req.body;
+    if (!openrouterKey || !text) return res.status(400).json({ message: 'Chave e texto são obrigatórios.' });
+    try {
+        const response = await axios.post("https://openrouter.ai/api/v1/chat/completions", {
+            model: "openai/gpt-3.5-turbo",
+            messages: [{ role: "user", content: `Revise e corrija o seguinte texto em português, mantendo o tom original e a formatação. Apenas retorne o texto corrigido, sem comentários adicionais:\n\n${text}` }],
+        }, { headers: { 'Authorization': `Bearer ${openrouterKey}` } });
+        res.json({ text: response.data.choices[0].message.content });
+    } catch (error) {
+        console.error('Erro na API OpenRouter:', error.response ? error.response.data : error.message);
+        res.status(500).json({ message: 'Erro ao revisar o texto.' });
+    }
+});
+
+// 7. Rota Genérica (Catch-all) para servir o index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// 8. Inicialização do Servidor
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+  initializeDb();
+});
