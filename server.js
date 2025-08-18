@@ -18,14 +18,13 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const JWT_SECRET = process.env.JWT_SECRET;
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
-// [NOVO] Verificação de variáveis de ambiente essenciais
 if (!GOOGLE_CLIENT_ID || !JWT_SECRET) {
     console.warn("\n[AVISO] Variáveis de ambiente GOOGLE_CLIENT_ID e/ou JWT_SECRET não estão definidas.");
     console.warn("A autenticação, especialmente com o Google, PODE NÃO FUNCIONAR corretamente.\n");
 }
 
 // Middlewares
-app.use(express.json({ limit: '10mb' })); // Aumenta o limite para o upload de screenshots
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 3. Conexão com o Banco de Dados PostgreSQL
@@ -96,7 +95,7 @@ app.post('/api/login', async (req, res) => {
         const user = result.rows[0];
         if (user && user.password_hash && await bcrypt.compare(password, user.password_hash)) {
             const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-            res.json({ user: {id: user.id, email: user.email}, accessToken });
+            res.json({ user: {id: user.id, email: user.email, name: user.name}, accessToken });
         } else {
             res.status(401).json({ message: 'Credenciais inválidas.' });
         }
@@ -120,13 +119,16 @@ app.post('/api/google-login', async (req, res) => {
         const { sub: google_id, email, name } = payload;
         let result = await pool.query('SELECT * FROM users WHERE google_id = $1', [google_id]);
         let user = result.rows[0];
+
         if (!user) {
             result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
             user = result.rows[0];
             if (user) {
-                await pool.query('UPDATE users SET google_id = $1, name = $2 WHERE email = $3 RETURNING *', [google_id, name, email]);
+                // [CORRIGIDO] Vincula a conta e refaz a busca para pegar o usuário atualizado
+                await pool.query('UPDATE users SET google_id = $1, name = $2 WHERE email = $3', [google_id, name, email]);
                 user = (await pool.query('SELECT * FROM users WHERE email = $1', [email])).rows[0];
             } else {
+                // Cria um novo usuário
                 result = await pool.query('INSERT INTO users (email, name, google_id, settings) VALUES ($1, $2, $3, $4) RETURNING *', [email, name, google_id, {}]);
                 user = result.rows[0];
             }
@@ -166,7 +168,7 @@ app.post('/api/settings/:userId', authenticateToken, async (req, res) => {
     }
 });
 
-// 6. Rotas da API (YouTube, Trends, etc.) - AGORA PROTEGIDAS
+// 6. Rotas da API (YouTube, Trends, etc.)
 const getGoogleApiKey = async (userId) => {
     const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
     return result.rows.length > 0 ? result.rows[0].settings?.google_api : null;
