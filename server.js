@@ -18,6 +18,12 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const JWT_SECRET = process.env.JWT_SECRET;
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
+// [NOVO] Verificação de variáveis de ambiente essenciais
+if (!GOOGLE_CLIENT_ID || !JWT_SECRET) {
+    console.warn("\n[AVISO] Variáveis de ambiente GOOGLE_CLIENT_ID e/ou JWT_SECRET não estão definidas.");
+    console.warn("A autenticação, especialmente com o Google, PODE NÃO FUNCIONAR corretamente.\n");
+}
+
 // Middlewares
 app.use(express.json({ limit: '10mb' })); // Aumenta o limite para o upload de screenshots
 app.use(express.static(path.join(__dirname, 'public')));
@@ -102,6 +108,9 @@ app.post('/api/login', async (req, res) => {
 
 app.post('/api/google-login', async (req, res) => {
     const { credential } = req.body;
+    if (!GOOGLE_CLIENT_ID) {
+        return res.status(500).json({ message: "ID de Cliente do Google não configurado no servidor." });
+    }
     try {
         const ticket = await client.verifyIdToken({
             idToken: credential,
@@ -115,7 +124,8 @@ app.post('/api/google-login', async (req, res) => {
             result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
             user = result.rows[0];
             if (user) {
-                await pool.query('UPDATE users SET google_id = $1, name = $2 WHERE email = $3', [google_id, name, email]);
+                await pool.query('UPDATE users SET google_id = $1, name = $2 WHERE email = $3 RETURNING *', [google_id, name, email]);
+                user = (await pool.query('SELECT * FROM users WHERE email = $1', [email])).rows[0];
             } else {
                 result = await pool.query('INSERT INTO users (email, name, google_id, settings) VALUES ($1, $2, $3, $4) RETURNING *', [email, name, google_id, {}]);
                 user = result.rows[0];
@@ -162,7 +172,6 @@ const getGoogleApiKey = async (userId) => {
     return result.rows.length > 0 ? result.rows[0].settings?.google_api : null;
 };
 
-// [CORRIGIDO] Adicionado authenticateToken
 app.get('/api/youtube-stats/:channelId', authenticateToken, async (req, res) => {
     const { channelId } = req.params;
     try {
@@ -184,7 +193,6 @@ app.get('/api/youtube-stats/:channelId', authenticateToken, async (req, res) => 
     }
 });
 
-// [CORRIGIDO] Adicionado authenticateToken
 app.get('/api/youtube-recent-videos/:playlistId', authenticateToken, async (req, res) => {
     const { playlistId } = req.params;
     try {
@@ -208,7 +216,6 @@ app.get('/api/youtube-recent-videos/:playlistId', authenticateToken, async (req,
     }
 });
 
-// [CORRIGIDO] Adicionado authenticateToken
 app.get('/api/video-comments/:videoId', authenticateToken, async (req, res) => {
     const { videoId } = req.params;
     try {
@@ -244,14 +251,13 @@ app.get('/api/video-details/:videoId', authenticateToken, async (req, res) => {
     }
 });
 
-// [NOVA ROTA] Para o Google Trends
 app.get('/api/google-trends/:keyword/:geo', authenticateToken, async (req, res) => {
     const { keyword, geo } = req.params;
     try {
         const result = await googleTrends.interestOverTime({
             keyword,
             geo: geo.toUpperCase(),
-            startTime: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) // Últimos 12 meses
+            startTime: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
         });
         res.json(JSON.parse(result));
     } catch (error) {
@@ -274,7 +280,6 @@ app.post('/api/correct-text', authenticateToken, async (req, res) => {
         res.status(500).json({ message: 'Erro ao revisar o texto.' });
     }
 });
-
 
 // 7. Rota Genérica (Catch-all) para servir o index.html
 app.get('*', (req, res) => {
