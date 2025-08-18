@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v17.7</title>
+    <title>Darks Vips AI v17.8</title>
     <!-- Favicon -->
     <link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔮</text></svg>">
     
+    <!-- Google Sign-In -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -101,8 +104,22 @@
                 <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">Entrar</button>
             </form>
             <div class="relative flex py-2 items-center"><div class="flex-grow border-t border-slate-200"></div><span class="flex-shrink mx-4 text-slate-400 text-xs">OU</span><div class="flex-grow border-t border-slate-200"></div></div>
-            <button id="google-login-btn" class="w-full flex items-center justify-center gap-3 py-3 px-4 border rounded-md bg-white text-slate-700 hover:bg-slate-50"><svg class="w-5 h-5" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C42.021,35.596,44,30.138,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path></svg><span>Entrar com Google</span></button>
-            <p class="text-center text-sm">Não tem uma conta? <a href="#" id="show-register" class="font-medium text-indigo-600 hover:text-indigo-500">Registre-se</a></p>
+            
+            <!-- Botão de Login com Google -->
+            <div id="g_id_onload"
+                 data-client_id="483231613006-31cqno4qts2p5ut9i0s7rrnpl488aiqc.apps.googleusercontent.com" <!-- IMPORTANTE: Substituir -->
+                 data-callback="handleGoogleCredentialResponse">
+            </div>
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-size="large"
+                 data-theme="outline"
+                 data-text="sign_in_with"
+                 data-shape="rectangular"
+                 data-logo_alignment="left">
+            </div>
+
+            <p class="text-center text-sm mt-4">Não tem uma conta? <a href="#" id="show-register" class="font-medium text-indigo-600 hover:text-indigo-500">Registre-se</a></p>
         </div>
     </div>
     <div id="register-container" class="hidden items-center justify-center h-screen bg-slate-100">
@@ -237,6 +254,7 @@
     // --- Global State Management ---
     let appState = {
         currentUser: null,
+        token: null, // <-- NOVO: Para armazenar o JWT
         apiKeys: { 
             gemini: "", 
             gemini_backup1: "",
@@ -261,7 +279,6 @@
         registerFeedback: document.getElementById('register-feedback'),
         showRegister: document.getElementById('show-register'),
         showLogin: document.getElementById('show-login'),
-        googleLoginBtn: document.getElementById('google-login-btn'),
         sidebar: document.getElementById('sidebar'),
         sidebarNav: document.getElementById('sidebar-nav'),
         tabContent: document.getElementById('tab-content'),
@@ -301,14 +318,15 @@
     // --- API Communication ---
     async function apiRequest(endpoint, method, body = null) {
         log(`Iniciando requisição ${method} para ${endpoint}`);
-        const options = { 
-            method, 
-            headers: { 
-                'Content-Type': 'application/json',
-                'x-user-id': appState.currentUser?.id
-            } 
-        };
+        const headers = { 'Content-Type': 'application/json' };
+        // [MODIFICADO] Adiciona o token de autenticação se estiver disponível
+        if (appState.token) {
+            headers['Authorization'] = `Bearer ${appState.token}`;
+        }
+        
+        const options = { method, headers };
         if (body) options.body = JSON.stringify(body);
+
         try {
             const response = await fetch(endpoint, options);
             if (!response.ok) {
@@ -338,13 +356,14 @@
 
     async function handleLogin(e) {
         e.preventDefault();
-        log('Tentativa de login...');
+        log('Tentativa de login com e-mail/senha...');
         ELEMENTS.loginFeedback.textContent = '';
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
         try {
-            const user = await apiRequest('/api/login', 'POST', { email, password });
-            appState.currentUser = user;
+            const data = await apiRequest('/api/login', 'POST', { email, password });
+            appState.currentUser = data.user;
+            appState.token = data.accessToken;
             await initializeApp();
         } catch (error) {
             ELEMENTS.loginFeedback.textContent = error.message;
@@ -358,18 +377,31 @@
         const email = document.getElementById('register-email').value;
         const password = document.getElementById('register-password').value;
         try {
-            await apiRequest('/api/register', 'POST', { email, password });
-            const user = await apiRequest('/api/login', 'POST', { email, password });
-            appState.currentUser = user;
+            const data = await apiRequest('/api/register', 'POST', { email, password });
+            appState.currentUser = data.user;
+            appState.token = data.accessToken;
             await initializeApp();
         } catch (error) {
             ELEMENTS.registerFeedback.textContent = error.message;
         }
     }
+
+    // [NOVA FUNÇÃO] Callback do Login com Google
+    async function handleGoogleCredentialResponse(response) {
+        log('Recebida credencial do Google. Enviando para o backend...');
+        try {
+            const data = await apiRequest('/api/google-login', 'POST', { credential: response.credential });
+            appState.currentUser = data.user;
+            appState.token = data.accessToken;
+            await initializeApp();
+        } catch (error) {
+            ELEMENTS.loginFeedback.textContent = 'Falha no login com Google: ' + error.message;
+        }
+    }
     
     function handleLogout() {
         log('Usuário deslogado.');
-        appState = { currentUser: null, apiKeys: { gemini: "", gemini_backup1: "", gemini_backup2: "", openai: "", google_api: "", openrouter: "" }, userChannels: [], videoIdeas: [], currentGeminiKeyIndex: 0 };
+        appState = { currentUser: null, token: null, apiKeys: { gemini: "", gemini_backup1: "", gemini_backup2: "", openai: "", google_api: "", openrouter: "" }, userChannels: [], videoIdeas: [], currentGeminiKeyIndex: 0 };
         ELEMENTS.appContainer.style.display = 'none';
         showLoginScreen();
         document.getElementById('login-form').reset();
@@ -1812,14 +1844,6 @@
     ELEMENTS.logoutBtn.addEventListener('click', handleLogout);
     ELEMENTS.closeLegendModal.addEventListener('click', () => ELEMENTS.legendModal.style.display = 'none');
     
-    // [CORREÇÃO] Listener do botão de login do Google
-    ELEMENTS.googleLoginBtn.addEventListener('click', () => {
-        const feedback = ELEMENTS.loginFeedback;
-        feedback.textContent = 'Login com Google em desenvolvimento. Por favor, use e-mail e senha.';
-        feedback.className = 'text-blue-500 text-sm text-center min-h-[20px]';
-        setTimeout(() => feedback.textContent = '', 5000);
-    });
-    
     // Ticket Modal Listeners
     ELEMENTS.openTicketBtn.addEventListener('click', () => ELEMENTS.ticketModal.style.display = 'flex');
     ELEMENTS.closeTicketModal.addEventListener('click', () => ELEMENTS.ticketModal.style.display = 'none');
@@ -1903,4 +1927,3 @@
     </script>
 </body>
 </html>
-"
