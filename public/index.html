@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v14.3</title>
+    <title>Darks Vips AI v14.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -291,10 +291,10 @@
     const createCopyButton = (text) => `<button class="copy-btn text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded hover:bg-slate-300" data-copy-text="${encodeURIComponent(text)}">Copiar</button>`;
     
     const renderScoreCard = (title, mainScore, subScores, suggestion, isNovel = false) => {
-        const intMainScore = Math.round(Math.min(100, mainScore));
+        const intMainScore = Math.round(Math.min(100, mainScore || 0));
         const novelBadge = isNovel ? '<span class="inline-flex items-center rounded-md bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700">✨ Inédita</span>' : '';
         const subScoresHtml = Object.entries(subScores).map(([key, value]) => {
-            const cappedValue = Math.min(100, Math.round(value));
+            const cappedValue = Math.min(100, Math.round(value || 0));
             return `
             <div class="mb-2">
                 <div class="flex justify-between items-center text-sm mb-1"><span class="text-slate-600">${key}</span><span class="font-semibold text-slate-700">${cappedValue}/100</span></div>
@@ -388,7 +388,7 @@
             desc: "Descubra subnichos inexplorados a partir de um nicho principal.", 
             content: `<div class="bg-white p-6 rounded-xl shadow-sm border">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <input type="text" id="main-niche" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nicho principal. Ex: História">
+                            <input type="text" id="main-niche" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nicho principal (ou deixe em branco)">
                             <select id="subniche-country" class="w-full px-4 py-3 bg-slate-100 border rounded-lg">
                                 <option value="BR">Brasil</option><option value="US">EUA</option><option value="PT">Portugal</option><option value="ES">Espanha</option><option value="DE">Alemanha</option><option value="FR">França</option><option value="GB">Reino Unido</option><option value="JP">Japão</option>
                             </select>
@@ -399,7 +399,7 @@
                       </div>` 
         },
         "niche-analysis": { title: "Análise de Nicho (RPM/Hype)", desc: "Analise o potencial de um nicho específico.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="analysis-niche" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nicho a ser analisado"><select id="analysis-country" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="BR">Brasil</option><option value="US">EUA</option><option value="PT">Portugal</option><option value="ES">Espanha</option><option value="DE">Alemanha</option><option value="FR">França</option></select></div><button id="analyze-niche" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">📊 Analisar Nicho</button><div id="output" class="mt-6"></div></div>` },
-        "video-optimizer": { title: "Analisador de Vídeo (URL)", desc: "Otimize títulos, descrições e tags a partir de uma URL do YouTube.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="url" id="video-url" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="https://www.youtube.com/watch?v=..."><button id="analyze-video" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">🚀 Otimizar Vídeo</button><div id="output" class="mt-6"></div></div>` },
+        "video-optimizer": { title: "Analisador de Vídeo (URL)", desc: "Otimize títulos, descrições e tags a partir de uma URL do YouTube.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="url" id="video-url" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="https://www.youtube.com/watch?v=..."><button id="analyze-video" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">� Otimizar Vídeo</button><div id="output" class="mt-6"></div></div>` },
         "title-structures": { title: "Estruturas de Títulos Virais", desc: "Gere estruturas de títulos com alto potencial de clique.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="structure-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico. Ex: Produtividade"><select id="structure-lang" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português</option><option value="en-US">Inglês</option><option value="es-ES">Espanhol</option></select></div><button id="generate-structures" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">🏗️ Gerar Estruturas</button><div id="output" class="mt-6 space-y-4"></div><button id="generate-more-structures" class="hidden w-full mt-4 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700">Gerar Mais</button></div>` },
         "script-writer": { title: "Criador de Roteiros", desc: "Gere roteiros com foco em alta retenção.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="space-y-4"><input type="text" id="script-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico do Vídeo"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="number" id="script-duration" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Duração (minutos)"><input type="number" id="script-parts" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nº de Partes"></div><div class="flex items-center"><input id="script-narration-only" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded"><label for="script-narration-only" class="ml-2 block text-sm text-gray-900">Apenas Narração (sem diálogos)</label></div><button id="generate-script" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">📜 Gerar Roteiro</button></div><div id="output" class="mt-6"></div></div>` },
         "visual-storyboard": { title: "Storyboard Visual", desc: "Transforme seu roteiro em um guia de cenas e visuais.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><textarea id="storyboard-script" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" rows="8" placeholder="Cole seu roteiro aqui..."></textarea><button id="generate-storyboard" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">🎬 Criar Storyboard</button><div id="output" class="mt-6"></div></div>` },
@@ -476,9 +476,10 @@
             document.getElementById('generate-more-niches').style.display = 'block';
         },
         'find-subniches': async (output, append = false) => {
-            const mainNiche = document.getElementById('main-niche').value.trim();
+            let mainNiche = document.getElementById('main-niche').value.trim();
             const country = document.getElementById('subniche-country').value;
-            if (!mainNiche) { output.innerHTML = `<p class="text-red-500">Insira um nicho principal.</p>`; return; }
+            if (!mainNiche) { mainNiche = "qualquer nicho com alta demanda e baixa concorrência" }
+            
             const prompt = `Para o nicho principal de "${mainNiche}", no país ${country}, gere 5 subnichos inexplorados e criativos. Para cada um, forneça uma sugestão que seja uma "virada de chave" e indique se é uma ideia inédita.`;
             const schema = {
                 type: "ARRAY",
@@ -587,7 +588,7 @@
                 const videoData = await apiRequest(`/api/video-details/${videoId}`, 'GET');
                 const { title, description, tags, channelTitle } = videoData;
 
-                const prompt = `Como um especialista em YouTube, analise os dados de um vídeo e gere otimizações de alta performance. Seja criativo e forneça sugestões que sejam uma "virada de chave". Título Atual: "${title}". Descrição Atual: "${description}". Tags Atuais: "${tags.join(', ')}".`;
+                const prompt = `Como um especialista em YouTube, analise os dados de um vídeo e gere otimizações de alta performance para "ressuscitar" seu alcance. Seja criativo e forneça sugestões que sejam uma "virada de chave". Título Atual: "${title}". Descrição Atual: "${description}". Tags Atuais: "${tags.join(', ')}".`;
                 const schema = {
                     type: "OBJECT",
                     properties: {
@@ -627,7 +628,7 @@
                 output.innerHTML = `
                     <div class="mb-6"><h3 class="text-xl font-bold mb-2">Análise Atual (Dados Reais)</h3><div class="flex gap-4 bg-slate-100 p-4 rounded-lg"><img src="https://i.ytimg.com/vi/${videoId}/hqdefault.jpg" onerror="this.src='https://placehold.co/120x90/e2e8f0/334155?text=Thumb'" class="rounded-md w-32 h-auto object-cover"/><div class="flex-1"><h4 class="font-semibold">${title}</h4><p class="text-sm font-medium text-slate-600">${channelTitle}</p><p class="text-sm text-slate-500 prose whitespace-pre-wrap">${description}</p><p class="text-xs text-slate-400 mt-2">Tags: ${tags.join(', ')}</p></div></div></div>
                     <div><h3 class="text-xl font-bold mb-2">Sugestões de Otimização</h3>
-                    ${result.optimized_titles.map(t => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${t.title} ${createCopyButton(t.title)}</h4></div>${renderScoreCard('Potencial Viral', t.score, { 'CTR': t.score + 2, 'SEO': t.score - 3 }, t.suggestion)}</div>`).join('')}
+                    ${result.optimized_titles.map(t => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${t.title} ${createCopyButton(t.title)}</h4></div>${renderScoreCard('Potencial Viral', t.score, { 'CTR': t.score, 'SEO': t.score - 5 }, t.suggestion)}</div>`).join('')}
                     <div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4 items-start">
                         <div class="flex-1">
                             <h4 class="font-semibold">Descrição Otimizada ${createCopyButton(result.optimized_description.description + '\n\n' + result.optimized_description.hashtags)}</h4>
@@ -637,14 +638,14 @@
                                 <p class="text-sm text-slate-700 p-2 bg-white rounded border mt-1">${result.optimized_description.hashtags}</p>
                             </div>
                         </div>
-                        ${renderScoreCard('Otimização SEO', result.optimized_description.score, { 'Palavras-chave': result.optimized_description.score + 5, 'Clareza': result.optimized_description.score - 2 }, result.optimized_description.suggestion)}
+                        ${renderScoreCard('Otimização SEO', result.optimized_description.score, { 'Palavras-chave': result.optimized_description.score, 'Clareza': result.optimized_description.score - 2 }, result.optimized_description.suggestion)}
                     </div>
                     <div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4 items-start">
                         <div class="flex-1">
                             <h4 class="font-semibold">Tags Otimizadas (para campo de tags) ${createCopyButton(result.optimized_tags.tags.join(', '))}</h4>
                             <p class="text-sm text-slate-700 p-2 bg-white rounded border mt-2">${result.optimized_tags.tags.join(', ')}</p>
                         </div>
-                        ${renderScoreCard('Qualidade das Tags', result.optimized_tags.score, { 'Relevância': result.optimized_tags.score + 5, 'Volume': result.optimized_tags.score - 3 }, result.optimized_tags.suggestion)}
+                        ${renderScoreCard('Qualidade das Tags', result.optimized_tags.score, { 'Relevância': result.optimized_tags.score, 'Volume': result.optimized_tags.score - 8 }, result.optimized_tags.suggestion)}
                     </div></div>`;
             } finally {
                 hideProgressModal();
@@ -669,7 +670,7 @@
                 console.warn("Não foi possível buscar dados do Google Trends:", error.message);
             }
 
-            const prompt = `Crie 3 estruturas de títulos virais para "${topic}" no idioma ${lang}, com no MÁXIMO 100 caracteres. A nota de 'Busca' para este tópico é ${searchScore}. Para cada estrutura, forneça uma sugestão que seja uma "virada de chave".`;
+            const prompt = `Crie 3 estruturas de títulos virais para "${topic}" no idioma ${lang}, com no MÁXIMO 100 caracteres. A nota de 'Busca' para este tópico é ${searchScore}. Apenas retorne títulos com nota acima de 80. Para cada estrutura, forneça uma sugestão que seja uma "virada de chave".`;
             const schema = {
                 type: "ARRAY",
                 items: {
@@ -679,14 +680,15 @@
                         structure: { type: "STRING" },
                         example_title: { type: "STRING", description: "Exemplo de título (máx 100 chars)." },
                         explanation: { type: "STRING" },
-                        viral_score: { type: "NUMBER", description: "Pontuação (70-98)." },
+                        viral_score: { type: "NUMBER", description: "Pontuação (80-98)." },
                         suggestion: { type: "STRING", description: "A 'virada de chave' para esta estrutura." },
                         is_novel: { type: "BOOLEAN", description: "Se a estrutura é inédita e tem pontuação > 93." }
                     }
                 }
             };
             const result = await callGenerativeAPI(prompt, schema);
-            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Busca': searchScore }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
+            const filteredResult = result.filter(item => item.viral_score > 80);
+            const html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Busca': searchScore }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
             document.getElementById('generate-more-structures').style.display = 'block';
         },
@@ -782,7 +784,7 @@
                             <p class="text-sm text-slate-700 p-2 bg-white rounded border mt-1">${result.hashtags}</p>
                         </div>
                     </div>
-                    ${renderScoreCard('Otimização', result.score, { 'SEO': result.score + 3, 'Engajamento': result.score - 4 }, result.suggestion)}
+                    ${renderScoreCard('Otimização', result.score, { 'SEO': result.score, 'Engajamento': result.score - 4 }, result.suggestion)}
                 </div>`;
         },
         'generate-tags': async (output) => {
@@ -799,7 +801,7 @@
                 }
             };
             const result = await callGenerativeAPI(prompt, schema);
-            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Tags Geradas</h4>${createCopyButton(result.tags)}</div><p class="text-sm text-slate-700 p-2 bg-white rounded border">${result.tags}</p></div>${renderScoreCard('Qualidade', result.score, { 'Relevância': result.score + 5, 'Volume': result.score - 3 }, result.suggestion)}</div>`;
+            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Tags Geradas</h4>${createCopyButton(result.tags)}</div><p class="text-sm text-slate-700 p-2 bg-white rounded border">${result.tags}</p></div>${renderScoreCard('Qualidade', result.score, { 'Relevância': result.score, 'Volume': result.score - 8 }, result.suggestion)}</div>`;
         }
     };
     
