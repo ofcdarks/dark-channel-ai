@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v17.4</title>
+    <title>Darks Vips AI v17.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -358,18 +358,17 @@
         const subScoresHtml = Object.entries(subScores).map(([key, value]) => {
             let displayValue = typeof value === 'number' ? `${Math.round(value)}/100` : value;
             let color = 'text-slate-700';
-            let progress = '';
-
-            if (key.includes('Busca')) {
+            if (key === 'Busca') {
                  displayValue = getTrendLevel(value);
                  color = displayValue === 'Alto' ? 'text-green-500' : displayValue === 'Médio' ? 'text-yellow-500' : 'text-red-500';
             } else if (typeof value === 'number') {
                 color = getScoreTextColor(value);
-                progress = `<div class="progress-bar-container"><div class="progress-bar-inner ${getScoreColor(value)}" style="width: ${value}%;"></div></div>`;
             } else {
                  color = value === 'Positiva' ? 'text-green-500' : value === 'Negativa' ? 'text-red-500' : value === 'Mista' ? 'text-yellow-500' : 'text-slate-700';
             }
             
+            const progress = typeof value === 'number' ? `<div class="progress-bar-container"><div class="progress-bar-inner ${getScoreColor(value)}" style="width: ${value}%;"></div></div>` : '';
+
             return `
             <div class="mb-2">
                 <div class="flex justify-between items-center text-sm mb-1"><span class="text-slate-600">${key}</span><span class="font-semibold ${color}">${displayValue}</span></div>
@@ -445,6 +444,7 @@
         const openrouterKey = appState.apiKeys.openrouter || "";
         if (!openrouterKey) {
             hideProgressModal();
+            // Using a custom modal/feedback instead of alert
             const feedbackDiv = document.createElement('div');
             feedbackDiv.textContent = "Chave da API OpenRouter não encontrada. Por favor, adicione-a nas Configurações.";
             feedbackDiv.className = 'text-red-500 mt-2 text-sm';
@@ -618,13 +618,10 @@
                 };
                 const result = await callGenerativeAPI(prompt, schema);
                 const html = result.map(item => {
-                    const mainScore = item.scores?.Potencial || 0;
-                    const subScores = {
-                        'Potencial': item.scores?.Potencial || 0,
-                        'Concorrência (menor é melhor)': 100 - (item.scores?.Concorrência || 50),
-                        'Originalidade': item.scores?.Originalidade || 0
-                    };
-                    return `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.subniche_name} ${createCopyButton(item.subniche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">Ideias de Vídeo: ${item.video_ideas.join('; ')}</p></div>${renderScoreCard('Análise do Subnicho', mainScore, subScores, item.suggestion, item.is_novel)}</div>`;
+                    if (!item.scores) {
+                        item.scores = { Potencial: 50, Concorrência: 50, Originalidade: 50 };
+                    }
+                    return `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.subniche_name} ${createCopyButton(item.subniche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">Ideias de Vídeo: ${item.video_ideas.join('; ')}</p></div>${renderScoreCard('Análise do Subnicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Originalidade': item.scores.Originalidade }, item.suggestion, item.is_novel)}</div>`;
                 }).join('');
 
                 if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
@@ -663,6 +660,11 @@
                 const labels = timelineData.map(d => new Date(d.time * 1000).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }));
                 const values = timelineData.map(d => d.value[0]);
                 const avgInterest = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+                const getTrendLevel = (score) => {
+                    if (score > 66) return "Alto";
+                    if (score > 33) return "Médio";
+                    return "Baixo";
+                };
                 const trendLevelText = getTrendLevel(avgInterest);
 
                 output.innerHTML = `
@@ -1097,8 +1099,8 @@
             };
             try {
                 const result = await callGenerativeAPI(prompt, schema);
-                const descriptionText = result.description.replace(/\n/g, '<br>');
-                const hashtagsList = result.hashtags.split(',').map(tag => tag.trim());
+                const descriptionText = result.description.replace(/\n/g, '<br>'); // Separar por quebra de linha
+                const hashtagsList = result.hashtags.split(',').map(tag => tag.trim()); // Separar as tags por vírgula
                 
                 output.innerHTML = `
                     <div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start">
