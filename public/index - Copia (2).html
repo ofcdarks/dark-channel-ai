@@ -122,12 +122,6 @@
                 <div class="text-center">
                     <button type="submit" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700">Abrir Ticket por E-mail</button>
                     <p class="text-xs text-slate-500 mt-2">Isso abrirá seu cliente de e-mail. Lembre-se de <strong class="text-slate-700">anexar o print da tela manualmente</strong> para nos ajudar a resolver o problema mais rápido.</p>
-                    <!-- [CORREÇÃO] Adicionado container de fallback para o caso do 'mailto' não funcionar -->
-                    <div id="support-fallback" class="hidden mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
-                        <p>Se o seu programa de e-mail não abriu automaticamente, por favor, envie os detalhes manualmente para:</p>
-                        <strong class="cursor-pointer font-semibold">suporte@canaisdarks.com.br</strong>
-                        <p class="mt-1">Não se esqueça de incluir a descrição e o print da tela.</p>
-                    </div>
                 </div>
             </form>
         </div>
@@ -664,35 +658,8 @@
                     }
                 };
                 const result = await callAIModel(prompt, schema);
-                
-                // [CORREÇÃO] Adicionado tratamento de erro para respostas incompletas da IA.
-                // Isso evita que a aplicação quebre se a IA não retornar o objeto 'scores'.
                 const html = result.map(item => {
-                    const potencial = item.scores?.Potencial || 0;
-                    const concorrencia = item.scores?.Concorrência || 0;
-                    const originalidade = item.scores?.Originalidade || 0;
-                    const subnicheName = item.subniche_name || "Subnicho Desconhecido";
-                    const description = item.description || "Nenhuma descrição fornecida.";
-                    const videoIdeas = (item.video_ideas || []).slice(0, 3).join('; ');
-
-                    return `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4">
-                                <div class="flex-1">
-                                    <h3 class="font-semibold text-lg mb-2">${subnicheName} ${createCopyButton(subnicheName)}</h3>
-                                    <p class="text-sm text-slate-700">${description}</p>
-                                    <p class="mt-2 font-semibold text-sm">Principais Ideias de Vídeo: ${videoIdeas}</p>
-                                </div>
-                                ${renderScoreCard(
-                                    'Análise do Subnicho', 
-                                    potencial, 
-                                    { 
-                                        'Potencial': potencial, 
-                                        'Concorrência (menor é melhor)': 100 - concorrencia, 
-                                        'Originalidade': originalidade 
-                                    }, 
-                                    item.suggestion, 
-                                    item.is_novel
-                                )}
-                            </div>`;
+                    return `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.subniche_name} ${createCopyButton(item.subniche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">Principais Ideias de Vídeo: ${item.video_ideas.slice(0, 3).join('; ')}</p></div>${renderScoreCard('Análise do Subnicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Originalidade': item.scores.Originalidade }, item.suggestion, item.is_novel)}</div>`;
                 }).join('');
 
                 if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
@@ -1711,31 +1678,19 @@
         ELEMENTS.screenshotPreview.classList.add('hidden');
         ELEMENTS.screenshotPreview.src = '';
         ELEMENTS.supportForm.reset();
-        // [CORREÇÃO] Garante que a mensagem de fallback seja escondida ao fechar o modal
-        document.getElementById('support-fallback').classList.add('hidden');
     });
     ELEMENTS.supportForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const description = document.getElementById('support-description').value;
         const subject = "Ticket de Suporte - Darks Vips AI";
-        // [CORREÇÃO] Adicionada verificação para evitar erro se o usuário não estiver logado
-        const userEmail = appState.currentUser?.email || 'Usuário não logado';
-        let body = `Descrição do problema:\n----------------------\n${description}\n\n----------------------\nEmail do usuário: ${userEmail}\nVersão da App: 17.7`;
+        let body = `Descrição do problema:\n----------------------\n${description}\n\n----------------------\nEmail do usuário: ${appState.currentUser.email}\nVersão da App: 17.7`;
         
         if (ELEMENTS.screenshotPreview.src) {
             body += "\n\n(Lembrete: Anexe o print de tela que você selecionou!)";
         }
 
         const mailtoLink = `mailto:suporte@canaisdarks.com.br?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        
-        try {
-            window.open(mailtoLink, '_blank');
-        } catch (error) {
-            console.error("Falha ao tentar abrir o cliente de e-mail:", error);
-        }
-        
-        // [CORREÇÃO] Exibe a mensagem de fallback para guiar o usuário
-        document.getElementById('support-fallback').classList.remove('hidden');
+        window.open(mailtoLink, '_blank');
     });
     ELEMENTS.supportScreenshotInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
