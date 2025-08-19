@@ -44,6 +44,19 @@ const initializeDb = async () => {
   }
 };
 
+// Helper para validar a estrutura da resposta do explorador de subnichos
+const validateSubnicheData = (data) => {
+    if (!Array.isArray(data) || data.length === 0) return false;
+    for (const item of data) {
+        if (!item.scores || typeof item.scores.Potencial !== 'number' || typeof item.scores.Concorrência !== 'number' || typeof item.scores.Originalidade !== 'number') {
+            console.warn("Item de subnicho com estrutura de 'scores' inválida foi encontrado e descartado:", item);
+            return false;
+        }
+    }
+    return true;
+};
+
+
 // 4. Rotas da API (Autenticação e Configurações)
 app.post('/api/register', async (req, res) => {
     const { email, password } = req.body;
@@ -109,7 +122,7 @@ app.post('/api/settings/:userId', async (req, res) => {
 });
 
 
-// 5. Rota Segura para Geração de Conteúdo com IA
+// 5. [ATUALIZADO] Rota Segura para Geração de Conteúdo com IA
 app.post('/api/generate', async (req, res) => {
     const userId = req.headers['x-user-id'];
     const { prompt, schema } = req.body;
@@ -126,6 +139,7 @@ app.post('/api/generate', async (req, res) => {
         const geminiKeys = (apiKeys.gemini || []).filter(k => k && k.trim() !== '');
         let lastError = null;
 
+        // Tentativa 1: OpenAI (se a chave existir)
         if (openAIKey) {
             try {
                 console.log("Tentando com a API da OpenAI...");
@@ -139,13 +153,22 @@ app.post('/api/generate', async (req, res) => {
                 
                 const content = response.data.choices[0].message.content;
                 let data;
-                try {
-                    data = schema ? JSON.parse(content) : { text: content };
-                } catch (e) {
-                    throw new Error("OpenAI retornou um JSON malformado.");
+                if (schema) {
+                    try {
+                        const parsedContent = JSON.parse(content);
+                        const isSubnicheRequest = schema?.items?.properties?.subniche_name;
+                        if (isSubnicheRequest && !validateSubnicheData(parsedContent)) {
+                            throw new Error("OpenAI retornou dados de subnicho malformados.");
+                        }
+                        data = parsedContent;
+                    } catch (parseError) {
+                        throw new Error(`Falha ao decodificar JSON da OpenAI: ${parseError.message}`);
+                    }
+                } else {
+                    data = { text: content };
                 }
                 console.log("Sucesso com OpenAI.");
-                return res.json({ data, apiSource: 'OpenAI' });
+                return res.json({ data: data, apiSource: 'OpenAI' });
 
             } catch (error) {
                 lastError = error;
@@ -153,6 +176,7 @@ app.post('/api/generate', async (req, res) => {
             }
         }
 
+        // Tentativa 2: Gemini (fallback ou padrão)
         if (geminiKeys.length > 0) {
              console.log("Usando a API Gemini...");
              for (const key of geminiKeys) {
@@ -166,13 +190,22 @@ app.post('/api/generate', async (req, res) => {
                     if (response.data.candidates?.[0]?.content?.parts?.[0]) {
                         const text = response.data.candidates[0].content.parts[0].text;
                         let data;
-                        try {
-                           data = schema ? JSON.parse(text) : { text };
-                        } catch(e) {
-                            throw new Error("Gemini retornou um JSON malformado.");
+                        if (schema) {
+                             try {
+                                const parsedContent = JSON.parse(text);
+                                const isSubnicheRequest = schema?.items?.properties?.subniche_name;
+                                if (isSubnicheRequest && !validateSubnicheData(parsedContent)) {
+                                    throw new Error("Gemini retornou dados de subnicho malformados.");
+                                }
+                                data = parsedContent;
+                            } catch (parseError) {
+                                throw new Error(`Falha ao decodificar JSON da Gemini: ${parseError.message}`);
+                            }
+                        } else {
+                            data = { text: text };
                         }
                         console.log("Sucesso com Gemini.");
-                        return res.json({ data, apiSource: 'Gemini' });
+                        return res.json({ data: data, apiSource: 'Gemini' });
                     }
                 } catch (error) {
                     lastError = error;
@@ -228,11 +261,9 @@ app.get('/api/video-details/:videoId', async (req, res) => {
             title: snippet.title,
             description: snippet.description,
             tags: snippet.tags || [],
-            channelId: snippet.channelId,
             channelTitle: snippet.channelTitle,
             viewCount: formatStat(stats.viewCount),
             likeCount: formatStat(stats.likeCount),
-            favoriteCount: formatStat(stats.favoriteCount),
             commentCount: formatStat(stats.commentCount),
             detectedLanguage: snippet.defaultAudioLanguage || snippet.defaultLanguage || 'pt'
         });
@@ -241,37 +272,6 @@ app.get('/api/video-details/:videoId', async (req, res) => {
         res.status(500).json({ message: "Erro ao buscar dados do vídeo. Verifique a chave da API e o ID do vídeo." });
     }
 });
-
-// [NOVA ROTA] Para buscar detalhes do canal
-app.get('/api/channel-details/:channelId', async (req, res) => {
-    const { channelId } = req.params;
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json({ message: "Usuário não autenticado." });
-
-    try {
-        const apiKey = await getGoogleApiKey(userId);
-        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
-
-        const youtube = google.youtube({ version: 'v3', auth: apiKey });
-        const response = await youtube.channels.list({
-            part: 'statistics',
-            id: channelId,
-        });
-
-        if (response.data.items.length === 0) {
-            return res.status(404).json({ message: 'Canal não encontrado.' });
-        }
-        const stats = response.data.items[0].statistics;
-        res.json({
-            subscriberCount: formatStat(stats.subscriberCount),
-            videoCount: formatStat(stats.videoCount),
-        });
-    } catch (error) {
-        console.error("Erro na API do YouTube ao buscar detalhes do canal:", error.message);
-        res.status(500).json({ message: "Erro ao buscar dados do canal." });
-    }
-});
-
 
 app.get('/api/youtube-stats/:channelId', async (req, res) => {
     const { channelId } = req.params;

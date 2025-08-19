@@ -164,7 +164,7 @@
         userEmailDisplay: document.getElementById('user-email-display'),
         logoutBtn: document.getElementById('logout-btn'),
         openMenuBtn: document.getElementById('open-menu-btn'),
-        closeMenuBtn: document.getElementById('close-menu-btn'),
+        closeMenuBtn: document.getElementById('close-menu-btn'), // Note: This element doesn't exist in the HTML, but the listener does.
         menuOverlay: document.getElementById('menu-overlay'),
         mobileHeaderTitle: document.getElementById('mobile-header-title'),
         logMessage: document.getElementById('log-message'),
@@ -382,6 +382,13 @@
 
     const getLegendForTool = (toolId) => {
         const legends = {
+            'subniche-finder': `
+                <h4 class="font-semibold text-slate-800 mb-2">💡 Entendendo as Métricas</h4>
+                <ul class="space-y-2 text-slate-600">
+                    <li><strong>Potencial:</strong> Uma nota geral que combina demanda de busca, potencial de monetização e a longevidade do subnicho. Pontuações acima de 75 são consideradas excelentes oportunidades.</li>
+                    <li><strong>Concorrência (menor é melhor):</strong> Esta é uma pontuação invertida. Um valor alto (ex: 90/100) significa que a concorrência é BAIXA, tornando o nicho mais fácil de dominar.</li>
+                    <li><strong>Originalidade:</strong> Mede o quão única e criativa é a abordagem do subnicho. Pontuações altas indicam uma maior chance de se destacar da multidão e criar um conteúdo verdadeiramente novo.</li>
+                </ul>`,
             'niche-analysis': `
                 <h4 class="font-semibold text-slate-800 mb-2">💡 Entendendo as Métricas</h4>
                 <ul class="space-y-2 text-slate-600">
@@ -403,18 +410,19 @@
         return `<div class="mt-8 text-sm p-4 bg-indigo-50 rounded-lg border border-indigo-200">${legendHtml}</div>`;
     };
 
-    // --- AI API Call Abstraction (Seguro e com Log) ---
+    // --- [ATUALIZADO] AI API Call Abstraction (Seguro e com Log) ---
     async function callAIModel(prompt, schema = null) {
         showProgressModal();
         try {
             addToLog("Comunicando com o servidor para análise de IA...");
             const result = await apiRequest('/api/generate', 'POST', { prompt, schema });
+            // Adiciona a fonte da API ao log e retorna apenas os dados
             addToLog(`Análise concluída com sucesso via ${result.apiSource || 'API'}.`);
             return result.data;
         } catch (error) {
             console.error("Erro ao chamar o modelo de IA via backend:", error);
             addToLog(`Erro: ${error.message}`, true);
-            throw error;
+            throw error; // Re-lança o erro para ser tratado pela função que chamou
         } finally {
             hideProgressModal();
         }
@@ -651,15 +659,9 @@
             
             try {
                 showProgressModal();
-                addToLog("Buscando dados do vídeo...");
                 const videoData = await apiRequest(`/api/video-details/${videoId}`, 'GET');
                 appState.currentVideoAnalysis = videoData;
-
-                addToLog("Buscando dados do canal...");
-                const channelData = await apiRequest(`/api/channel-details/${videoData.channelId}`, 'GET');
-
-                const { title, description, tags, detectedLanguage, viewCount, likeCount, commentCount } = videoData;
-                const { subscriberCount } = channelData;
+                const { title, description, tags, detectedLanguage } = videoData;
                 const lang = detectedLanguage || 'a língua original do texto';
                 const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
 
@@ -705,30 +707,6 @@
 
                 output.innerHTML = `
                     <div class="mb-6"><h3 class="text-xl font-bold mb-2">Vídeo Analisado</h3><div class="flex flex-col md:flex-row gap-4 bg-slate-100 p-4 rounded-lg"><img src="${thumbnailUrl}" onerror="this.style.display='none'" class="rounded-md w-full md:w-48 h-auto object-cover"/><div class="flex-1"><h4 class="font-semibold">${title}</h4><p class="text-xs text-slate-500 mt-1">Idioma Detectado: ${lang}</p></div></div></div>
-                    
-                    <!-- PAINEL DE VISÃO GERAL -->
-                    <div class="mb-6 bg-white p-4 rounded-xl shadow-sm border">
-                        <h3 class="text-lg font-semibold mb-4 text-slate-800">Visão Geral</h3>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                            <div>
-                                <p class="text-sm text-slate-500">Visualizações</p>
-                                <p class="text-2xl font-bold text-indigo-600">${viewCount}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-slate-500">Likes</p>
-                                <p class="text-2xl font-bold text-indigo-600">${likeCount}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-slate-500">Comentários</p>
-                                <p class="text-2xl font-bold text-indigo-600">${commentCount}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-slate-500">Inscritos do Canal</p>
-                                <p class="text-2xl font-bold text-indigo-600">${subscriberCount}</p>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="space-y-8">
                         <div><h3 class="text-xl font-bold mb-3 border-b pb-2">Análise de Título</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Título Atual</h4><p class="text-sm bg-white p-2 rounded border">${title}</p><div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.title.score, { 'SEO & CTR': analysis.title.score }, analysis.title.critique)}</div></div><div class="bg-green-50 p-4 rounded-lg border border-green-200"><h4 class="font-semibold mb-2 text-green-800">Sugestões Otimizadas</h4><div id="optimized-titles-container">${renderTitles(optimizations.titles)}</div><button id="generate-more-titles" class="w-full mt-4 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700">Gerar Mais Sugestões</button></div></div></div>
                         
@@ -945,7 +923,7 @@
                         </div>
                     </div>
                     <div class="mt-6 bg-white p-4 rounded-lg border">
-                        <h3 class="text-xl font-bold mb-3">💡 Oportunidades de Conteúdo</h3>
+                        <h3 class="text-xl font-bold mb-3">� Oportunidades de Conteúdo</h3>
                         <div class="space-y-4">
                             ${video_ideas.map(idea => `
                                 <div class="bg-indigo-50 border-l-4 border-indigo-400 p-4 rounded-r-lg flex justify-between items-start">
@@ -1755,3 +1733,4 @@
     </script>
 </body>
 </html>
+�
