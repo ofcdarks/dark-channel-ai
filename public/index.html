@@ -340,7 +340,16 @@
     const createCopyButton = (text) => `<button class="copy-btn text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded hover:bg-slate-300" data-copy-text="${encodeURIComponent(text)}">Copiar</button>`;
     
     const renderScoreCard = (title, mainScore, subScores, suggestion, isNovel = false) => {
-        const intMainScore = Math.round(Math.min(100, mainScore || 0));
+        // [MELHORIA] Calcula uma pontuação principal mais resiliente se a original for 0 ou nula
+        let intMainScore = Math.round(Math.min(100, mainScore || 0));
+        if (intMainScore === 0 && Object.keys(subScores).length > 0) {
+            const numericScores = Object.values(subScores).filter(v => typeof v === 'number');
+            if (numericScores.length > 0) {
+                const avg = numericScores.reduce((a, b) => a + b, 0) / numericScores.length;
+                intMainScore = Math.round(Math.min(100, avg));
+            }
+        }
+
         const novelBadge = isNovel ? '<span class="inline-flex items-center rounded-md bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700">✨ Inédita</span>' : '';
         const subScoresHtml = Object.entries(subScores).map(([key, value]) => {
             if (typeof value === 'string') { // Handle text values like "Alta", "Média", "Baixa"
@@ -623,13 +632,11 @@
                 
                 const result = await callAIModel(prompt, schema);
                 
-                // [CORREÇÃO] Adicionada validação da resposta da IA
                 if (!result || !Array.isArray(result) || result.length === 0) {
                     throw new Error("A IA não retornou sugestões válidas. Tente refinar sua busca.");
                 }
 
                 const html = result.map(item => {
-                    // Validação robusta para cada item
                     const potencial = item.scores?.Potencial || 0;
                     const concorrencia = item.scores?.Concorrência || 0;
                     const originalidade = item.scores?.Originalidade || 0;

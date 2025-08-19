@@ -7,7 +7,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const { google } = require('googleapis');
 const googleTrends = require('google-trends-api');
-const axios = require('axios'); // Adicionado para fazer requisições HTTP do servidor
+const axios = require('axios');
 
 // 2. Configuração Inicial
 const app = express();
@@ -15,7 +15,6 @@ const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(express.json());
-// Garanta que seu 'index.html' está dentro de uma pasta 'public'
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 3. Conexão com o Banco de Dados PostgreSQL
@@ -44,6 +43,20 @@ const initializeDb = async () => {
     client.release();
   }
 };
+
+// [NOVO] Helper para validar a estrutura da resposta do explorador de subnichos
+const validateSubnicheData = (data) => {
+    if (!Array.isArray(data) || data.length === 0) return false;
+    for (const item of data) {
+        // Verifica se o item tem a estrutura mínima esperada
+        if (!item.scores || typeof item.scores.Potencial !== 'number' || typeof item.scores.Concorrência !== 'number' || typeof item.scores.Originalidade !== 'number') {
+            console.warn("Item de subnicho com estrutura de 'scores' inválida foi encontrado e descartado:", item);
+            return false;
+        }
+    }
+    return true;
+};
+
 
 // 4. Rotas da API (Autenticação e Configurações)
 app.post('/api/register', async (req, res) => {
@@ -110,87 +123,89 @@ app.post('/api/settings/:userId', async (req, res) => {
 });
 
 
-// 5. [NOVA ROTA SEGURA] Rota para Geração de Conteúdo com IA
+// 5. [ATUALIZADO] Rota Segura para Geração de Conteúdo com IA
 app.post('/api/generate', async (req, res) => {
     const userId = req.headers['x-user-id'];
     const { prompt, schema } = req.body;
 
-    if (!userId) {
-        return res.status(401).json({ message: "Usuário não autenticado." });
-    }
-    if (!prompt) {
-        return res.status(400).json({ message: "O prompt é obrigatório." });
-    }
+    if (!userId) return res.status(401).json({ message: "Usuário não autenticado." });
+    if (!prompt) return res.status(400).json({ message: "O prompt é obrigatório." });
 
     try {
-        // Buscar chaves de API do usuário no banco de dados
         const settingsResult = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
-        if (settingsResult.rows.length === 0) {
-            return res.status(404).json({ message: 'Usuário não encontrado.' });
-        }
+        if (settingsResult.rows.length === 0) return res.status(404).json({ message: 'Usuário não encontrado.' });
         
         const apiKeys = settingsResult.rows[0].settings || {};
         const openAIKey = apiKeys.openai;
         const geminiKeys = (apiKeys.gemini || []).filter(k => k && k.trim() !== '');
+        let lastError = null;
 
-        // Lógica de Priorização: Tenta OpenAI primeiro, se houver chave
+        // Tentativa 1: OpenAI (se a chave existir)
         if (openAIKey) {
             try {
                 console.log("Tentando com a API da OpenAI...");
-                const payload = {
-                    model: "gpt-3.5-turbo",
-                    messages: [{ role: "user", content: prompt }],
-                };
-                if (schema) {
-                    payload.response_format = { type: "json_object" };
-                }
+                const payload = { model: "gpt-3.5-turbo", messages: [{ role: "user", content: prompt }] };
+                if (schema) payload.response_format = { type: "json_object" };
 
                 const response = await axios.post('https://api.openai.com/v1/chat/completions', payload, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${openAIKey}`
-                    },
-                    timeout: 60000 // 60 segundos de timeout
+                    headers: { 'Authorization': `Bearer ${openAIKey}` },
+                    timeout: 60000
                 });
                 
                 const content = response.data.choices[0].message.content;
-                return res.json(schema ? JSON.parse(content) : { text: content });
-
+                if (schema) {
+                    const parsedContent = JSON.parse(content);
+                    const isSubnicheRequest = schema?.items?.properties?.subniche_name;
+                    if (isSubnicheRequest && !validateSubnicheData(parsedContent)) {
+                        throw new Error("OpenAI retornou dados de subnicho malformados.");
+                    }
+                    console.log("Sucesso com OpenAI (JSON).");
+                    return res.json(parsedContent);
+                } else {
+                    console.log("Sucesso com OpenAI (Texto).");
+                    return res.json({ text: content });
+                }
             } catch (error) {
+                lastError = error;
                 console.error("Erro na API da OpenAI, tentando Gemini como fallback:", error.response?.data?.error?.message || error.message);
-                // Se OpenAI falhar, continua para tentar Gemini (não retorna erro ainda)
             }
         }
 
-        // Lógica de Fallback/Padrão: Usa Gemini
+        // Tentativa 2: Gemini (fallback ou padrão)
         if (geminiKeys.length > 0) {
              console.log("Usando a API Gemini...");
              for (const key of geminiKeys) {
                 try {
                     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${key}`;
                     let payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
-                    if (schema) {
-                        payload.generationConfig = { response_mime_type: "application/json", response_schema: schema };
-                    }
+                    if (schema) payload.generationConfig = { response_mime_type: "application/json", response_schema: schema };
                     
-                    const response = await axios.post(apiUrl, payload, {
-                        headers: { 'Content-Type': 'application/json' },
-                        timeout: 60000 // 60 segundos de timeout
-                    });
+                    const response = await axios.post(apiUrl, payload, { headers: { 'Content-Type': 'application/json' }, timeout: 60000 });
                     
                     if (response.data.candidates?.[0]?.content?.parts?.[0]) {
                         const text = response.data.candidates[0].content.parts[0].text;
-                        return res.json(schema ? JSON.parse(text) : { text });
+                        if (schema) {
+                            const parsedContent = JSON.parse(text);
+                            const isSubnicheRequest = schema?.items?.properties?.subniche_name;
+                            if (isSubnicheRequest && !validateSubnicheData(parsedContent)) {
+                                throw new Error("Gemini retornou dados de subnicho malformados.");
+                            }
+                            console.log("Sucesso com Gemini (JSON).");
+                            return res.json(parsedContent);
+                        } else {
+                            console.log("Sucesso com Gemini (Texto).");
+                            return res.json({ text: text });
+                        }
                     }
                 } catch (error) {
+                    lastError = error;
                     console.error(`Falha com uma chave Gemini. Tentando a próxima. Erro:`, error.response?.data?.error?.message || error.message);
-                    // Continua o loop para tentar a próxima chave
                 }
              }
         }
         
-        // Se todas as tentativas falharem
-        return res.status(500).json({ message: "Falha ao se comunicar com as APIs de IA. Verifique suas chaves nas configurações." });
+        const errorMessage = lastError?.message || "Nenhuma API de IA disponível ou todas falharam.";
+        return res.status(500).json({ message: `Falha ao gerar conteúdo. Verifique suas chaves de API. Último erro: ${errorMessage}` });
 
     } catch (error) {
         console.error("Erro geral na rota /api/generate:", error);
