@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v17.3</title>
+    <title>Darks Vips AI v17.2</title>
     <link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -207,12 +207,6 @@
         logEl.parentElement.classList.toggle('bg-slate-800', !isError);
     };
 
-    const getTrendLevel = (score) => {
-        if (score > 65) return 'Alta';
-        if (score > 35) return 'Média';
-        return 'Baixa';
-    };
-
     // --- API Communication ---
     async function apiRequest(endpoint, method, body = null) {
         const options = { 
@@ -286,7 +280,7 @@
         try {
             const settings = await apiRequest(`/api/settings/${appState.currentUser.id}`, 'GET');
             if (settings && Object.keys(settings).length > 0) {
-                appState.apiKeys.gemini = Array.isArray(settings.gemini) && settings.gemini.length === 3 ? settings.gemini : [settings.gemini || "", "", ""];
+                appState.apiKeys.gemini = Array.isArray(settings.gemini) ? settings.gemini : [settings.gemini || "", "", ""];
                 appState.apiKeys.openai = settings.openai || "";
                 appState.apiKeys.google_api = settings.google_api || "";
                 appState.userChannels = settings.userChannels || [];
@@ -367,15 +361,6 @@
         const intMainScore = Math.round(Math.min(100, mainScore || 0));
         const novelBadge = isNovel ? '<span class="inline-flex items-center rounded-md bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700">✨ Inédita</span>' : '';
         const subScoresHtml = Object.entries(subScores).map(([key, value]) => {
-            if (typeof value === 'string') { // Handle text values like "Alta", "Média", "Baixa"
-                return `
-                <div class="mb-2">
-                    <div class="flex justify-between items-center text-sm mb-1">
-                        <span class="text-slate-600">${key}</span>
-                        <span class="font-semibold text-slate-700 px-2 py-0.5 rounded-md ${value === 'Alta' ? 'bg-green-100 text-green-800' : value === 'Média' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}">${value}</span>
-                    </div>
-                </div>`;
-            }
             const cappedValue = Math.min(100, Math.round(value || 0));
             return `
             <div class="mb-2">
@@ -398,72 +383,66 @@
     };
 
     // --- Gemini API Call with Key Rotation ---
-    async function callGenerativeAPI(prompt, schema = null) {
+    async function callGenerativeAPI(prompt, schema = null, attempt = 0) {
         const validKeys = appState.apiKeys.gemini.filter(k => k && k.trim() !== '');
         if (validKeys.length === 0) {
             throw new Error("Nenhuma chave da API Gemini foi configurada. Adicione uma nas Configurações.");
         }
 
-        showProgressModal();
-        let lastError = null;
-
-        for (let i = 0; i < validKeys.length; i++) {
-            const keyIndex = (appState.currentGeminiKeyIndex + i) % validKeys.length;
-            const currentKey = validKeys[keyIndex];
-            
-            addToLog(`Usando chave de API Gemini ${keyIndex + 1}...`);
-
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${currentKey}`;
-            let payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
-            if (schema) {
-                payload.generationConfig = { response_mime_type: "application/json", response_schema: schema };
-            }
-
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 60000);
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: controller.signal });
-                clearTimeout(timeoutId);
-
-                if (response.status === 429) {
-                    addToLog(`Chave ${keyIndex + 1} excedeu a cota. Tentando a próxima...`, true);
-                    lastError = new Error(`Chave ${keyIndex + 1} com cota excedida.`);
-                    continue; // Try next key
-                }
-
-                if (!response.ok) {
-                    const errorBody = await response.json();
-                    lastError = new Error(`Erro na API: ${response.status} - ${errorBody.error?.message || 'Verifique sua chave de API.'}`);
-                    addToLog(`Erro com a chave ${keyIndex + 1}. Tentando a próxima...`, true);
-                    continue; // Try next key
-                }
-                
-                const result = await response.json();
-                
-                if (result.candidates?.[0]?.content?.parts?.[0]) {
-                    const text = result.candidates[0].content.parts[0].text;
-                    addToLog("Análise da IA concluída com sucesso!");
-                    appState.currentGeminiKeyIndex = keyIndex; // Update the working key index
-                    hideProgressModal();
-                    return schema ? JSON.parse(text) : { text };
-                }
-
-                if (result.candidates?.[0]?.finishReason === 'SAFETY') {
-                    lastError = new Error("A resposta foi bloqueada por políticas de segurança.");
-                } else {
-                    lastError = new Error("Resposta da API inválida ou vazia.");
-                }
-                
-            } catch (error) {
-                console.error(`Erro detalhado na API com chave ${keyIndex + 1}:`, error);
-                lastError = error;
-                if (error.name === 'AbortError') lastError = new Error("A requisição da API excedeu o tempo limite.");
-            }
+        if (attempt >= validKeys.length) {
+            throw new Error("Todas as chaves da API Gemini falharam ou atingiram a cota. Tente novamente mais tarde.");
         }
 
-        hideProgressModal();
-        addToLog(`Erro: ${lastError.message}`, true);
-        throw new Error(`Todas as chaves da API Gemini falharam. Último erro: ${lastError.message}`);
+        const currentKey = validKeys[appState.currentGeminiKeyIndex];
+        addToLog(`Usando chave de API Gemini ${appState.currentGeminiKeyIndex + 1}...`);
+
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${currentKey}`;
+        let payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+        
+        if (schema) {
+            payload.generationConfig = { 
+                response_mime_type: "application/json",
+                response_schema: schema
+            };
+        }
+
+        showProgressModal();
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (response.status === 429) { // Quota exceeded
+                addToLog(`Chave ${appState.currentGeminiKeyIndex + 1} excedeu a cota. Tentando a próxima...`, true);
+                appState.currentGeminiKeyIndex = (appState.currentGeminiKeyIndex + 1) % validKeys.length;
+                return callGenerativeAPI(prompt, schema, attempt + 1);
+            }
+
+            if (!response.ok) {
+                const errorBody = await response.json();
+                throw new Error(`Erro na API: ${response.status} - ${errorBody.error?.message || 'Verifique sua chave de API.'}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.candidates?.[0]?.content?.parts?.[0]) {
+                const text = result.candidates[0].content.parts[0].text;
+                addToLog("Análise da IA concluída com sucesso!");
+                return schema ? JSON.parse(text) : { text };
+            }
+
+            if (result.candidates?.[0]?.finishReason === 'SAFETY') throw new Error("A resposta foi bloqueada por políticas de segurança.");
+            throw new Error("Resposta da API inválida ou vazia.");
+
+        } catch (error) {
+            console.error("Erro detalhado na API:", error);
+            addToLog(`Erro na API: ${error.message}`, true);
+            if (error.name === 'AbortError') throw new Error("A requisição da API excedeu o tempo limite.");
+            throw error;
+        } finally {
+            hideProgressModal();
+        }
     }
     
     // --- Tools and Handlers ---
@@ -580,7 +559,7 @@
                 }
             };
             const result = await callGenerativeAPI(prompt, schema);
-            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: $${(item.rpm_estimate_value || 0).toFixed(2)}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Volume de Busca': getTrendLevel(item.scores['Volume de Busca']) }, item.suggestion)}</div>`).join('');
+            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: $${(item.rpm_estimate_value || 0).toFixed(2)}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Volume de Busca': item.scores['Volume de Busca'] }, item.suggestion)}</div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
             document.getElementById('generate-more-niches').style.display = 'block';
         },
@@ -665,13 +644,13 @@
                             <p class="text-sm mt-1">RPM Estimado: <strong>$${(result.rpm_estimate_value || 0).toFixed(2)}</strong></p>
                             <p class="text-sm mt-1">Canais de Referência: ${channelsHtml}</p>
                         </div>
-                        ${renderScoreCard('Análise de Nicho', result.hype_score, { 'Hype Score': result.hype_score, 'Potencial de RPM': (result.rpm_estimate_value || 0) * 10, 'Demanda de Busca': getTrendLevel(avgInterest) }, result.suggestion)}
+                        ${renderScoreCard('Análise de Nicho', result.hype_score, { 'Hype Score': result.hype_score, 'Potencial de RPM': (result.rpm_estimate_value || 0) * 10, 'Busca Média': avgInterest }, result.suggestion)}
                     </div>
                     <div id="trends-chart-container" class="mt-6 bg-white p-4 rounded-lg border">
                         <h4 class="font-semibold text-slate-800 mb-2">Tendência de Interesse (Últimos 12 meses)</h4>
                         <div class="h-64 relative"><canvas id="trends-chart"></canvas></div>
                         <div class="text-xs text-slate-500 mt-2 p-2 bg-slate-50 rounded-md">
-                         <strong>Legenda:</strong> O gráfico mostra o interesse de busca relativo (0-100) pelo tópico. <strong>Demanda Média: ${getTrendLevel(avgInterest)}</strong>. Picos podem indicar sazonalidade ou eventos virais. Uma linha estável ou crescente é um bom sinal.
+                         <strong>Legenda:</strong> O gráfico mostra o interesse de busca relativo (0-100) pelo tópico. <strong>Média de Interesse: ${avgInterest}/100</strong>. Picos podem indicar sazonalidade ou eventos virais. Uma linha estável ou crescente é um bom sinal.
                         </div>
                     </div>`;
 
@@ -704,9 +683,10 @@
             if (!videoIdMatch) { output.innerHTML = `<p class="text-red-500">URL inválida. Não foi possível extrair o ID do vídeo.</p>`; return; }
             const videoId = videoIdMatch[1];
             
+            showProgressModal();
             try {
                 const videoData = await apiRequest(`/api/video-details/${videoId}`, 'GET');
-                appState.currentVideoAnalysis = videoData;
+                appState.currentVideoAnalysis = videoData; // Store for re-generation
                 const { title, description, tags, detectedLanguage } = videoData;
                 const lang = detectedLanguage || 'a língua original do texto';
                 const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
@@ -720,7 +700,7 @@
 
                 SUA TAREFA:
                 1.  **Análise Crítica:** Avalie cada item (título, descrição, tags) e atribua uma pontuação de 0 a 100 para cada um, explicando brevemente o porquê da nota.
-                2.  **Otimização:** Crie 3 novas sugestões de títulos, 3 headlines (frases curtas e de impacto para notificações), 1 nova descrição e 1 novo conjunto de tags. Para cada item otimizado, atribua uma nova pontuação (SEMPRE ACIMA de 80) e uma "virada de chave" (a principal melhoria).`;
+                2.  **Otimização:** Crie 3 novas sugestões de títulos, 1 nova descrição e 1 novo conjunto de tags. Para cada item otimizado, atribua uma nova pontuação (SEMPRE ACIMA de 80) e uma "virada de chave" (a principal melhoria).`;
                 
                 const schema = {
                     type: "OBJECT",
@@ -736,8 +716,10 @@
                         optimizations: {
                             type: "OBJECT",
                             properties: {
-                                titles: { type: "ARRAY", items: { type: "OBJECT", properties: { title: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } } },
-                                headlines: { type: "ARRAY", items: { type: "OBJECT", properties: { text: { type: "STRING" }, score: { type: "NUMBER" } } } },
+                                titles: {
+                                    type: "ARRAY",
+                                    items: { type: "OBJECT", properties: { title: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } }
+                                },
                                 description: { type: "OBJECT", properties: { text: { type: "STRING" }, hashtags: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } },
                                 tags: { type: "OBJECT", properties: { tag_list: { type: "ARRAY", items: { type: "STRING" } }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } }
                             }
@@ -748,24 +730,91 @@
                 const result = await callGenerativeAPI(prompt, schema);
                 const { analysis, optimizations } = result;
 
-                const renderTitles = (titles) => titles.map(t => `<div class="mb-4"><div class="flex justify-between items-start gap-2"><p class="text-sm bg-white p-2 rounded border flex-1">${t.title} ${createCopyButton(t.title)}</p><div class="w-32 flex-shrink-0 text-center"><p class="font-bold text-lg ${getScoreTextColor(t.score)}">${t.score}</p><p class="text-xs text-slate-500">Potencial</p></div></div><p class="text-xs text-slate-600 mt-1 pl-1"><strong>Virada de Chave:</strong> ${t.suggestion}</p></div>`).join('');
+                const renderTitles = (titles) => {
+                    return titles.map(t => `
+                        <div class="mb-4">
+                            <div class="flex justify-between items-start gap-2">
+                                <p class="text-sm bg-white p-2 rounded border flex-1">${t.title} ${createCopyButton(t.title)}</p>
+                                <div class="w-32 flex-shrink-0 text-center">
+                                    <p class="font-bold text-lg ${getScoreTextColor(t.score)}">${t.score}</p>
+                                    <p class="text-xs text-slate-500">Potencial</p>
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-600 mt-1 pl-1"><strong>Virada de Chave:</strong> ${t.suggestion}</p>
+                        </div>
+                    `).join('');
+                };
 
                 output.innerHTML = `
-                    <div class="mb-6"><h3 class="text-xl font-bold mb-2">Vídeo Analisado</h3><div class="flex flex-col md:flex-row gap-4 bg-slate-100 p-4 rounded-lg"><img src="${thumbnailUrl}" onerror="this.style.display='none'" class="rounded-md w-full md:w-48 h-auto object-cover"/><div class="flex-1"><h4 class="font-semibold">${title}</h4><p class="text-xs text-slate-500 mt-1">Idioma Detectado: ${lang}</p></div></div></div>
+                    <div class="mb-6">
+                        <h3 class="text-xl font-bold mb-2">Vídeo Analisado</h3>
+                        <div class="flex flex-col md:flex-row gap-4 bg-slate-100 p-4 rounded-lg">
+                            <img src="${thumbnailUrl}" onerror="this.style.display='none'" class="rounded-md w-full md:w-48 h-auto object-cover"/>
+                            <div class="flex-1">
+                                <h4 class="font-semibold">${title}</h4>
+                                <p class="text-xs text-slate-500 mt-1">Idioma Detectado: ${lang}</p>
+                            </div>
+                        </div>
+                    </div>
                     <div class="space-y-8">
-                        <div><h3 class="text-xl font-bold mb-3 border-b pb-2">Análise de Título</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Título Atual</h4><p class="text-sm bg-white p-2 rounded border">${title}</p><div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.title.score, { 'SEO & CTR': analysis.title.score }, analysis.title.critique)}</div></div><div class="bg-green-50 p-4 rounded-lg border border-green-200"><h4 class="font-semibold mb-2 text-green-800">Sugestões Otimizadas</h4><div id="optimized-titles-container">${renderTitles(optimizations.titles)}</div><button id="generate-more-titles" class="w-full mt-4 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700">Gerar Mais Sugestões</button></div></div></div>
-                        
-                        <div class="bg-white p-4 rounded-lg border"><h4 class="font-semibold text-lg mb-2">⭐ Headlines de Impacto</h4><div class="grid grid-cols-1 sm:grid-cols-3 gap-4">${optimizations.headlines.map(h => `<div class="bg-indigo-50 p-3 rounded-md text-center"><p class="font-semibold text-indigo-800">"${h.text}"</p><p class="text-xs mt-1 font-bold ${getScoreTextColor(h.score)}">${h.score}/100 Potencial</p></div>`).join('')}</div></div>
+                        <!-- TÍTULO -->
+                        <div>
+                            <h3 class="text-xl font-bold mb-3 border-b pb-2">Análise de Título</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-slate-100 p-4 rounded-lg">
+                                    <h4 class="font-semibold mb-2">Título Atual</h4>
+                                    <p class="text-sm bg-white p-2 rounded border">${title}</p>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.title.score, { 'SEO & CTR': analysis.title.score }, analysis.title.critique)}</div>
+                                </div>
+                                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                                    <h4 class="font-semibold mb-2 text-green-800">Sugestões Otimizadas</h4>
+                                    <div id="optimized-titles-container">${renderTitles(optimizations.titles)}</div>
+                                    <button id="generate-more-titles" class="w-full mt-4 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700">Gerar Mais Sugestões</button>
+                                </div>
+                            </div>
+                        </div>
 
-                        <div><h3 class="text-xl font-bold mb-3 border-b pb-2">Análise de Descrição</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Descrição Atual</h4><div class="text-sm bg-white p-2 rounded border prose whitespace-pre-wrap max-h-48 overflow-y-auto">${description}</div><div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.description.score, { 'SEO & Clareza': analysis.description.score }, analysis.description.critique)}</div></div><div class="bg-green-50 p-4 rounded-lg border border-green-200"><h4 class="font-semibold mb-2 text-green-800">Descrição Otimizada ${createCopyButton(optimizations.description.text + '\n\n' + optimizations.description.hashtags)}</h4><div class="text-sm bg-white p-2 rounded border prose whitespace-pre-wrap max-h-48 overflow-y-auto">${optimizations.description.text}</div><p class="text-sm bg-white p-2 rounded border mt-2 font-semibold">${optimizations.description.hashtags}</p><div class="mt-4">${renderScoreCard('Pontuação Otimizada', optimizations.description.score, { 'SEO & Engajamento': optimizations.description.score }, optimizations.description.suggestion)}</div></div></div></div>
-                        
-                        <div><h3 class="text-xl font-bold mb-3 border-b pb-2">Análise de Tags</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Tags Atuais</h4><p class="text-sm bg-white p-2 rounded border">${tags.join(', ')}</p><div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.tags.score, { 'Relevância': analysis.tags.score }, analysis.tags.critique)}</div></div><div class="bg-green-50 p-4 rounded-lg border border-green-200"><h4 class="font-semibold mb-2 text-green-800">Tags Otimizadas ${createCopyButton(optimizations.tags.tag_list.join(', '))}</h4><p class="text-sm bg-white p-2 rounded border">${optimizations.tags.tag_list.join(', ')}</p><div class="mt-4">${renderScoreCard('Pontuação Otimizada', optimizations.tags.score, { 'Relevância & Volume': optimizations.tags.score }, optimizations.tags.suggestion)}</div></div></div></div>
+                        <!-- DESCRIÇÃO -->
+                        <div>
+                            <h3 class="text-xl font-bold mb-3 border-b pb-2">Análise de Descrição</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-slate-100 p-4 rounded-lg">
+                                    <h4 class="font-semibold mb-2">Descrição Atual</h4>
+                                    <div class="text-sm bg-white p-2 rounded border prose whitespace-pre-wrap max-h-48 overflow-y-auto">${description}</div>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.description.score, { 'SEO & Clareza': analysis.description.score }, analysis.description.critique)}</div>
+                                </div>
+                                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                                    <h4 class="font-semibold mb-2 text-green-800">Descrição Otimizada ${createCopyButton(optimizations.description.text + '\n\n' + optimizations.description.hashtags)}</h4>
+                                    <div class="text-sm bg-white p-2 rounded border prose whitespace-pre-wrap max-h-48 overflow-y-auto">${optimizations.description.text}</div>
+                                    <p class="text-sm bg-white p-2 rounded border mt-2 font-semibold">${optimizations.description.hashtags}</p>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Otimizada', optimizations.description.score, { 'SEO & Engajamento': optimizations.description.score }, optimizations.description.suggestion)}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAGS -->
+                        <div>
+                            <h3 class="text-xl font-bold mb-3 border-b pb-2">Análise de Tags</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-slate-100 p-4 rounded-lg">
+                                    <h4 class="font-semibold mb-2">Tags Atuais</h4>
+                                    <p class="text-sm bg-white p-2 rounded border">${tags.join(', ')}</p>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.tags.score, { 'Relevância': analysis.tags.score }, analysis.tags.critique)}</div>
+                                </div>
+                                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                                    <h4 class="font-semibold mb-2 text-green-800">Tags Otimizadas ${createCopyButton(optimizations.tags.tag_list.join(', '))}</h4>
+                                    <p class="text-sm bg-white p-2 rounded border">${optimizations.tags.tag_list.join(', ')}</p>
+                                    <div class="mt-4">${renderScoreCard('Pontuação Otimizada', optimizations.tags.score, { 'Relevância & Volume': optimizations.tags.score }, optimizations.tags.suggestion)}</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 `;
+                // Add event listener for the new button
                 document.getElementById('generate-more-titles').addEventListener('click', () => handlers['generate-more-titles'](document.getElementById('optimized-titles-container')));
 
-            } catch (error) {
-                 output.innerHTML = `<p class="text-red-500">Erro ao analisar vídeo: ${error.message}</p>`;
+            } finally {
+                hideProgressModal();
             }
         },
         'generate-more-titles': async (output) => {
@@ -1010,7 +1059,7 @@
             };
             const result = await callGenerativeAPI(prompt, schema);
             const filteredResult = result.filter(item => item.viral_score > 80);
-            const html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
+            const html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Busca': searchScore }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
             document.getElementById('generate-more-structures').style.display = 'block';
         },
@@ -1582,9 +1631,8 @@
         e.preventDefault();
         const description = document.getElementById('error-description').value;
         const subject = "Report de Erro - Darks Vips AI";
-        const body = `Descrição do problema:\n----------------------\n${description}\n\n----------------------\nEmail do usuário: ${appState.currentUser.email}\nVersão da App: 17.3`;
-        const mailtoLink = `mailto:suporte@canaisdarks.com.br?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.open(mailtoLink, '_blank');
+        const body = `Descrição do problema:\n----------------------\n${description}\n\n----------------------\nEmail do usuário: ${appState.currentUser.email}\nVersão da App: 17.2`;
+        window.location.href = `mailto:suporte@canaisdarks.com.br?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     });
 
 
