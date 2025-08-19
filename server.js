@@ -44,11 +44,10 @@ const initializeDb = async () => {
   }
 };
 
-// [NOVO] Helper para validar a estrutura da resposta do explorador de subnichos
+// Helper para validar a estrutura da resposta do explorador de subnichos
 const validateSubnicheData = (data) => {
     if (!Array.isArray(data) || data.length === 0) return false;
     for (const item of data) {
-        // Verifica se o item tem a estrutura mínima esperada
         if (!item.scores || typeof item.scores.Potencial !== 'number' || typeof item.scores.Concorrência !== 'number' || typeof item.scores.Originalidade !== 'number') {
             console.warn("Item de subnicho com estrutura de 'scores' inválida foi encontrado e descartado:", item);
             return false;
@@ -153,21 +152,27 @@ app.post('/api/generate', async (req, res) => {
                 });
                 
                 const content = response.data.choices[0].message.content;
+                let data;
                 if (schema) {
-                    const parsedContent = JSON.parse(content);
-                    const isSubnicheRequest = schema?.items?.properties?.subniche_name;
-                    if (isSubnicheRequest && !validateSubnicheData(parsedContent)) {
-                        throw new Error("OpenAI retornou dados de subnicho malformados.");
+                    try {
+                        const parsedContent = JSON.parse(content);
+                        const isSubnicheRequest = schema?.items?.properties?.subniche_name;
+                        if (isSubnicheRequest && !validateSubnicheData(parsedContent)) {
+                            throw new Error("OpenAI retornou dados de subnicho malformados.");
+                        }
+                        data = parsedContent;
+                    } catch (parseError) {
+                        throw new Error(`Falha ao decodificar JSON da OpenAI: ${parseError.message}`);
                     }
-                    console.log("Sucesso com OpenAI (JSON).");
-                    return res.json(parsedContent);
                 } else {
-                    console.log("Sucesso com OpenAI (Texto).");
-                    return res.json({ text: content });
+                    data = { text: content };
                 }
+                console.log("Sucesso com OpenAI.");
+                return res.json({ data: data, apiSource: 'OpenAI' });
+
             } catch (error) {
                 lastError = error;
-                console.error("Erro na API da OpenAI, tentando Gemini como fallback:", error.response?.data?.error?.message || error.message);
+                console.error("Erro na API da OpenAI, tentando Gemini como fallback:", error.message);
             }
         }
 
@@ -184,22 +189,27 @@ app.post('/api/generate', async (req, res) => {
                     
                     if (response.data.candidates?.[0]?.content?.parts?.[0]) {
                         const text = response.data.candidates[0].content.parts[0].text;
+                        let data;
                         if (schema) {
-                            const parsedContent = JSON.parse(text);
-                            const isSubnicheRequest = schema?.items?.properties?.subniche_name;
-                            if (isSubnicheRequest && !validateSubnicheData(parsedContent)) {
-                                throw new Error("Gemini retornou dados de subnicho malformados.");
+                             try {
+                                const parsedContent = JSON.parse(text);
+                                const isSubnicheRequest = schema?.items?.properties?.subniche_name;
+                                if (isSubnicheRequest && !validateSubnicheData(parsedContent)) {
+                                    throw new Error("Gemini retornou dados de subnicho malformados.");
+                                }
+                                data = parsedContent;
+                            } catch (parseError) {
+                                throw new Error(`Falha ao decodificar JSON da Gemini: ${parseError.message}`);
                             }
-                            console.log("Sucesso com Gemini (JSON).");
-                            return res.json(parsedContent);
                         } else {
-                            console.log("Sucesso com Gemini (Texto).");
-                            return res.json({ text: text });
+                            data = { text: text };
                         }
+                        console.log("Sucesso com Gemini.");
+                        return res.json({ data: data, apiSource: 'Gemini' });
                     }
                 } catch (error) {
                     lastError = error;
-                    console.error(`Falha com uma chave Gemini. Tentando a próxima. Erro:`, error.response?.data?.error?.message || error.message);
+                    console.error(`Falha com uma chave Gemini. Tentando a próxima. Erro:`, error.message);
                 }
              }
         }

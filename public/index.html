@@ -340,7 +340,6 @@
     const createCopyButton = (text) => `<button class="copy-btn text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded hover:bg-slate-300" data-copy-text="${encodeURIComponent(text)}">Copiar</button>`;
     
     const renderScoreCard = (title, mainScore, subScores, suggestion, isNovel = false) => {
-        // [MELHORIA] Calcula uma pontuação principal mais resiliente se a original for 0 ou nula
         let intMainScore = Math.round(Math.min(100, mainScore || 0));
         if (intMainScore === 0 && Object.keys(subScores).length > 0) {
             const numericScores = Object.values(subScores).filter(v => typeof v === 'number');
@@ -352,7 +351,7 @@
 
         const novelBadge = isNovel ? '<span class="inline-flex items-center rounded-md bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700">✨ Inédita</span>' : '';
         const subScoresHtml = Object.entries(subScores).map(([key, value]) => {
-            if (typeof value === 'string') { // Handle text values like "Alta", "Média", "Baixa"
+            if (typeof value === 'string') {
                 return `
                 <div class="mb-2">
                     <div class="flex justify-between items-center text-sm mb-1">
@@ -412,14 +411,15 @@
         return `<div class="mt-8 text-sm p-4 bg-indigo-50 rounded-lg border border-indigo-200">${legendHtml}</div>`;
     };
 
-    // --- [REFEITO] AI API Call Abstraction (Seguro) ---
+    // --- [ATUALIZADO] AI API Call Abstraction (Seguro e com Log) ---
     async function callAIModel(prompt, schema = null) {
         showProgressModal();
         try {
             addToLog("Comunicando com o servidor para análise de IA...");
             const result = await apiRequest('/api/generate', 'POST', { prompt, schema });
-            addToLog("Análise da IA concluída com sucesso!");
-            return result;
+            // Adiciona a fonte da API ao log e retorna apenas os dados
+            addToLog(`Análise concluída com sucesso via ${result.apiSource || 'API'}.`);
+            return result.data;
         } catch (error) {
             console.error("Erro ao chamar o modelo de IA via backend:", error);
             addToLog(`Erro: ${error.message}`, true);
