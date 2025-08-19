@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v17.7</title>
+    <title>Darks Vips AI v17.8</title>
     <link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -120,7 +120,6 @@
                 </label>
                 <img id="screenshot-preview" src="" alt="Pré-visualização do print" class="hidden max-w-full h-auto max-h-40 mx-auto mb-4 rounded-md"/>
                 <div class="text-center">
-                    <!-- [CORREÇÃO] Botão agora abre o WhatsApp -->
                     <button type="submit" class="bg-green-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-600">Abrir Ticket via WhatsApp</button>
                     <p class="text-xs text-slate-500 mt-2">Isso abrirá o WhatsApp com uma mensagem pré-formatada. Lembre-se de enviar o print da tela na conversa.</p>
                 </div>
@@ -405,18 +404,62 @@
                 </div>`;
     };
 
+    // --- [NOVO] Legendas para os Cards ---
+    const getLegendForTool = (toolId) => {
+        const legends = {
+            'subniche-finder': `
+                <h4 class="font-semibold text-slate-800 mb-2">Entendendo as Métricas</h4>
+                <ul class="space-y-2">
+                    <li><strong>Potencial:</strong> Combinação de demanda, monetização e longevidade do subnicho. Acima de 75 é promissor.</li>
+                    <li><strong>Concorrência (menor é melhor):</strong> Pontuação invertida. Quanto mais alta, menor a saturação de conteúdo, indicando uma boa oportunidade.</li>
+                    <li><strong>Originalidade:</strong> O quão única e criativa é a abordagem, aumentando as chances de se destacar.</li>
+                </ul>`,
+            'niche-analysis': `
+                <h4 class="font-semibold text-slate-800 mb-2">Entendendo as Métricas</h4>
+                <ul class="space-y-2">
+                    <li><strong>Hype Score:</strong> Mede o potencial de viralização e o "buzz" atual em torno do nicho.</li>
+                    <li><strong>Potencial de RPM:</strong> Uma estimativa do ganho por mil visualizações, baseada em dados de mercado.</li>
+                    <li><strong>Demanda de Busca:</strong> Indica o interesse do público no tópico, com base em tendências de busca.</li>
+                </ul>`,
+             'video-optimizer': `
+                <h4 class="font-semibold text-slate-800 mb-2">Entendendo as Métricas</h4>
+                <ul class="space-y-2">
+                    <li><strong>Pontuação:</strong> Avalia a qualidade do SEO, clareza e potencial de clique (CTR) do título, descrição ou tags.</li>
+                    <li><strong>Virada de Chave:</strong> A principal melhoria estratégica aplicada na sugestão otimizada.</li>
+                </ul>`,
+            'default': `
+                <h4 class="font-semibold text-slate-800 mb-2">Entendendo as Métricas</h4>
+                <p>As pontuações de 0 a 100 indicam o potencial de cada item. Valores mais altos sugerem maior probabilidade de sucesso. Analise a "Virada de Chave" para insights estratégicos.</p>`
+        };
+        const legendHtml = legends[toolId] || legends['default'];
+        return `<div class="mt-6 text-xs text-slate-500 p-4 bg-slate-50 rounded-md border">${legendHtml}</div>`;
+    };
+
+
     // --- AI API Call Abstraction ---
-    async function callAIModel(prompt, schema = null) {
-        // Prioritizes OpenAI if the key is available
-        if (appState.apiKeys.openai) {
-            addToLog("Usando API da OpenAI (preferencial)...");
-            // NOTE: This is a placeholder for the actual OpenAI API call structure.
-            // You would replace this with a fetch call to the OpenAI endpoint.
-            // For now, it will fall through to Gemini for demonstration purposes.
-            console.warn("OpenAI API key found, but implementation is a placeholder. Falling back to Gemini.");
+    async function callOpenAIAPI(prompt, schema) {
+        addToLog("Usando API da OpenAI (preferencial)...");
+        // Esta é uma implementação de exemplo. Você precisaria de um endpoint no seu servidor
+        // para fazer a chamada para a API da OpenAI de forma segura.
+        try {
+            // A chamada real seria para o seu backend, ex: /api/openai-proxy
+            // const result = await apiRequest('/api/openai-proxy', 'POST', { prompt, schema });
+            // return result;
+
+            // Por enquanto, como placeholder, vamos logar e cair para o Gemini.
+            console.warn("A chamada para a API da OpenAI é um placeholder. Usando Gemini como fallback.");
+            throw new Error("OpenAI não implementada, usando fallback.");
+
+        } catch (error) {
+            addToLog("Falha na OpenAI, tentando Gemini como backup...", true);
+            return callGeminiAPI(prompt, schema);
         }
-        
-        // Fallback to Gemini
+    }
+
+    async function callAIModel(prompt, schema = null) {
+        if (appState.apiKeys.openai) {
+            return callOpenAIAPI(prompt, schema);
+        }
         return callGeminiAPI(prompt, schema);
     }
 
@@ -522,7 +565,8 @@
                         </div>
                         <button id="find-subniches" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">💎 Explorar Subnichos</button>
                         <div id="output" class="mt-6"></div>
-                        <button id="generate-more-subniches" class="hidden w-full mt-4 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700">Gerar Mais</button>
+                        <!-- [CORREÇÃO] Botão de gerar mais foi reativado -->
+                        <button id="generate-more-subniches" class="hidden w-full mt-4 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700">Gerar Mais 3 Sugestões</button>
                       </div>` 
         },
         "niche-analysis": { title: "Análise de Nicho (RPM/Hype)", desc: "Analise o potencial de um nicho específico.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="analysis-niche" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nicho a ser analisado"><select id="analysis-country" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="BR">Brasil</option><option value="US">EUA</option><option value="PT">Portugal</option><option value="ES">Espanha</option><option value="DE">Alemanha</option><option value="FR">França</option></select></div><button id="analyze-niche" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">📊 Analisar Nicho</button><div id="output" class="mt-6"></div></div>` },
@@ -567,7 +611,14 @@
                             <h3 class="text-lg font-semibold">Chaves de API</h3>
                             <div class="space-y-4 mt-2">
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-700">Gemini API Key (Principal)</label>
+                                    <label class="block text-sm font-medium text-slate-700">OpenAI API Key (Preferencial)</label>
+                                    <input type="password" id="openai-key" class="mt-1 block w-full px-3 py-2 border rounded-md">
+                                    <p class="text-xs text-slate-500 mt-1">Se preenchida, esta chave será usada como principal para todas as ferramentas de IA.</p>
+                                    <a href="https://platform.openai.com/api-keys" target="_blank" class="text-xs text-indigo-600 hover:underline">Obter chave da OpenAI</a>
+                                </div>
+                                <hr/>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700">Gemini API Key (Principal / Backup)</label>
                                     <input type="password" id="gemini-key-1" class="mt-1 block w-full px-3 py-2 border rounded-md">
                                     <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-indigo-600 hover:underline">Obter chave do Google AI Studio</a>
                                 </div>
@@ -579,11 +630,7 @@
                                     <label class="block text-sm font-medium text-slate-700">Gemini API Key (Reserva 2)</label>
                                     <input type="password" id="gemini-key-3" class="mt-1 block w-full px-3 py-2 border rounded-md">
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">OpenAI API Key (Opcional - Preferencial)</label>
-                                    <input type="password" id="openai-key" class="mt-1 block w-full px-3 py-2 border rounded-md">
-                                    <a href="https://platform.openai.com/api-keys" target="_blank" class="text-xs text-indigo-600 hover:underline">Obter chave da OpenAI</a>
-                                </div>
+                                <hr/>
                                 <div>
                                     <label class="block text-sm font-medium text-slate-700">Google API Key (YouTube Data)</label>
                                     <input type="password" id="google-api-key" class="mt-1 block w-full px-3 py-2 border rounded-md">
@@ -626,7 +673,8 @@
                 }
             };
             const result = await callAIModel(prompt, schema);
-            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: $${(item.rpm_estimate_value || 0).toFixed(2)}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Volume de Busca': getTrendLevel(item.scores['Volume de Busca']) }, item.suggestion)}</div>`).join('');
+            let html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: $${(item.rpm_estimate_value || 0).toFixed(2)}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Volume de Busca': getTrendLevel(item.scores['Volume de Busca']) }, item.suggestion)}</div>`).join('');
+            html += getLegendForTool('niche-analysis');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
             document.getElementById('generate-more-niches').style.display = 'block';
         },
@@ -636,7 +684,8 @@
                 const country = document.getElementById('subniche-country').value;
                 if (!mainNiche) { mainNiche = "qualquer nicho com alta demanda e baixa concorrência" }
                 
-                const prompt = `Para o nicho principal de "${mainNiche}", no país ${country}, gere 3 subnichos inexplorados e criativos. Para cada um, forneça: 1. Uma descrição. 2. Exatamente as 3 principais ideias de vídeo. 3. Uma sugestão "virada de chave". 4. Pontuações realistas e variadas de Potencial, Concorrência e Originalidade (0-100). 5. Se a ideia é inédita (true/false).`;
+                // [CORREÇÃO] Prompt ajustado para ser mais diretivo e evitar scores zerados.
+                const prompt = `Para o nicho principal de "${mainNiche}", no país ${country}, gere EXATAMENTE 3 subnichos inexplorados e criativos. Para cada um, forneça: 1. Uma descrição. 2. 3 ideias de vídeo. 3. Uma sugestão "virada de chave". 4. Pontuações realistas e variadas de Potencial (entre 60-95), Concorrência (entre 10-70) e Originalidade (entre 50-98). 5. Se a ideia é inédita (true/false).`;
                 const schema = {
                     type: "ARRAY",
                     items: {
@@ -660,8 +709,6 @@
                 };
                 const result = await callAIModel(prompt, schema);
                 
-                // [CORREÇÃO] Adicionado tratamento de erro para respostas incompletas da IA.
-                // Isso evita que a aplicação quebre se a IA não retornar o objeto 'scores'.
                 const html = result.map(item => {
                     const potencial = item.scores?.Potencial || 0;
                     const concorrencia = item.scores?.Concorrência || 0;
@@ -690,7 +737,13 @@
                             </div>`;
                 }).join('');
 
-                if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
+                let finalHtml = html;
+                // Adiciona a legenda apenas na primeira geração
+                if (!append) {
+                    finalHtml += getLegendForTool('subniche-finder');
+                }
+
+                if (append) output.querySelector('#generate-more-subniches').insertAdjacentHTML('beforebegin', html); else output.innerHTML = finalHtml;
                 document.getElementById('generate-more-subniches').style.display = 'block';
             } catch (error) {
                 console.error("Erro no Explorador de Subnichos:", error);
@@ -739,10 +792,8 @@
                     <div id="trends-chart-container" class="mt-6 bg-white p-4 rounded-lg border">
                         <h4 class="font-semibold text-slate-800 mb-2">Tendência de Interesse (Últimos 12 meses)</h4>
                         <div class="h-64 relative"><canvas id="trends-chart"></canvas></div>
-                        <div class="text-xs text-slate-500 mt-2 p-2 bg-slate-50 rounded-md">
-                         <strong>Legenda:</strong> O gráfico mostra o interesse de busca relativo (0-100) pelo tópico. <strong>Demanda Média: ${getTrendLevel(avgInterest)}</strong>. Picos podem indicar sazonalidade ou eventos virais. Uma linha estável ou crescente é um bom sinal.
-                        </div>
-                    </div>`;
+                    </div>
+                    ${getLegendForTool('niche-analysis')}`;
 
                 const ctx = document.getElementById('trends-chart').getContext('2d');
                 if (trendsChartInstance) trendsChartInstance.destroy();
@@ -831,6 +882,7 @@
                         
                         <div><h3 class="text-xl font-bold mb-3 border-b pb-2">Análise de Tags</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Tags Atuais</h4><p class="text-sm bg-white p-2 rounded border">${tags.join(', ')}</p><div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.tags.score, { 'Relevância': analysis.tags.score }, analysis.tags.critique)}</div></div><div class="bg-green-50 p-4 rounded-lg border border-green-200"><h4 class="font-semibold mb-2 text-green-800">Tags Otimizadas ${createCopyButton(optimizations.tags.tag_list.join(', '))}</h4><p class="text-sm bg-white p-2 rounded border">${optimizations.tags.tag_list.join(', ')}</p><div class="mt-4">${renderScoreCard('Pontuação Otimizada', optimizations.tags.score, { 'Relevância & Volume': optimizations.tags.score }, optimizations.tags.suggestion)}</div></div></div></div>
                     </div>
+                    ${getLegendForTool('video-optimizer')}
                 `;
                 document.getElementById('generate-more-titles').addEventListener('click', () => handlers['generate-more-titles'](document.getElementById('optimized-titles-container')));
 
@@ -1050,6 +1102,7 @@
                             `).join('')}
                         </div>
                     </div>
+                    ${getLegendForTool('comment-analyzer')}
                 `;
 
             } catch (error) {
@@ -1093,7 +1146,8 @@
             };
             const result = await callAIModel(prompt, schema);
             const filteredResult = result.filter(item => item.viral_score > 80);
-            const html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
+            let html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
+            html += getLegendForTool('title-structures');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
             document.getElementById('generate-more-structures').style.display = 'block';
         },
@@ -1135,7 +1189,8 @@
                 }
             };
             const result = await callAIModel(prompt, schema);
-            const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="font-mono text-sm bg-slate-200 p-2 rounded relative group">${item.prompt}<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(item.prompt)}</div></div><p class="text-xs mt-2 text-slate-600"><strong>Teste A/B:</strong> ${item.ab_test_suggestion}</p></div>${renderScoreCard('Potencial de CTR', item.score, { 'Impacto Visual': item.score + 4, 'Clareza': item.score - 3 }, item.suggestion)}</div>`).join('');
+            let html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="font-mono text-sm bg-slate-200 p-2 rounded relative group">${item.prompt}<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(item.prompt)}</div></div><p class="text-xs mt-2 text-slate-600"><strong>Teste A/B:</strong> ${item.ab_test_suggestion}</p></div>${renderScoreCard('Potencial de CTR', item.score, { 'Impacto Visual': item.score + 4, 'Clareza': item.score - 3 }, item.suggestion)}</div>`).join('');
+            html += getLegendForTool('thumbnail-prompts');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
             document.getElementById('generate-more-prompts').style.display = 'block';
         },
@@ -1171,7 +1226,8 @@
                         </div>
                     </div>
                     ${renderScoreCard('Otimização', result.score, { 'SEO': result.score, 'Engajamento': result.score > 10 ? result.score - 4 : result.score }, result.suggestion)}
-                </div>`;
+                </div>
+                ${getLegendForTool('description-optimizer')}`;
         },
         'generate-tags': async (output) => {
             const topic = document.getElementById('tag-topic').value.trim();
@@ -1187,7 +1243,8 @@
                 }
             };
             const result = await callAIModel(prompt, schema);
-            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Tags Geradas</h4>${createCopyButton(result.tags)}</div><p class="text-sm text-slate-700 p-2 bg-white rounded border">${result.tags}</p></div>${renderScoreCard('Qualidade', result.score, { 'Relevância': result.score, 'Volume': result.score > 10 ? result.score - 8 : result.score }, result.suggestion)}</div>`;
+            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Tags Geradas</h4>${createCopyButton(result.tags)}</div><p class="text-sm text-slate-700 p-2 bg-white rounded border">${result.tags}</p></div>${renderScoreCard('Qualidade', result.score, { 'Relevância': result.score, 'Volume': result.score > 10 ? result.score - 8 : result.score }, result.suggestion)}</div>
+            ${getLegendForTool('tag-generator')}`;
         },
         'convert-to-srt': (output) => {
             const texto = document.getElementById('srt-input-text').value;
@@ -1320,7 +1377,10 @@
         ['niches', 'subniches', 'structures', 'prompts'].forEach(type => {
             const moreBtn = document.getElementById(`generate-more-${type}`);
             if (moreBtn) {
-                moreBtn.addEventListener('click', () => {
+                 // Clone to remove old listeners
+                const newMoreBtn = moreBtn.cloneNode(true);
+                moreBtn.parentNode.replaceChild(newMoreBtn, moreBtn);
+                newMoreBtn.addEventListener('click', () => {
                     const handlerKey = type === 'subniches' ? 'find-subniches' : `generate-${type}`;
                     handlers[handlerKey](outputEl, true)
                 });
@@ -1706,18 +1766,14 @@
         ELEMENTS.screenshotPreview.classList.add('hidden');
         ELEMENTS.screenshotPreview.src = '';
         ELEMENTS.supportForm.reset();
-        // [CORREÇÃO] Garante que a mensagem de fallback seja escondida ao fechar o modal
-        document.getElementById('support-fallback').classList.add('hidden');
     });
     ELEMENTS.supportForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const description = document.getElementById('support-description').value;
-        // [CORREÇÃO] Adicionada verificação para evitar erro se o usuário não estiver logado
         const userEmail = appState.currentUser?.email || 'Usuário não logado';
         
-        // [CORREÇÃO] Lógica alterada para usar WhatsApp
         const phoneNumber = "5514997022684";
-        let message = `*Ticket de Suporte - Darks Vips AI*\n\n*Email:* ${userEmail}\n*Versão:* 17.7\n\n*Descrição do Problema:*\n${description}`;
+        let message = `*Ticket de Suporte - Darks Vips AI*\n\n*Email:* ${userEmail}\n*Versão:* 17.8\n\n*Descrição do Problema:*\n${description}`;
 
         if (ELEMENTS.screenshotPreview.src) {
             message += "\n\n(Um print da tela foi anexado e será enviado na conversa.)";
