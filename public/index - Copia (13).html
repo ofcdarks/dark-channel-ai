@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v17.4</title>
+    <title>Darks Vips AI v17.3</title>
     <link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -111,17 +111,12 @@
                 <h3 class="text-lg font-semibold text-slate-800">Reportar um Erro</h3>
                 <button id="close-error-modal" class="text-2xl text-slate-500 hover:text-slate-800">&times;</button>
             </div>
-            <p class="text-sm text-slate-600 mb-4">Descreva o problema que você encontrou. Se possível, inclua os passos para reproduzi-lo.</p>
+            <p class="text-sm text-slate-600 mb-4">Descreva o problema que você encontrou. Se possível, inclua os passos para reproduzi-lo. Um print da tela é muito útil!</p>
             <form id="error-report-form">
                 <textarea id="error-description" class="w-full p-2 border rounded-md mb-4" rows="5" placeholder="Descrição detalhada do erro..." required></textarea>
-                <label for="error-screenshot" class="w-full text-center cursor-pointer bg-slate-100 p-4 border-2 border-dashed rounded-lg block mb-4">
-                    <span>📎 Anexar Print da Tela</span>
-                    <input type="file" id="error-screenshot" class="hidden" accept="image/*">
-                </label>
-                <img id="screenshot-preview" src="" alt="Pré-visualização do print" class="hidden max-w-full h-auto max-h-40 mx-auto mb-4 rounded-md"/>
                 <div class="text-center">
                     <button type="submit" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg">Abrir Ticket por E-mail</button>
-                    <p class="text-xs text-slate-500 mt-2">Isso abrirá seu cliente de e-mail. Por favor, **anexe o print da tela manualmente**.</p>
+                    <p class="text-xs text-slate-500 mt-2">Isso abrirá seu cliente de e-mail padrão. Por favor, anexe o print da tela manualmente.</p>
                 </div>
             </form>
         </div>
@@ -200,8 +195,6 @@
         reportErrorBtn: document.getElementById('report-error-btn'),
         closeErrorModal: document.getElementById('close-error-modal'),
         errorReportForm: document.getElementById('error-report-form'),
-        errorScreenshotInput: document.getElementById('error-screenshot'),
-        screenshotPreview: document.getElementById('screenshot-preview'),
     };
 
     const PROGRESS_PHRASES = [ "Decodificando o algoritmo...", "Buscando insights virais...", "Consultando os dados de tendência...", "Polindo as palavras-chave...", "Ajustando o potencial de clique..." ];
@@ -349,7 +342,7 @@
             { id: 'description-optimizer', icon: '📄', label: 'Otimizador de Descrição' },
             { id: 'tag-generator', icon: '🏷️', label: 'Gerador de Tags' },
             { id: 'srt-converter', icon: '🔄', label: 'Conversor de SRT' },
-            { id: 'text-divider', icon: '✂️', label: 'Divisor de Texto' },
+            { id: 'char-separator', icon: '✍️', label: 'Separador de Caracteres' },
             { id: 'channel-organizer', icon: '📺', label: 'Organizador de Canais' },
             { id: 'planner', icon: '🗓️', label: 'Planejador de Conteúdo' },
             { id: 'settings', icon: '⚙️', label: 'Configurações' },
@@ -517,7 +510,7 @@
         "description-optimizer": { title: "Otimizador de Descrição", desc: "Crie descrições com SEO e CTAs eficazes.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="text" id="desc-title" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="Título do Vídeo"><textarea id="desc-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" rows="4" placeholder="Resumo do vídeo e palavras-chave..."></textarea><button id="generate-description" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">📄 Gerar Descrição</button><div id="output" class="mt-6"></div></div>` },
         "tag-generator": { title: "Gerador de Tags", desc: "Gere tags relevantes para maximizar o alcance.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="tag-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico do Vídeo"><select id="tag-lang" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português</option><option value="en-US">Inglês</option><option value="es-ES">Espanhol</option></select></div><button id="generate-tags" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">🏷️ Gerar Tags</button><div id="output" class="mt-6"></div></div>` },
         "srt-converter": { title: "Conversor de Texto para SRT", desc: "Cole um texto e converta-o para o formato de legenda .SRT com tempo otimizado.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><textarea id="srt-input-text" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" rows="10" placeholder="Cole o texto completo aqui..."></textarea><button id="convert-to-srt" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">🔄 Converter para SRT</button><div id="output" class="mt-6"></div></div>` },
-        "text-divider": { title: "Divisor de Texto", desc: "Analise e divida seu roteiro. Veja contadores e tempo estimado de narração.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6"><div class="bg-slate-100 p-4 rounded-lg text-center"><p class="text-sm text-slate-500">Palavras</p><p id="word-count" class="text-3xl font-bold">0</p></div><div class="bg-slate-100 p-4 rounded-lg text-center"><p class="text-sm text-slate-500">Caracteres</p><p id="char-count" class="text-3xl font-bold">0</p></div><div class="bg-slate-100 p-4 rounded-lg text-center"><p class="text-sm text-slate-500">Tempo de Narração</p><p id="time-estimate" class="text-3xl font-bold">00:00</p></div></div><textarea id="text-divider-input" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" rows="8" placeholder="Digite ou cole o texto/roteiro aqui..."></textarea><div class="flex items-center justify-between gap-4 mb-4"><div class="flex items-center gap-4"><label>Dividir por:</label><div class="flex items-center"><input type="radio" id="sep-char" name="separator-type" value="char" checked class="h-4 w-4"><label for="sep-char" class="ml-2">Caracteres</label></div><div class="flex items-center"><input type="radio" id="sep-word" name="separator-type" value="word" class="h-4 w-4"><label for="sep-word" class="ml-2">Palavras</label></div></div><input type="text" id="char-separator-input" class="px-4 py-3 bg-slate-100 border rounded-lg w-24" value="|"></div><div id="output"></div></div>` },
+        "char-separator": { title: "Separador de Texto", desc: "Adicione um separador entre cada caractere ou palavra de um texto.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><textarea id="char-input" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" rows="5" placeholder="Digite ou cole o texto aqui..."></textarea><div class="flex items-center justify-between gap-4 mb-4"><div class="flex items-center gap-4"><label>Separar por:</label><div class="flex items-center"><input type="radio" id="sep-char" name="separator-type" value="char" checked class="h-4 w-4"><label for="sep-char" class="ml-2">Caracteres</label></div><div class="flex items-center"><input type="radio" id="sep-word" name="separator-type" value="word" class="h-4 w-4"><label for="sep-word" class="ml-2">Palavras</label></div></div><input type="text" id="char-separator-input" class="px-4 py-3 bg-slate-100 border rounded-lg w-24" value="|"></div><div id="output" class="mt-6"></div></div>` },
         "channel-organizer": { title: "Organizador de Canais", desc: "Adicione e gerencie as informações e estratégias dos seus canais.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border mb-6"><h3 class="text-lg font-semibold mb-4">Adicionar Novo Canal</h3><form id="channel-form" class="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="text" id="org-channel-name" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nome do Canal" required><input type="text" id="org-channel-niche" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nicho Principal" required><select id="org-channel-lang" class="px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português (BR)</option><option value="en-US">Inglês (US)</option><option value="es-ES">Espanhol (ES)</option></select><input type="number" id="org-videos-week" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Vídeos por Semana" required><input type="text" id="org-post-time" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Horário de Postagem. Ex: 18:00"><input type="number" id="org-backlog-qty" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Qtd. de Vídeos no Backlog"><button type="submit" class="md:col-span-2 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">Adicionar Canal</button></form></div><div id="organizer-output" class="space-y-4"></div>` },
         "planner": { title: "Planejador de Conteúdo", desc: "Organize suas ideias de vídeo e acompanhe seu progresso.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border mb-6"><h3 class="text-lg font-semibold mb-4">Adicionar Nova Ideia</h3><form id="planner-form" class="space-y-4"><select id="planner-channel-select" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" required><option value="">Selecione um Canal</option></select><input type="text" id="idea-title" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Título da ideia de vídeo" required><button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">Adicionar ao Planejamento</button></form></div><div id="planner-output" class="space-y-4"></div>` },
         "settings": { 
@@ -640,7 +633,7 @@
             const country = document.getElementById('analysis-country').value;
             if (!niche) { output.innerHTML = `<p class="text-red-500">Insira um nicho para análise.</p>`; return; }
             
-            const prompt = `Analise profundamente o nicho "${niche}" para o YouTube no país ${country}. Forneça uma estimativa de RPM em dólares, uma pontuação de "hype" (potencial de viralização), e 3 canais de referência que sejam populares nesse país e nesse nicho específico. Os canais devem ser relevantes para o idioma e a cultura do país ${country}. Forneça também uma sugestão estratégica que seja uma "virada de chave".`;
+            const prompt = `Analise profundamente o nicho "${niche}" para o YouTube no país ${country}. Forneça uma estimativa de RPM em dólares, uma pontuação de "hype" (potencial de viralização), canais de referência e uma sugestão estratégica que seja uma "virada de chave".`;
             const schema = {
                 type: "OBJECT",
                 properties: {
@@ -1219,7 +1212,7 @@
         if (tabId === 'dashboard') initializeDashboard();
         if (tabId === 'channel-organizer') initializeChannelOrganizer();
         if (tabId === 'planner') initializePlanner();
-        if (tabId === 'text-divider') initializeTextDivider();
+        if (tabId === 'char-separator') initializeCharSeparator();
         if (tabId === 'niche-analysis') {
             const nicheInput = document.getElementById('analysis-niche');
             nicheInput.addEventListener('input', () => {
@@ -1297,29 +1290,14 @@
         });
     }
 
-    function initializeTextDivider() {
-        const textInput = document.getElementById('text-divider-input');
+    function initializeCharSeparator() {
+        const textInput = document.getElementById('char-input');
         const separatorInput = document.getElementById('char-separator-input');
         const outputEl = document.getElementById('output');
         const typeRadios = document.querySelectorAll('input[name="separator-type"]');
-        const wordCountEl = document.getElementById('word-count');
-        const charCountEl = document.getElementById('char-count');
-        const timeEstimateEl = document.getElementById('time-estimate');
 
-        const updateAnalytics = () => {
+        const updateSeparation = () => {
             const text = textInput.value;
-            const words = text.split(/\s+/).filter(Boolean);
-            const wordCount = words.length;
-            const charCount = text.length;
-            
-            wordCountEl.textContent = wordCount;
-            charCountEl.textContent = charCount;
-
-            const timeInSeconds = (wordCount / 150) * 60;
-            const minutes = Math.floor(timeInSeconds / 60);
-            const seconds = Math.floor(timeInSeconds % 60);
-            timeEstimateEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            
             const separator = separatorInput.value;
             const type = document.querySelector('input[name="separator-type"]:checked').value;
             
@@ -1328,15 +1306,15 @@
                 return;
             }
 
-            const items = type === 'char' ? text.split('') : words;
+            const items = type === 'char' ? text.split('') : text.split(/\s+/).filter(Boolean);
             const separatedText = items.join(separator);
 
-            outputEl.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Texto Dividido</h4>${createCopyButton(separatedText)}</div><div class="prose whitespace-pre-wrap p-2 bg-white rounded border max-h-72 overflow-y-auto">${separatedText}</div></div>`;
+            outputEl.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Resultado</h4>${createCopyButton(separatedText)}</div><div class="prose whitespace-pre-wrap p-2 bg-white rounded border max-h-72 overflow-y-auto">${separatedText}</div></div>`;
         };
 
-        textInput.addEventListener('input', updateAnalytics);
-        separatorInput.addEventListener('input', updateAnalytics);
-        typeRadios.forEach(radio => radio.addEventListener('change', updateAnalytics));
+        textInput.addEventListener('input', updateSeparation);
+        separatorInput.addEventListener('input', updateSeparation);
+        typeRadios.forEach(radio => radio.addEventListener('change', updateSeparation));
     }
     
     let mainChartInstance = null;
@@ -1599,30 +1577,14 @@
         ELEMENTS.menuOverlay.style.display = 'none';
     });
     ELEMENTS.reportErrorBtn.addEventListener('click', () => ELEMENTS.errorReportModal.style.display = 'flex');
-    ELEMENTS.closeErrorModal.addEventListener('click', () => {
-        ELEMENTS.errorReportModal.style.display = 'none';
-        ELEMENTS.screenshotPreview.classList.add('hidden');
-        ELEMENTS.screenshotPreview.src = '';
-        ELEMENTS.errorReportForm.reset();
-    });
+    ELEMENTS.closeErrorModal.addEventListener('click', () => ELEMENTS.errorReportModal.style.display = 'none');
     ELEMENTS.errorReportForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const description = document.getElementById('error-description').value;
         const subject = "Report de Erro - Darks Vips AI";
-        const body = `Descrição do problema:\n----------------------\n${description}\n\n----------------------\nEmail do usuário: ${appState.currentUser.email}\nVersão da App: 17.4`;
+        const body = `Descrição do problema:\n----------------------\n${description}\n\n----------------------\nEmail do usuário: ${appState.currentUser.email}\nVersão da App: 17.3`;
         const mailtoLink = `mailto:suporte@canaisdarks.com.br?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         window.open(mailtoLink, '_blank');
-    });
-    ELEMENTS.errorScreenshotInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                ELEMENTS.screenshotPreview.src = event.target.result;
-                ELEMENTS.screenshotPreview.classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        }
     });
 
 
