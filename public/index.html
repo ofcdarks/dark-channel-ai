@@ -114,7 +114,6 @@
             <div class="p-4 text-sm text-slate-500" id="user-email-display"></div>
             <nav id="sidebar-nav" class="p-4 space-y-1 flex-1 overflow-y-auto"></nav>
             <div class="p-4 border-t">
-                <!-- [CORREÇÃO] Botão de Suporte Removido -->
                 <button id="logout-btn" class="w-full text-left flex items-center gap-3 px-4 py-2 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-700">
                     <span>🚪</span><span>Sair</span>
                 </button>
@@ -409,20 +408,21 @@
         addToLog("Usando API da OpenAI (preferencial)...");
         showProgressModal();
         try {
-            // ATENÇÃO: Fazer chamadas de API com chaves secretas diretamente do cliente
-            // é INSEGURO e expõe sua chave. Em um ambiente de produção, isso DEVE
-            // ser feito através de um backend (servidor) que atua como um proxy.
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            // [CORREÇÃO] Adiciona a instrução para retornar JSON ao prompt quando necessário.
+            let finalPrompt = prompt;
+            if (schema) {
+                finalPrompt += "\n\nIMPORTANT: Your response MUST be a valid JSON object that conforms to the provided schema, without any markdown formatting like ```json.";
+            }
+
+            const response = await fetch('[https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${appState.apiKeys.openai}`
                 },
                 body: JSON.stringify({
-                    model: "gpt-3.5-turbo", // Modelo de baixo custo para a maioria das tarefas
-                    messages: [{ role: "user", content: prompt }],
-                    // A API da OpenAI tem um modo de "função" para JSON, mas para simplificar
-                    // vamos pedir JSON no prompt e parsear a resposta.
+                    model: "gpt-3.5-turbo",
+                    messages: [{ role: "user", content: finalPrompt }],
                     response_format: schema ? { type: "json_object" } : { type: "text" }
                 })
             });
@@ -441,7 +441,6 @@
         } catch (error) {
             console.error("Erro na API da OpenAI:", error);
             addToLog(`Falha na OpenAI: ${error.message}. Tentando Gemini como backup...`, true);
-            // Se a chamada da OpenAI falhar, caia para a Gemini
             hideProgressModal();
             return callGeminiAPI(prompt, schema);
         }
@@ -1411,7 +1410,7 @@
         }
         statusEl.innerHTML = '<span class="animate-spin">⏳</span>';
         try {
-            const response = await fetch('https://api.openai.com/v1/models', {
+            const response = await fetch('[https://api.openai.com/v1/models](https://api.openai.com/v1/models)', {
                 method: 'GET',
                 headers: { 'Authorization': `Bearer ${key}` }
             });
@@ -1691,7 +1690,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                         ${recentVideos.map(video => `
                             <div class="bg-white p-4 rounded-lg border shadow-sm">
-                                <a href="https://www.youtube.com/watch?v=${video.id}" target="_blank">
+                                <a href="[https://www.youtube.com/watch?v=$](https://www.youtube.com/watch?v=$){video.id}" target="_blank">
                                     <img src="${video.thumbnail}" alt="${video.title}" class="rounded-md mb-2 w-full aspect-video object-cover">
                                     <h4 class="font-semibold text-sm leading-tight truncate">${video.title}</h4>
                                 </a>
