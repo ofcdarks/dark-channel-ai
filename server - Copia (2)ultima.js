@@ -7,7 +7,6 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const { google } = require('googleapis');
 const googleTrends = require('google-trends-api');
-const axios = require('axios'); // Adicionado para fazer requisições HTTP do servidor
 
 // 2. Configuração Inicial
 const app = express();
@@ -15,7 +14,8 @@ const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(express.json());
-// Garanta que seu 'index.html' está dentro de uma pasta 'public'
+// [CORREÇÃO] Para resolver o erro 'ENOENT', o servidor precisa saber onde encontrar seu arquivo principal.
+// A convenção é usar uma pasta 'public'. Certifique-se de que seu 'index.html' está dentro de uma pasta 'public' na raiz do projeto.
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 3. Conexão com o Banco de Dados PostgreSQL
@@ -109,97 +109,7 @@ app.post('/api/settings/:userId', async (req, res) => {
     }
 });
 
-
-// 5. [NOVA ROTA SEGURA] Rota para Geração de Conteúdo com IA
-app.post('/api/generate', async (req, res) => {
-    const userId = req.headers['x-user-id'];
-    const { prompt, schema } = req.body;
-
-    if (!userId) {
-        return res.status(401).json({ message: "Usuário não autenticado." });
-    }
-    if (!prompt) {
-        return res.status(400).json({ message: "O prompt é obrigatório." });
-    }
-
-    try {
-        // Buscar chaves de API do usuário no banco de dados
-        const settingsResult = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
-        if (settingsResult.rows.length === 0) {
-            return res.status(404).json({ message: 'Usuário não encontrado.' });
-        }
-        
-        const apiKeys = settingsResult.rows[0].settings || {};
-        const openAIKey = apiKeys.openai;
-        const geminiKeys = (apiKeys.gemini || []).filter(k => k && k.trim() !== '');
-
-        // Lógica de Priorização: Tenta OpenAI primeiro, se houver chave
-        if (openAIKey) {
-            try {
-                console.log("Tentando com a API da OpenAI...");
-                const payload = {
-                    model: "gpt-3.5-turbo",
-                    messages: [{ role: "user", content: prompt }],
-                };
-                if (schema) {
-                    payload.response_format = { type: "json_object" };
-                }
-
-                const response = await axios.post('https://api.openai.com/v1/chat/completions', payload, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${openAIKey}`
-                    },
-                    timeout: 60000 // 60 segundos de timeout
-                });
-                
-                const content = response.data.choices[0].message.content;
-                return res.json(schema ? JSON.parse(content) : { text: content });
-
-            } catch (error) {
-                console.error("Erro na API da OpenAI, tentando Gemini como fallback:", error.response?.data?.error?.message || error.message);
-                // Se OpenAI falhar, continua para tentar Gemini (não retorna erro ainda)
-            }
-        }
-
-        // Lógica de Fallback/Padrão: Usa Gemini
-        if (geminiKeys.length > 0) {
-             console.log("Usando a API Gemini...");
-             for (const key of geminiKeys) {
-                try {
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${key}`;
-                    let payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
-                    if (schema) {
-                        payload.generationConfig = { response_mime_type: "application/json", response_schema: schema };
-                    }
-                    
-                    const response = await axios.post(apiUrl, payload, {
-                        headers: { 'Content-Type': 'application/json' },
-                        timeout: 60000 // 60 segundos de timeout
-                    });
-                    
-                    if (response.data.candidates?.[0]?.content?.parts?.[0]) {
-                        const text = response.data.candidates[0].content.parts[0].text;
-                        return res.json(schema ? JSON.parse(text) : { text });
-                    }
-                } catch (error) {
-                    console.error(`Falha com uma chave Gemini. Tentando a próxima. Erro:`, error.response?.data?.error?.message || error.message);
-                    // Continua o loop para tentar a próxima chave
-                }
-             }
-        }
-        
-        // Se todas as tentativas falharem
-        return res.status(500).json({ message: "Falha ao se comunicar com as APIs de IA. Verifique suas chaves nas configurações." });
-
-    } catch (error) {
-        console.error("Erro geral na rota /api/generate:", error);
-        res.status(500).json({ message: 'Erro interno do servidor ao processar a requisição de IA.' });
-    }
-});
-
-
-// 6. Rotas da API (YouTube Data & Google Trends)
+// 5. Rotas da API (YouTube Data & Google Trends)
 const getGoogleApiKey = async (userId) => {
     const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
     if (result.rows.length > 0 && result.rows[0].settings) {
@@ -328,6 +238,7 @@ app.get('/api/youtube-recent-videos/:uploadsPlaylistId', async (req, res) => {
     }
 });
 
+// [NOVA ROTA] Busca os comentários de um vídeo
 app.get('/api/video-comments/:videoId', async (req, res) => {
     const { videoId } = req.params;
     const userId = req.headers['x-user-id'];
@@ -342,8 +253,8 @@ app.get('/api/video-comments/:videoId', async (req, res) => {
         const response = await youtube.commentThreads.list({
             part: 'snippet',
             videoId: videoId,
-            maxResults: 50, 
-            order: 'relevance'
+            maxResults: 50, // Pega os 50 comentários principais
+            order: 'relevance' // Pega os mais relevantes
         });
 
         const comments = response.data.items.map(item => item.snippet.topLevelComment.snippet.textDisplay);
@@ -375,12 +286,12 @@ app.get('/api/google-trends/:keyword/:country', async (req, res) => {
 });
 
 
-// 7. Rota Genérica (Catch-all) para servir o index.html
+// 6. Rota Genérica (Catch-all) para servir o index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 8. Inicialização do Servidor
+// 7. Inicialização do Servidor
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
   initializeDb();

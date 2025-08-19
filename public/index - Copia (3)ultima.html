@@ -140,6 +140,7 @@
             openai: "", 
             google_api: "" 
         },
+        currentGeminiKeyIndex: 0,
         userChannels: [],
         videoIdeas: [],
         currentVideoAnalysis: null
@@ -164,7 +165,7 @@
         userEmailDisplay: document.getElementById('user-email-display'),
         logoutBtn: document.getElementById('logout-btn'),
         openMenuBtn: document.getElementById('open-menu-btn'),
-        closeMenuBtn: document.getElementById('close-menu-btn'), // Note: This element doesn't exist in the HTML, but the listener does.
+        closeMenuBtn: document.getElementById('close-menu-btn'),
         menuOverlay: document.getElementById('menu-overlay'),
         mobileHeaderTitle: document.getElementById('mobile-header-title'),
         logMessage: document.getElementById('log-message'),
@@ -196,14 +197,11 @@
             } 
         };
         if (body) options.body = JSON.stringify(body);
-        
         const response = await fetch(endpoint, options);
-        
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || 'Ocorreu um erro na comunicação com o servidor.');
+            throw new Error(errorData.message || 'Ocorreu um erro.');
         }
-        
         const contentType = response.headers.get("content-type");
         return contentType?.includes("application/json") ? response.json() : null;
     }
@@ -373,6 +371,7 @@
                 </div>`;
     };
 
+    // --- [NOVO] Legendas para os Cards ---
     const getLegendForTool = (toolId) => {
         const legends = {
             'subniche-finder': `
@@ -403,21 +402,125 @@
         return `<div class="mt-8 text-sm p-4 bg-indigo-50 rounded-lg border border-indigo-200">${legendHtml}</div>`;
     };
 
-    // --- [REFEITO] AI API Call Abstraction (Seguro) ---
-    async function callAIModel(prompt, schema = null) {
+
+    // --- AI API Call Abstraction ---
+    async function callOpenAIAPI(prompt, schema) {
+        addToLog("Usando API da OpenAI (preferencial)...");
         showProgressModal();
         try {
-            addToLog("Comunicando com o servidor para análise de IA...");
-            const result = await apiRequest('/api/generate', 'POST', { prompt, schema });
-            addToLog("Análise da IA concluída com sucesso!");
-            return result;
-        } catch (error) {
-            console.error("Erro ao chamar o modelo de IA via backend:", error);
-            addToLog(`Erro: ${error.message}`, true);
-            throw error; // Re-lança o erro para ser tratado pela função que chamou
-        } finally {
+            let finalPrompt = prompt;
+            if (schema) {
+                finalPrompt += "\n\nIMPORTANT: Your response MUST be a valid JSON object that conforms to the provided schema, without any markdown formatting like ```json.";
+            }
+
+            const response = await fetch('[https://api.openai.com/v1/chat/completions](https://api.openai.com/v1/chat/completions)', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${appState.apiKeys.openai}`
+                },
+                body: JSON.stringify({
+                    model: "gpt-3.5-turbo",
+                    messages: [{ role: "user", content: finalPrompt }],
+                    response_format: schema ? { type: "json_object" } : { type: "text" }
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error.message || `Erro na API OpenAI: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const content = result.choices[0].message.content;
             hideProgressModal();
+            addToLog("Análise da OpenAI concluída com sucesso!");
+            return schema ? JSON.parse(content) : { text: content };
+
+        } catch (error) {
+            console.error("Erro na API da OpenAI:", error);
+            addToLog(`Falha na OpenAI: ${error.message}. Tentando Gemini como backup...`, true);
+            hideProgressModal();
+            return callGeminiAPI(prompt, schema);
         }
+    }
+
+    async function callAIModel(prompt, schema = null) {
+        if (appState.apiKeys.openai) {
+            return callOpenAIAPI(prompt, schema);
+        }
+        return callGeminiAPI(prompt, schema);
+    }
+
+    async function callGeminiAPI(prompt, schema = null) {
+        const validKeys = appState.apiKeys.gemini.filter(k => k && k.trim() !== '');
+        if (validKeys.length === 0) {
+            throw new Error("Nenhuma chave da API Gemini foi configurada. Adicione uma nas Configurações.");
+        }
+
+        showProgressModal();
+        let lastError = null;
+
+        for (let i = 0; i < validKeys.length; i++) {
+            const keyIndex = (appState.currentGeminiKeyIndex + i) % validKeys.length;
+            const currentKey = validKeys[keyIndex];
+            
+            addToLog(`Usando chave de API Gemini ${keyIndex + 1}...`);
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${currentKey}`;
+            let payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+            if (schema) {
+                payload.generationConfig = { response_mime_type: "application/json", response_schema: schema };
+            }
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000);
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (response.status === 429) {
+                    addToLog(`Chave ${keyIndex + 1} excedeu a cota. Tentando a próxima...`, true);
+                    lastError = new Error(`Chave ${keyIndex + 1} com cota excedida.`);
+                    continue; // Try next key
+                }
+
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    lastError = new Error(`Erro na API: ${response.status} - ${errorBody.error?.message || 'Verifique sua chave de API.'}`);
+                    addToLog(`Erro com a chave ${keyIndex + 1}. Tentando a próxima...`, true);
+                    continue; // Try next key
+                }
+                
+                const result = await response.json();
+                
+                if (result.candidates?.[0]?.content?.parts?.[0]) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    addToLog("Análise da IA concluída com sucesso!");
+                    appState.currentGeminiKeyIndex = keyIndex; // Update the working key index
+                    hideProgressModal();
+                    return schema ? JSON.parse(text) : { text };
+                }
+
+                if (result.candidates?.[0]?.finishReason === 'SAFETY') {
+                    lastError = new Error("A resposta foi bloqueada por políticas de segurança.");
+                } else if (result.promptFeedback?.blockReason) {
+                     lastError = new Error(`Requisição bloqueada: ${result.promptFeedback.blockReason}`);
+                }
+                else {
+                    lastError = new Error("Resposta da API inválida ou vazia.");
+                }
+                
+            } catch (error) {
+                console.error(`Erro detalhado na API com chave ${keyIndex + 1}:`, error);
+                lastError = error;
+                if (error.name === 'AbortError') lastError = new Error("A requisição da API excedeu o tempo limite.");
+            }
+        }
+
+        hideProgressModal();
+        addToLog(`Erro: ${lastError.message}`, true);
+        throw new Error(`Todas as chaves de API falharam. Último erro: ${lastError.message}`);
     }
     
     // --- Tools and Handlers ---
@@ -578,19 +681,15 @@
                     }
                 }
             };
-            try {
-                const result = await callAIModel(prompt, schema);
-                let html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: $${(item.rpm_estimate_value || 0).toFixed(2)}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Volume de Busca': getTrendLevel(item.scores['Volume de Busca']) }, item.suggestion)}</div>`).join('');
-                if (append) {
-                    const moreButton = document.getElementById('generate-more-niches');
-                    if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
-                } else {
-                    output.innerHTML = html;
-                }
-                document.getElementById('generate-more-niches').style.display = 'block';
-            } catch (error) {
-                 output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
+            const result = await callAIModel(prompt, schema);
+            let html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: $${(item.rpm_estimate_value || 0).toFixed(2)}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Volume de Busca': getTrendLevel(item.scores['Volume de Busca']) }, item.suggestion)}</div>`).join('');
+            if (append) {
+                const moreButton = document.getElementById('generate-more-niches');
+                if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
+            } else {
+                output.innerHTML = html;
             }
+            document.getElementById('generate-more-niches').style.display = 'block';
         },
         'find-subniches': async (output, append = false) => {
             try {
@@ -620,22 +719,15 @@
                         }
                     }
                 };
-                
                 const result = await callAIModel(prompt, schema);
                 
-                // [CORREÇÃO] Adicionada validação da resposta da IA
-                if (!result || !Array.isArray(result) || result.length === 0) {
-                    throw new Error("A IA não retornou sugestões válidas. Tente refinar sua busca.");
-                }
-
                 const html = result.map(item => {
-                    // Validação robusta para cada item
                     const potencial = item.scores?.Potencial || 0;
                     const concorrencia = item.scores?.Concorrência || 0;
                     const originalidade = item.scores?.Originalidade || 0;
-                    const subnicheName = item.subniche_name || "Subnicho Indefinido";
+                    const subnicheName = item.subniche_name || "Subnicho Desconhecido";
                     const description = item.description || "Nenhuma descrição fornecida.";
-                    const videoIdeas = (Array.isArray(item.video_ideas) ? item.video_ideas : []).slice(0, 3).join('; ');
+                    const videoIdeas = (item.video_ideas || []).slice(0, 3).join('; ');
 
                     return `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4">
                                 <div class="flex-1">
@@ -666,7 +758,7 @@
                 document.getElementById('generate-more-subniches').style.display = 'block';
             } catch (error) {
                 console.error("Erro no Explorador de Subnichos:", error);
-                output.innerHTML = `<div class="text-center p-4 bg-red-50 text-red-700 rounded-lg border border-red-200"><strong>Ocorreu um erro:</strong> ${error.message}</div>`;
+                output.innerHTML = `<p class="text-red-500">Ocorreu um erro ao buscar os subnichos. A IA pode estar sobrecarregada ou a chave de API é inválida. Tente novamente em alguns instantes. Detalhe: ${error.message}</p>`;
             }
         },
         'analyze-niche': async (output) => {
@@ -743,7 +835,6 @@
             const videoId = videoIdMatch[1];
             
             try {
-                showProgressModal();
                 const videoData = await apiRequest(`/api/video-details/${videoId}`, 'GET');
                 appState.currentVideoAnalysis = videoData;
                 const { title, description, tags, detectedLanguage } = videoData;
@@ -840,7 +931,6 @@
             if (!channelId) { output.innerHTML = `<p class="text-red-500">Insira o ID de um canal concorrente.</p>`; return; }
 
             try {
-                showProgressModal();
                 const stats = await apiRequest(`/api/youtube-stats/${channelId}`, 'GET');
                 const recentVideos = stats.uploadsPlaylistId ? await apiRequest(`/api/youtube-recent-videos/${stats.uploadsPlaylistId}`, 'GET') : [];
                 
@@ -930,8 +1020,6 @@
 
             } catch (error) {
                 output.innerHTML = `<p class="text-red-500">Erro ao analisar concorrente: ${error.message}</p>`;
-            } finally {
-                hideProgressModal();
             }
         },
         'analyze-comments': async (output) => {
@@ -942,7 +1030,6 @@
             const videoId = videoIdMatch[1];
 
             try {
-                showProgressModal();
                 const [comments, videoData] = await Promise.all([
                     apiRequest(`/api/video-comments/${videoId}`, 'GET'),
                     apiRequest(`/api/video-details/${videoId}`, 'GET')
@@ -950,7 +1037,6 @@
 
                 if (comments.length === 0) {
                     output.innerHTML = `<p class="text-slate-500">Este vídeo não tem comentários ou eles estão desativados.</p>`;
-                    hideProgressModal();
                     return;
                 }
                 
@@ -1027,8 +1113,6 @@
 
             } catch (error) {
                 output.innerHTML = `<p class="text-red-500">Erro ao analisar comentários: ${error.message}</p>`;
-            } finally {
-                hideProgressModal();
             }
         },
         'generate-structures': async (output, append = false) => {
@@ -1066,20 +1150,16 @@
                     }
                 }
             };
-            try {
-                const result = await callAIModel(prompt, schema);
-                const filteredResult = result.filter(item => item.viral_score > 80);
-                let html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
-                if (append) {
-                    const moreButton = document.getElementById('generate-more-structures');
-                    if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
-                } else {
-                    output.innerHTML = html;
-                }
-                document.getElementById('generate-more-structures').style.display = 'block';
-            } catch (error) {
-                 output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
+            const result = await callAIModel(prompt, schema);
+            const filteredResult = result.filter(item => item.viral_score > 80);
+            let html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
+            if (append) {
+                const moreButton = document.getElementById('generate-more-structures');
+                if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
+            } else {
+                output.innerHTML = html;
             }
+            document.getElementById('generate-more-structures').style.display = 'block';
         },
         'generate-script': async (output) => {
             const topic = document.getElementById('script-topic').value.trim();
@@ -1092,13 +1172,8 @@
             if (parts) prompt += ` Divida o roteiro em ${parts} partes distintas, cada parte com cerca de 5 parágrafos.`;
             if (narrationOnly) prompt += ` O roteiro DEVE conter APENAS narração, sem diálogos.`;
             prompt += ` Foque em storytelling e hooks emocionais para alta retenção.`;
-            
-            try {
-                const result = await callAIModel(prompt);
-                output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Roteiro Gerado</h4>${createCopyButton(result.text)}</div><div class="prose h-96 overflow-y-auto whitespace-pre-wrap p-2 bg-white rounded border">${result.text}</div></div>`;
-            } catch (error) {
-                 output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
-            }
+            const result = await callAIModel(prompt);
+            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Roteiro Gerado</h4>${createCopyButton(result.text)}</div><div class="prose h-96 overflow-y-auto whitespace-pre-wrap p-2 bg-white rounded border">${result.text}</div></div>`;
         },
         'generate-prompts': async (output, append = false) => {
             const title = document.getElementById('thumb-title').value.trim();
@@ -1123,19 +1198,15 @@
                     }
                 }
             };
-            try {
-                const result = await callAIModel(prompt, schema);
-                let html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="font-mono text-sm bg-slate-200 p-2 rounded relative group">${item.prompt}<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(item.prompt)}</div></div><p class="text-xs mt-2 text-slate-600"><strong>Teste A/B:</strong> ${item.ab_test_suggestion}</p></div>${renderScoreCard('Potencial de CTR', item.score, { 'Impacto Visual': item.score + 4, 'Clareza': item.score - 3 }, item.suggestion)}</div>`).join('');
-                if (append) {
-                    const moreButton = document.getElementById('generate-more-prompts');
-                    if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
-                } else {
-                    output.innerHTML = html;
-                }
-                document.getElementById('generate-more-prompts').style.display = 'block';
-            } catch (error) {
-                 output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
+            const result = await callAIModel(prompt, schema);
+            let html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="font-mono text-sm bg-slate-200 p-2 rounded relative group">${item.prompt}<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(item.prompt)}</div></div><p class="text-xs mt-2 text-slate-600"><strong>Teste A/B:</strong> ${item.ab_test_suggestion}</p></div>${renderScoreCard('Potencial de CTR', item.score, { 'Impacto Visual': item.score + 4, 'Clareza': item.score - 3 }, item.suggestion)}</div>`).join('');
+            if (append) {
+                const moreButton = document.getElementById('generate-more-prompts');
+                if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
+            } else {
+                output.innerHTML = html;
             }
+            document.getElementById('generate-more-prompts').style.display = 'block';
         },
         'generate-description': async (output) => {
             const title = document.getElementById('desc-title').value.trim();
@@ -1151,29 +1222,25 @@
                     suggestion: { type: "STRING", description: "A 'virada de chave' para esta descrição." }
                 }
             };
-            try {
-                const result = await callAIModel(prompt, schema);
-                output.innerHTML = `
-                    <div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start">
-                        <div class="flex-1">
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="font-semibold">Descrição Otimizada</h4>
-                                ${createCopyButton(result.description + '\n\n' + result.hashtags)}
-                            </div>
-                            <div class="prose whitespace-pre-wrap text-sm">${result.description}</div>
-                             <div class="mt-4">
-                                <h5 class="font-semibold text-sm flex justify-between items-center">
-                                    <span>Hashtags</span>
-                                    ${createCopyButton(result.hashtags)}
-                                </h5>
-                                <p class="text-sm text-slate-700 p-2 bg-white rounded border mt-1">${result.hashtags}</p>
-                            </div>
+            const result = await callAIModel(prompt, schema);
+            output.innerHTML = `
+                <div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start">
+                    <div class="flex-1">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="font-semibold">Descrição Otimizada</h4>
+                            ${createCopyButton(result.description + '\n\n' + result.hashtags)}
                         </div>
-                        ${renderScoreCard('Otimização', result.score, { 'SEO': result.score, 'Engajamento': result.score > 10 ? result.score - 4 : result.score }, result.suggestion)}
-                    </div>`;
-            } catch (error) {
-                 output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
-            }
+                        <div class="prose whitespace-pre-wrap text-sm">${result.description}</div>
+                         <div class="mt-4">
+                            <h5 class="font-semibold text-sm flex justify-between items-center">
+                                <span>Hashtags</span>
+                                ${createCopyButton(result.hashtags)}
+                            </h5>
+                            <p class="text-sm text-slate-700 p-2 bg-white rounded border mt-1">${result.hashtags}</p>
+                        </div>
+                    </div>
+                    ${renderScoreCard('Otimização', result.score, { 'SEO': result.score, 'Engajamento': result.score > 10 ? result.score - 4 : result.score }, result.suggestion)}
+                </div>`;
         },
         'generate-tags': async (output) => {
             const topic = document.getElementById('tag-topic').value.trim();
@@ -1188,12 +1255,8 @@
                     suggestion: { type: "STRING", description: "A 'virada de chave' para estas tags." }
                 }
             };
-            try {
-                const result = await callAIModel(prompt, schema);
-                output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Tags Geradas</h4>${createCopyButton(result.tags)}</div><p class="text-sm text-slate-700 p-2 bg-white rounded border">${result.tags}</p></div>${renderScoreCard('Qualidade', result.score, { 'Relevância': result.score, 'Volume': result.score > 10 ? result.score - 8 : result.score }, result.suggestion)}</div>`;
-            } catch (error) {
-                 output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
-            }
+            const result = await callAIModel(prompt, schema);
+            output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Tags Geradas</h4>${createCopyButton(result.tags)}</div><p class="text-sm text-slate-700 p-2 bg-white rounded border">${result.tags}</p></div>${renderScoreCard('Qualidade', result.score, { 'Relevância': result.score, 'Volume': result.score > 10 ? result.score - 8 : result.score }, result.suggestion)}</div>`;
         },
         'convert-to-srt': (output) => {
             const texto = document.getElementById('srt-input-text').value;
@@ -1338,6 +1401,7 @@
         ['niches', 'subniches', 'structures', 'prompts'].forEach(type => {
             const moreBtn = document.getElementById(`generate-more-${type}`);
             if (moreBtn) {
+                 // Clone to remove old listeners
                 const newMoreBtn = moreBtn.cloneNode(true);
                 moreBtn.parentNode.replaceChild(newMoreBtn, moreBtn);
                 newMoreBtn.addEventListener('click', () => {
@@ -1350,6 +1414,7 @@
 
     // --- Specific Initializers ---
     
+    // Funções de Validação de API
     async function validateOpenAIKey(key, statusEl) {
         if (!key) {
             statusEl.innerHTML = '<span title="Chave não informada">⚪</span>';
@@ -1357,7 +1422,7 @@
         }
         statusEl.innerHTML = '<span class="animate-spin">⏳</span>';
         try {
-            const response = await fetch('https://api.openai.com/v1/models', {
+            const response = await fetch('[https://api.openai.com/v1/models](https://api.openai.com/v1/models)', {
                 method: 'GET',
                 headers: { 'Authorization': `Bearer ${key}` }
             });
@@ -1377,6 +1442,7 @@
             return;
         }
         statusEl.innerHTML = '<span class="animate-spin">⏳</span>';
+        // [CORREÇÃO] Usando o modelo correto para validação
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${key}`;
         try {
             const response = await fetch(apiUrl, {
@@ -1461,11 +1527,7 @@
             feedbackEl.textContent = '';
             try {
                 await apiRequest(`/api/settings/${appState.currentUser.id}`, 'POST', { settings: newSettings });
-                appState.apiKeys = { 
-                    openai: newSettings.openai, 
-                    gemini: newSettings.gemini,
-                    google_api: newSettings.google_api
-                };
+                appState.apiKeys = { ...newSettings };
                 feedbackEl.textContent = 'Configurações salvas com sucesso!';
                 feedbackEl.className = 'text-green-600 text-sm mt-4';
             } catch (error) {
@@ -1641,7 +1703,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                         ${recentVideos.map(video => `
                             <div class="bg-white p-4 rounded-lg border shadow-sm">
-                                <a href="https://www.youtube.com/watch?v=${video.id}" target="_blank">
+                                <a href="[https://www.youtube.com/watch?v=$](https://www.youtube.com/watch?v=$){video.id}" target="_blank">
                                     <img src="${video.thumbnail}" alt="${video.title}" class="rounded-md mb-2 w-full aspect-video object-cover">
                                     <h4 class="font-semibold text-sm leading-tight truncate">${video.title}</h4>
                                 </a>
@@ -1796,14 +1858,10 @@
         ELEMENTS.sidebar.classList.add('open');
         ELEMENTS.menuOverlay.style.display = 'block';
     });
-    // Assuming there might be a close button inside the sidebar in the future
-    const closeBtn = document.getElementById('close-menu-btn');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            ELEMENTS.sidebar.classList.remove('open');
-            ELEMENTS.menuOverlay.style.display = 'none';
-        });
-    }
+    ELEMENTS.closeMenuBtn.addEventListener('click', () => {
+        ELEMENTS.sidebar.classList.remove('open');
+        ELEMENTS.menuOverlay.style.display = 'none';
+    });
     ELEMENTS.menuOverlay.addEventListener('click', () => {
         ELEMENTS.sidebar.classList.remove('open');
         ELEMENTS.menuOverlay.style.display = 'none';
