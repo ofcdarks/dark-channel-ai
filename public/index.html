@@ -607,7 +607,25 @@
                 const country = document.getElementById('subniche-country').value;
                 if (!mainNiche) { mainNiche = "qualquer nicho com alta demanda e baixa concorrência" }
                 
-                const prompt = `Para o nicho principal de "${mainNiche}", no país ${country}, gere EXATAMENTE 3 subnichos inexplorados e criativos. Para cada um, forneça: 1. Uma descrição. 2. 3 ideias de vídeo. 3. Uma sugestão "virada de chave". 4. Pontuações realistas e variadas de Potencial (entre 60-95), Concorrência (entre 10-70) e Originalidade (entre 50-98). É crucial que você forneça valores inteiros, realistas e não-nulos para todas as pontuações. 5. Se a ideia é inédita (true/false).`;
+                const prompt = `Para o nicho principal de "${mainNiche}", no país ${country}, gere EXATAMENTE 3 subnichos inexplorados e criativos.
+Sua resposta DEVE SER UM JSON VÁLIDO que corresponda ao schema fornecido. Não inclua nenhum texto ou formatação markdown fora do objeto JSON.
+
+Exemplo de formato para UM item no array:
+{
+  "subniche_name": "Nome do Subnicho Exemplo",
+  "description": "Uma descrição clara e concisa sobre o que é este subnicho.",
+  "video_ideas": ["Ideia de vídeo 1", "Ideia de vídeo 2", "Ideia de vídeo 3"],
+  "is_novel": true,
+  "scores": {
+    "Potencial": 85,
+    "Concorrência": 20,
+    "Originalidade": 90
+  },
+  "suggestion": "Uma sugestão estratégica e acionável para ter sucesso neste subnicho."
+}
+
+Agora, gere a lista completa com 3 subnichos, seguindo estritamente este formato. Para cada subnicho, forneça pontuações realistas e variadas de Potencial (entre 60-95), Concorrência (entre 10-70) e Originalidade (entre 50-98). Os valores DEVEM ser números inteiros.`;
+                
                 const schema = {
                     type: "ARRAY",
                     items: {
