@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darks Vips AI v17.7</title>
+    <title>Darks Vips AI v17.6</title>
     <link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -404,22 +404,8 @@
                 </div>`;
     };
 
-    // --- AI API Call Abstraction ---
-    async function callAIModel(prompt, schema = null) {
-        // Prioritizes OpenAI if the key is available
-        if (appState.apiKeys.openai) {
-            addToLog("Usando API da OpenAI (preferencial)...");
-            // NOTE: This is a placeholder for the actual OpenAI API call structure.
-            // You would replace this with a fetch call to the OpenAI endpoint.
-            // For now, it will fall through to Gemini for demonstration purposes.
-            console.warn("OpenAI API key found, but implementation is a placeholder. Falling back to Gemini.");
-        }
-        
-        // Fallback to Gemini
-        return callGeminiAPI(prompt, schema);
-    }
-
-    async function callGeminiAPI(prompt, schema = null) {
+    // --- Gemini API Call with Key Rotation ---
+    async function callGenerativeAPI(prompt, schema = null) {
         const validKeys = appState.apiKeys.gemini.filter(k => k && k.trim() !== '');
         if (validKeys.length === 0) {
             throw new Error("Nenhuma chave da API Gemini foi configurada. Adicione uma nas Configurações.");
@@ -471,10 +457,7 @@
 
                 if (result.candidates?.[0]?.finishReason === 'SAFETY') {
                     lastError = new Error("A resposta foi bloqueada por políticas de segurança.");
-                } else if (result.promptFeedback?.blockReason) {
-                     lastError = new Error(`Requisição bloqueada: ${result.promptFeedback.blockReason}`);
-                }
-                else {
+                } else {
                     lastError = new Error("Resposta da API inválida ou vazia.");
                 }
                 
@@ -487,7 +470,7 @@
 
         hideProgressModal();
         addToLog(`Erro: ${lastError.message}`, true);
-        throw new Error(`Todas as chaves de API falharam. Último erro: ${lastError.message}`);
+        throw new Error(`Todas as chaves da API Gemini falharam. Último erro: ${lastError.message}`);
     }
     
     // --- Tools and Handlers ---
@@ -579,7 +562,7 @@
                                     <input type="password" id="gemini-key-3" class="mt-1 block w-full px-3 py-2 border rounded-md">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-700">OpenAI API Key (Opcional - Preferencial)</label>
+                                    <label class="block text-sm font-medium text-slate-700">OpenAI API Key (Opcional)</label>
                                     <input type="password" id="openai-key" class="mt-1 block w-full px-3 py-2 border rounded-md">
                                     <a href="https://platform.openai.com/api-keys" target="_blank" class="text-xs text-indigo-600 hover:underline">Obter chave da OpenAI</a>
                                 </div>
@@ -624,7 +607,7 @@
                     }
                 }
             };
-            const result = await callAIModel(prompt, schema);
+            const result = await callGenerativeAPI(prompt, schema);
             const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: $${(item.rpm_estimate_value || 0).toFixed(2)}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Volume de Busca': getTrendLevel(item.scores['Volume de Busca']) }, item.suggestion)}</div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
             document.getElementById('generate-more-niches').style.display = 'block';
@@ -635,7 +618,7 @@
                 const country = document.getElementById('subniche-country').value;
                 if (!mainNiche) { mainNiche = "qualquer nicho com alta demanda e baixa concorrência" }
                 
-                const prompt = `Para o nicho principal de "${mainNiche}", no país ${country}, gere 3 subnichos inexplorados e criativos. Para cada um, forneça: 1. Uma descrição. 2. Exatamente as 3 principais ideias de vídeo. 3. Uma sugestão "virada de chave". 4. Pontuações realistas e variadas de Potencial, Concorrência e Originalidade (0-100). 5. Se a ideia é inédita (true/false).`;
+                const prompt = `Para o nicho principal de "${mainNiche}", no país ${country}, gere 3 subnichos inexplorados e criativos. Para cada um, forneça uma sugestão "virada de chave", pontuações e indique se é uma ideia inédita.`;
                 const schema = {
                     type: "ARRAY",
                     items: {
@@ -657,9 +640,13 @@
                         }
                     }
                 };
-                const result = await callAIModel(prompt, schema);
+                const result = await callGenerativeAPI(prompt, schema);
                 const html = result.map(item => {
-                    return `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.subniche_name} ${createCopyButton(item.subniche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">Principais Ideias de Vídeo: ${item.video_ideas.slice(0, 3).join('; ')}</p></div>${renderScoreCard('Análise do Subnicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Originalidade': item.scores.Originalidade }, item.suggestion, item.is_novel)}</div>`;
+                    if (!item.scores) {
+                        console.error("Item sem 'scores':", item);
+                        item.scores = { Potencial: 50, Concorrência: 50, Originalidade: 50 };
+                    }
+                    return `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2">${item.subniche_name} ${createCopyButton(item.subniche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">Ideias de Vídeo: ${item.video_ideas.join('; ')}</p></div>${renderScoreCard('Análise do Subnicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Originalidade': item.scores.Originalidade }, item.suggestion, item.is_novel)}</div>`;
                 }).join('');
 
                 if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
@@ -688,7 +675,7 @@
             
             try {
                 const [result, trendsData] = await Promise.all([
-                    callAIModel(prompt, schema),
+                    callGenerativeAPI(prompt, schema),
                     apiRequest(`/api/google-trends/${encodeURIComponent(niche)}/${country}`, 'GET')
                 ]);
 
@@ -786,18 +773,17 @@
                     }
                 };
                 
-                const result = await callAIModel(prompt, schema);
+                const result = await callGenerativeAPI(prompt, schema);
                 const { analysis, optimizations } = result;
 
                 const renderTitles = (titles) => titles.map(t => `<div class="mb-4"><div class="flex justify-between items-start gap-2"><p class="text-sm bg-white p-2 rounded border flex-1">${t.title} ${createCopyButton(t.title)}</p><div class="w-32 flex-shrink-0 text-center"><p class="font-bold text-lg ${getScoreTextColor(t.score)}">${t.score}</p><p class="text-xs text-slate-500">Potencial</p></div></div><p class="text-xs text-slate-600 mt-1 pl-1"><strong>Virada de Chave:</strong> ${t.suggestion}</p></div>`).join('');
-                const allHeadlinesText = optimizations.headlines.map(h => h.text).join('\n');
 
                 output.innerHTML = `
                     <div class="mb-6"><h3 class="text-xl font-bold mb-2">Vídeo Analisado</h3><div class="flex flex-col md:flex-row gap-4 bg-slate-100 p-4 rounded-lg"><img src="${thumbnailUrl}" onerror="this.style.display='none'" class="rounded-md w-full md:w-48 h-auto object-cover"/><div class="flex-1"><h4 class="font-semibold">${title}</h4><p class="text-xs text-slate-500 mt-1">Idioma Detectado: ${lang}</p></div></div></div>
                     <div class="space-y-8">
                         <div><h3 class="text-xl font-bold mb-3 border-b pb-2">Análise de Título</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Título Atual</h4><p class="text-sm bg-white p-2 rounded border">${title}</p><div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.title.score, { 'SEO & CTR': analysis.title.score }, analysis.title.critique)}</div></div><div class="bg-green-50 p-4 rounded-lg border border-green-200"><h4 class="font-semibold mb-2 text-green-800">Sugestões Otimizadas</h4><div id="optimized-titles-container">${renderTitles(optimizations.titles)}</div><button id="generate-more-titles" class="w-full mt-4 bg-slate-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700">Gerar Mais Sugestões</button></div></div></div>
                         
-                        <div class="bg-white p-4 rounded-lg border"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold text-lg">⭐ Headlines de Impacto</h4>${createCopyButton(allHeadlinesText)}</div><div class="grid grid-cols-1 sm:grid-cols-3 gap-4">${optimizations.headlines.map(h => `<div class="bg-indigo-50 p-3 rounded-md text-center"><p class="font-semibold text-indigo-800">"${h.text}"</p><p class="text-xs mt-1 font-bold ${getScoreTextColor(h.score)}">${h.score}/100 Potencial</p></div>`).join('')}</div></div>
+                        <div class="bg-white p-4 rounded-lg border"><h4 class="font-semibold text-lg mb-2">⭐ Headlines de Impacto</h4><div class="grid grid-cols-1 sm:grid-cols-3 gap-4">${optimizations.headlines.map(h => `<div class="bg-indigo-50 p-3 rounded-md text-center"><p class="font-semibold text-indigo-800">"${h.text}"</p><p class="text-xs mt-1 font-bold ${getScoreTextColor(h.score)}">${h.score}/100 Potencial</p></div>`).join('')}</div></div>
 
                         <div><h3 class="text-xl font-bold mb-3 border-b pb-2">Análise de Descrição</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-slate-100 p-4 rounded-lg"><h4 class="font-semibold mb-2">Descrição Atual</h4><div class="text-sm bg-white p-2 rounded border prose whitespace-pre-wrap max-h-48 overflow-y-auto">${description}</div><div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.description.score, { 'SEO & Clareza': analysis.description.score }, analysis.description.critique)}</div></div><div class="bg-green-50 p-4 rounded-lg border border-green-200"><h4 class="font-semibold mb-2 text-green-800">Descrição Otimizada ${createCopyButton(optimizations.description.text + '\n\n' + optimizations.description.hashtags)}</h4><div class="text-sm bg-white p-2 rounded border prose whitespace-pre-wrap max-h-48 overflow-y-auto">${optimizations.description.text}</div><p class="text-sm bg-white p-2 rounded border mt-2 font-semibold">${optimizations.description.hashtags}</p><div class="mt-4">${renderScoreCard('Pontuação Otimizada', optimizations.description.score, { 'SEO & Engajamento': optimizations.description.score }, optimizations.description.suggestion)}</div></div></div></div>
                         
@@ -821,7 +807,7 @@
                 items: { type: "OBJECT", properties: { title: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } }
             };
 
-            const result = await callAIModel(prompt, schema);
+            const result = await callGenerativeAPI(prompt, schema);
             const renderMoreTitles = (titles) => {
                 return titles.map(t => `
                     <div class="mb-4 fade-in">
@@ -888,7 +874,7 @@
                     }
                 };
 
-                const result = await callAIModel(prompt, schema);
+                const result = await callGenerativeAPI(prompt, schema);
                 const { swot_analysis, action_plan } = result;
 
                 const renderList = (items) => items.map(item => `<li class="text-sm text-slate-700">${item}</li>`).join('');
@@ -942,32 +928,26 @@
             const videoId = videoIdMatch[1];
 
             try {
-                const [comments, videoData] = await Promise.all([
-                    apiRequest(`/api/video-comments/${videoId}`, 'GET'),
-                    apiRequest(`/api/video-details/${videoId}`, 'GET')
-                ]);
-
+                const comments = await apiRequest(`/api/video-comments/${videoId}`, 'GET');
                 if (comments.length === 0) {
                     output.innerHTML = `<p class="text-slate-500">Este vídeo não tem comentários ou eles estão desativados.</p>`;
                     return;
                 }
-                
-                const lang = videoData.detectedLanguage || 'pt-BR';
                 const commentsText = comments.map(c => `- "${c}"`).join('\n');
-                const prompt = `Analise a seguinte lista de comentários REAIS de um vídeo do YouTube. O idioma do vídeo é ${lang}.
+                const prompt = `Analise a seguinte lista de comentários REAIS de um vídeo do YouTube.
                 COMENTÁRIOS:
                 ${commentsText}
 
-                SUA ANÁLISE ESTRUTURADA (responda no idioma ${lang}):
-                1.  **Saúde do Vídeo:** Dê uma nota geral de 0 a 100 para a "saúde" do vídeo com base na recepção do público nos comentários e explique o porquê.
+                SUA ANÁLISE ESTRUTURADA:
+                1.  **Sentimento Geral:** Avalie a percepção do público e dê uma pontuação de 0 a 100.
                 2.  **Principais Elogios:** Liste os 3 pontos mais elogiados.
                 3.  **Principais Dúvidas/Críticas:** Liste as 3 principais questões ou críticas.
-                4.  **Ideias para Novos Vídeos:** Sugira 3 títulos de novos vídeos baseados nos comentários. Para cada um, forneça uma "virada de chave" estratégica e uma pontuação de potencial (0-100).`;
+                4.  **Ideias para Novos Vídeos:** Sugira 3 títulos de novos vídeos baseados nos comentários, cada um com uma "virada de chave" estratégica.`;
                 
                 const schema = {
                     type: "OBJECT",
                     properties: {
-                        health: { type: "OBJECT", properties: { score: { type: "NUMBER" }, analysis: { type: "STRING" } } },
+                        sentiment: { type: "OBJECT", properties: { score: { type: "NUMBER" }, analysis: { type: "STRING" } } },
                         praises: { type: "ARRAY", items: { type: "STRING" } },
                         criticisms: { type: "ARRAY", items: { type: "STRING" } },
                         video_ideas: {
@@ -976,23 +956,22 @@
                                 type: "OBJECT",
                                 properties: {
                                     title: { type: "STRING" },
-                                    suggestion: { type: "STRING" },
-                                    potential_score: { type: "NUMBER" }
+                                    suggestion: { type: "STRING" }
                                 }
                             }
                         }
                     }
                 };
                 
-                const result = await callAIModel(prompt, schema);
-                const { health, praises, criticisms, video_ideas } = result;
+                const result = await callGenerativeAPI(prompt, schema);
+                const { sentiment, praises, criticisms, video_ideas } = result;
 
                 const renderListItems = (items) => items.map(item => `<li class="bg-slate-50 p-2 rounded-md text-sm">${item}</li>`).join('');
 
                 output.innerHTML = `
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div class="lg:col-span-1 space-y-4">
-                            ${renderScoreCard('Saúde do Vídeo', health.score, { 'Recepção do Público': health.score }, health.analysis)}
+                        <div class="lg:col-span-1">
+                            ${renderScoreCard('Sentimento Geral', sentiment.score, { 'Análise de Sentimento': sentiment.score }, sentiment.analysis)}
                         </div>
                         <div class="lg:col-span-2 space-y-4">
                             <div class="bg-white p-4 rounded-lg border">
@@ -1009,15 +988,9 @@
                         <h3 class="text-xl font-bold mb-3">💡 Oportunidades de Conteúdo</h3>
                         <div class="space-y-4">
                             ${video_ideas.map(idea => `
-                                <div class="bg-indigo-50 border-l-4 border-indigo-400 p-4 rounded-r-lg flex justify-between items-start">
-                                    <div>
-                                        <p class="font-semibold text-indigo-800">${idea.title} ${createCopyButton(idea.title)}</p>
-                                        <p class="text-xs text-slate-600 mt-1"><strong>Virada de Chave:</strong> ${idea.suggestion}</p>
-                                    </div>
-                                    <div class="text-center ml-4">
-                                        <p class="font-bold text-lg ${getScoreTextColor(idea.potential_score)}">${idea.potential_score}</p>
-                                        <p class="text-xs text-slate-500">Potencial</p>
-                                    </div>
+                                <div class="bg-indigo-50 border-l-4 border-indigo-400 p-4 rounded-r-lg">
+                                    <p class="font-semibold text-indigo-800">${idea.title} ${createCopyButton(idea.title)}</p>
+                                    <p class="text-xs text-slate-600 mt-1"><strong>Virada de Chave:</strong> ${idea.suggestion}</p>
                                 </div>
                             `).join('')}
                         </div>
@@ -1063,7 +1036,7 @@
                     }
                 }
             };
-            const result = await callAIModel(prompt, schema);
+            const result = await callGenerativeAPI(prompt, schema);
             const filteredResult = result.filter(item => item.viral_score > 80);
             const html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
@@ -1080,7 +1053,7 @@
             if (parts) prompt += ` Divida o roteiro em ${parts} partes distintas, cada parte com cerca de 5 parágrafos.`;
             if (narrationOnly) prompt += ` O roteiro DEVE conter APENAS narração, sem diálogos.`;
             prompt += ` Foque em storytelling e hooks emocionais para alta retenção.`;
-            const result = await callAIModel(prompt);
+            const result = await callGenerativeAPI(prompt);
             output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Roteiro Gerado</h4>${createCopyButton(result.text)}</div><div class="prose h-96 overflow-y-auto whitespace-pre-wrap p-2 bg-white rounded border">${result.text}</div></div>`;
         },
         'generate-prompts': async (output, append = false) => {
@@ -1106,7 +1079,7 @@
                     }
                 }
             };
-            const result = await callAIModel(prompt, schema);
+            const result = await callGenerativeAPI(prompt, schema);
             const html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="font-mono text-sm bg-slate-200 p-2 rounded relative group">${item.prompt}<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(item.prompt)}</div></div><p class="text-xs mt-2 text-slate-600"><strong>Teste A/B:</strong> ${item.ab_test_suggestion}</p></div>${renderScoreCard('Potencial de CTR', item.score, { 'Impacto Visual': item.score + 4, 'Clareza': item.score - 3 }, item.suggestion)}</div>`).join('');
             if (append) output.insertAdjacentHTML('beforeend', html); else output.innerHTML = html;
             document.getElementById('generate-more-prompts').style.display = 'block';
@@ -1125,7 +1098,7 @@
                     suggestion: { type: "STRING", description: "A 'virada de chave' para esta descrição." }
                 }
             };
-            const result = await callAIModel(prompt, schema);
+            const result = await callGenerativeAPI(prompt, schema);
             output.innerHTML = `
                 <div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start">
                     <div class="flex-1">
@@ -1158,7 +1131,7 @@
                     suggestion: { type: "STRING", description: "A 'virada de chave' para estas tags." }
                 }
             };
-            const result = await callAIModel(prompt, schema);
+            const result = await callGenerativeAPI(prompt, schema);
             output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold">Tags Geradas</h4>${createCopyButton(result.tags)}</div><p class="text-sm text-slate-700 p-2 bg-white rounded border">${result.tags}</p></div>${renderScoreCard('Qualidade', result.score, { 'Relevância': result.score, 'Volume': result.score > 10 ? result.score - 8 : result.score }, result.suggestion)}</div>`;
         },
         'convert-to-srt': (output) => {
@@ -1683,7 +1656,7 @@
         e.preventDefault();
         const description = document.getElementById('support-description').value;
         const subject = "Ticket de Suporte - Darks Vips AI";
-        let body = `Descrição do problema:\n----------------------\n${description}\n\n----------------------\nEmail do usuário: ${appState.currentUser.email}\nVersão da App: 17.7`;
+        let body = `Descrição do problema:\n----------------------\n${description}\n\n----------------------\nEmail do usuário: ${appState.currentUser.email}\nVersão da App: 17.6`;
         
         if (ELEMENTS.screenshotPreview.src) {
             body += "\n\n(Lembrete: Anexe o print de tela que você selecionou!)";
