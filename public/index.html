@@ -108,10 +108,10 @@
     <div id="support-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold text-slate-800">Abrir Ticket de Suporte</h3>
+                <h3 class="text-lg font-semibold text-slate-800">Relatar um Problema</h3>
                 <button id="close-support-modal" class="text-2xl text-slate-500 hover:text-slate-800">&times;</button>
             </div>
-            <p class="text-sm text-slate-600 mb-4">Encontrou um problema ou tem alguma dúvida? Descreva abaixo e, se possível, anexe um print da tela.</p>
+            <p class="text-sm text-slate-600 mb-4">Descreva o problema encontrado. Se possível, anexe um print da tela para nos ajudar a resolver mais rápido.</p>
             <form id="support-form">
                 <textarea id="support-description" class="w-full p-2 border rounded-md mb-4" rows="5" placeholder="Descrição detalhada do problema ou dúvida..." required></textarea>
                 <label for="support-screenshot" class="w-full text-center cursor-pointer bg-slate-100 p-4 border-2 border-dashed rounded-lg block mb-4 hover:bg-slate-200">
@@ -120,14 +120,9 @@
                 </label>
                 <img id="screenshot-preview" src="" alt="Pré-visualização do print" class="hidden max-w-full h-auto max-h-40 mx-auto mb-4 rounded-md"/>
                 <div class="text-center">
-                    <button type="submit" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700">Abrir Ticket por E-mail</button>
-                    <p class="text-xs text-slate-500 mt-2">Isso abrirá seu cliente de e-mail. Lembre-se de <strong class="text-slate-700">anexar o print da tela manualmente</strong> para nos ajudar a resolver o problema mais rápido.</p>
-                    <!-- [CORREÇÃO] Adicionado container de fallback para o caso do 'mailto' não funcionar -->
-                    <div id="support-fallback" class="hidden mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
-                        <p>Se o seu programa de e-mail não abriu automaticamente, por favor, envie os detalhes manualmente para:</p>
-                        <strong class="cursor-pointer font-semibold">suporte@canaisdarks.com.br</strong>
-                        <p class="mt-1">Não se esqueça de incluir a descrição e o print da tela.</p>
-                    </div>
+                    <!-- [CORREÇÃO] Botão agora abre o WhatsApp -->
+                    <button type="submit" class="bg-green-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-600">Abrir Ticket via WhatsApp</button>
+                    <p class="text-xs text-slate-500 mt-2">Isso abrirá o WhatsApp com uma mensagem pré-formatada. Lembre-se de enviar o print da tela na conversa.</p>
                 </div>
             </form>
         </div>
@@ -1717,25 +1712,20 @@
     ELEMENTS.supportForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const description = document.getElementById('support-description').value;
-        const subject = "Ticket de Suporte - Darks Vips AI";
         // [CORREÇÃO] Adicionada verificação para evitar erro se o usuário não estiver logado
         const userEmail = appState.currentUser?.email || 'Usuário não logado';
-        let body = `Descrição do problema:\n----------------------\n${description}\n\n----------------------\nEmail do usuário: ${userEmail}\nVersão da App: 17.7`;
         
+        // [CORREÇÃO] Lógica alterada para usar WhatsApp
+        const phoneNumber = "5514997022684";
+        let message = `*Ticket de Suporte - Darks Vips AI*\n\n*Email:* ${userEmail}\n*Versão:* 17.7\n\n*Descrição do Problema:*\n${description}`;
+
         if (ELEMENTS.screenshotPreview.src) {
-            body += "\n\n(Lembrete: Anexe o print de tela que você selecionou!)";
+            message += "\n\n(Um print da tela foi anexado e será enviado na conversa.)";
         }
 
-        const mailtoLink = `mailto:suporte@canaisdarks.com.br?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
         
-        try {
-            window.open(mailtoLink, '_blank');
-        } catch (error) {
-            console.error("Falha ao tentar abrir o cliente de e-mail:", error);
-        }
-        
-        // [CORREÇÃO] Exibe a mensagem de fallback para guiar o usuário
-        document.getElementById('support-fallback').classList.remove('hidden');
+        window.open(whatsappLink, '_blank');
     });
     ELEMENTS.supportScreenshotInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
