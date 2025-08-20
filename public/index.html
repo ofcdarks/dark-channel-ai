@@ -42,9 +42,16 @@
                 /* LINK CORRIGIDO DA IMAGEM */
                 url('https://i.ibb.co/Y7295jcL/Gemini-Generated-Image-ux4zxiux4zxiux4z.png');
             background-repeat: no-repeat;
-            background-position: calc(50% + 200px) center;
+            /* Ajuste para cortar a imagem embaixo */
+            background-position: calc(50% + 200px) 45%; 
             background-size: contain;
             background-blend-mode: screen;
+        }
+
+        .login-form-container {
+            background-color: rgba(17, 24, 39, 0.6); /* bg-gray-900 com opacidade */
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         /* Mobile Responsiveness */
@@ -72,12 +79,11 @@
                 z-index: 30;
             }
             .login-background {
-                background-position: center bottom;
-                background-size: 150%;
+                background-position: center 80%;
+                background-size: 160%;
             }
             .login-form-container {
-                background-color: rgba(0,0,0,0.6);
-                backdrop-filter: blur(5px);
+                background-color: rgba(0,0,0,0.7);
             }
         }
     </style>
