@@ -8,17 +8,22 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Oswald:wght@400;500;600;700&family=Poppins:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { 
             font-family: 'Poppins', sans-serif; 
             background-color: #111827; /* bg-gray-900 */
         }
-        h1, h2, h3, h4, h5, .sidebar-btn, button, .font-display {
+        h1, h2, h3, h4, h5, .sidebar-btn, button {
             font-family: 'Oswald', sans-serif;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+        }
+        .font-display {
+            font-family: 'Abril Fatface', serif;
+            text-transform: none;
+            letter-spacing: normal;
         }
         .sidebar-btn { transition: all 0.2s ease-in-out; }
         .sidebar-btn:hover { background-color: #374151; /* bg-gray-700 */ }
@@ -307,14 +312,13 @@
             addToLog("Falha ao carregar configurações.", true);
         }
         
-        const logoAndFavicon = `<svg width="100%" height="100%" viewBox="0 0 250 50" xmlns="http://www.w3.org/2000/svg">
+        const logoAndFavicon = `<svg width="100%" height="100%" viewBox="0 0 300 50" xmlns="http://www.w3.org/2000/svg">
             <style>
-                .logo-text { font-family: 'Oswald', sans-serif; font-size: 28px; font-weight: 700; fill: white; text-transform: uppercase; letter-spacing: 0.05em; }
-                .dark-text { font-family: 'Oswald', sans-serif; font-size: 28px; font-weight: 700; fill: white; text-transform: uppercase; letter-spacing: 0.05em; }
+                .logo-text { font-family: 'Abril Fatface', serif; font-size: 34px; fill: white; }
             </style>
-            <text x="0" y="35" class="logo-text">La Casa</text>
-            <rect x="115" y="5" width="130" height="40" fill="#DC2626" />
-            <text x="120" y="35" class="dark-text">Canais Darks</text>
+            <text x="0" y="38" class="logo-text">La Casa</text>
+            <rect x="140" y="5" width="160" height="40" fill="#DC2626" />
+            <text x="145" y="38" class="logo-text">Canais Darks</text>
         </svg>`;
         document.getElementById('app-logo').innerHTML = logoAndFavicon;
         document.getElementById('favicon').href = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">👺</text></svg>')}`;
@@ -1145,7 +1149,7 @@
             const topic = document.getElementById('tag-topic').value.trim();
             const lang = document.getElementById('tag-lang').value;
             if (!topic) { output.innerHTML = `<p class="text-red-500">Insira um tópico.</p>`; return; }
-            const prompt = `Gere 25 tags para o campo de tags do YouTube, sobre "${topic}" no idioma ${lang}. As tags devem ser retornadas como uma única string, separadas por vírgula, com no máximo 500 caracteres. Calcule uma pontuação (0-100) baseada na relevância e volume de busca, e forneça uma "virada de chave".`;
+            const prompt = `Gere 25 tags para o campo de tags do YouTube, sobre "${topic}" no idioma ${lang}. As tags devem ser retornadas como uma única string, separadas por vírgula, com no máximo 500 caracteres. Calcule uma pontuação de 0 a 100 baseada na relevância e volume de busca, e forneça uma "virada de chave".`;
             const schema = {
                 type: "OBJECT",
                 properties: {
