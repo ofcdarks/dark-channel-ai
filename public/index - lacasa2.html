@@ -8,17 +8,22 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Oswald:wght@400;500;600;700&family=Poppins:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { 
             font-family: 'Poppins', sans-serif; 
             background-color: #111827; /* bg-gray-900 */
         }
-        h1, h2, h3, h4, h5, .sidebar-btn, button, .font-display {
+        h1, h2, h3, h4, h5, .sidebar-btn, button {
             font-family: 'Oswald', sans-serif;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+        }
+        .font-display {
+            font-family: 'Abril Fatface', serif;
+            text-transform: none;
+            letter-spacing: normal;
         }
         .sidebar-btn { transition: all 0.2s ease-in-out; }
         .sidebar-btn:hover { background-color: #374151; /* bg-gray-700 */ }
@@ -40,7 +45,7 @@
             background-image: 
                 radial-gradient(circle at 80% 40%, rgba(220, 38, 38, 0.25), transparent 40%),
                 /* LINK CORRIGIDO DA IMAGEM */
-                url('https://i.ibb.co/qMZz37Sr/logo-nostagia.png');
+                url('https://i.ibb.co/Q7Sqpx4r/wmremove-transformed.png');
             background-repeat: no-repeat;
             /* Ajuste para cortar a imagem embaixo */
             background-position: calc(50% + 200px) 45%; 
@@ -53,36 +58,6 @@
             backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
-        /* Estilo Mobile Dashboard */
-        .mobile-dashboard-bg {
-            background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M11 10h2v2h-2zM15 10h2v2h-2zM19 10h2v2h-2zM23 10h2v2h-2zM27 10h2v2h-2zM31 10h2v2h-2zM35 10h2v2h-2zM39 10h2v2h-2zM43 10h2v2h-2zM47 10h2v2h-2zM51 10h2v2h-2zM55 10h2v2h-2zM59 10h2v2h-2zM63 10h2v2h-2zM67 10h2v2h-2zM71 10h2v2h-2zM75 10h2v2h-2zM79 10h2v2h-2zM83 10h2v2h-2zM87 10h2v2h-2z" fill-opacity="0.1" fill="%23FFFFFF"/><g fill-opacity="0.1" fill="%23FFFFFF"><path d="M10 11h2v2h-2zM10 15h2v2h-2zM10 19h2v2h-2zM10 23h2v2h-2zM10 27h2v2h-2zM10 31h2v2h-2zM10 35h2v2h-2zM10 39h2v2h-2zM10 43h2v2h-2zM10 47h2v2h-2zM10 51h2v2h-2zM10 55h2v2h-2zM10 59h2v2h-2zM10 63h2v2h-2zM10 67h2v2h-2zM10 71h2v2h-2zM10 75h2v2h-2zM10 79h2v2h-2zM10 83h2v2h-2zM10 87h2v2h-2z"/></g></svg>');
-            background-color: #111827;
-        }
-
-        .torn-paper {
-            position: relative;
-            padding: 20px;
-        }
-        .torn-paper::before, .torn-paper::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            right: 0;
-            height: 20px;
-            background-size: 100% 20px;
-        }
-        .torn-paper::before {
-            top: -10px;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20" preserveAspectRatio="none"><path d="M0,10 Q2,0 4,10 T8,10 Q10,0 12,10 T16,10 Q18,0 20,10 T24,10 Q26,0 28,10 T32,10 Q34,0 36,10 T40,10 Q42,0 44,10 T48,10 Q50,0 52,10 T56,10 Q58,0 60,10 T64,10 Q66,0 68,10 T72,10 Q74,0 76,10 T80,10 Q82,0 84,10 T88,10 Q90,0 92,10 T96,10 Q98,0 100,10 V20 H0 Z" fill="black"/></svg>');
-        }
-        .torn-paper.red::before {
-             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20" preserveAspectRatio="none"><path d="M0,10 Q2,0 4,10 T8,10 Q10,0 12,10 T16,10 Q18,0 20,10 T24,10 Q26,0 28,10 T32,10 Q34,0 36,10 T40,10 Q42,0 44,10 T48,10 Q50,0 52,10 T56,10 Q58,0 60,10 T64,10 Q66,0 68,10 T72,10 Q74,0 76,10 T80,10 Q82,0 84,10 T88,10 Q90,0 92,10 T96,10 Q98,0 100,10 V20 H0 Z" fill="%23DC2626"/></svg>');
-        }
-        .torn-paper.white::before {
-             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20" preserveAspectRatio="none"><path d="M0,10 Q2,0 4,10 T8,10 Q10,0 12,10 T16,10 Q18,0 20,10 T24,10 Q26,0 28,10 T32,10 Q34,0 36,10 T40,10 Q42,0 44,10 T48,10 Q50,0 52,10 T56,10 Q58,0 60,10 T64,10 Q66,0 68,10 T72,10 Q74,0 76,10 T80,10 Q82,0 84,10 T88,10 Q90,0 92,10 T96,10 Q98,0 100,10 V20 H0 Z" fill="white"/></svg>');
-        }
-
 
         /* Mobile Responsiveness */
         @media (max-width: 768px) {
@@ -97,7 +72,7 @@
                 width: 288px; /* w-72 */
             }
             #sidebar.open { left: 0; }
-            #main-content { margin-left: 0; padding-bottom: 80px; } /* Space for bottom nav */
+            #main-content { margin-left: 0; padding-bottom: 40px; } /* Space for log bar */
             #log-bar { font-size: 0.75rem; }
             #menu-overlay {
                 position: fixed;
@@ -339,13 +314,12 @@
         
         const logoAndFavicon = `<svg width="100%" height="100%" viewBox="0 0 300 50" xmlns="http://www.w3.org/2000/svg">
             <style>
-                .logo-text { font-family: 'Oswald', sans-serif; font-size: 34px; font-weight: 700; fill: white; text-transform: uppercase; letter-spacing: 0.05em; }
+                .logo-text { font-family: 'Abril Fatface', serif; font-size: 34px; fill: white; }
             </style>
             <text x="0" y="38" class="logo-text">La Casa</text>
             <rect x="140" y="5" width="160" height="40" fill="#DC2626" />
             <text x="145" y="38" class="logo-text">Canais Darks</text>
         </svg>`;
-
         document.getElementById('app-logo').innerHTML = logoAndFavicon;
         document.getElementById('favicon').href = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">👺</text></svg>')}`;
 
@@ -541,9 +515,7 @@
                             <div class="space-y-4 mt-2">
                                 <!-- OpenAI -->
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-700">
-                                        <a href="https://platform.openai.com/api-keys" target="_blank" class="hover:text-red-600 hover:underline">OpenAI API Key (Preferencial)</a>
-                                    </label>
+                                    <label class="block text-sm font-medium text-slate-700">OpenAI API Key (Preferencial)</label>
                                     <div class="flex items-center gap-2 mt-1">
                                         <input type="password" id="openai-key" class="block w-full px-3 py-2 border rounded-md">
                                         <button id="validate-openai-key" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
@@ -554,9 +526,7 @@
                                 <hr/>
                                 <!-- Gemini -->
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-700">
-                                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="hover:text-red-600 hover:underline">Gemini API Key (Principal / Backup)</a>
-                                    </label>
+                                    <label class="block text-sm font-medium text-slate-700">Gemini API Key (Principal / Backup)</label>
                                     <div class="flex items-center gap-2 mt-1">
                                         <input type="password" id="gemini-key-1" class="block w-full px-3 py-2 border rounded-md">
                                         <button id="validate-gemini-key-1" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
@@ -582,9 +552,7 @@
                                 <hr/>
                                 <!-- Google API -->
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-700">
-                                        <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="hover:text-red-600 hover:underline">Google API Key (YouTube Data)</a>
-                                    </label>
+                                    <label class="block text-sm font-medium text-slate-700">Google API Key (YouTube Data)</label>
                                     <div class="flex items-center gap-2 mt-1">
                                         <input type="password" id="google-api-key" class="block w-full px-3 py-2 border rounded-md">
                                         <button id="validate-google-api-key" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
