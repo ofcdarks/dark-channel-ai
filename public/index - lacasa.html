@@ -14,6 +14,7 @@
         body { 
             font-family: 'Poppins', sans-serif; 
             background-color: #111827; /* bg-gray-900 */
+            background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><g fill="%2327272a" fill-opacity="0.1"><rect x="50" width="50" height="50"/><rect y="50" width="50" height="50"/></g></svg>');
         }
         h1, h2, h3, h4, h5, .sidebar-btn, button, .font-display {
             font-family: 'Oswald', sans-serif;
@@ -30,22 +31,10 @@
         .progress-bar-indeterminate { background-size: 200% 100%; background-image: linear-gradient(to right, #4B5563 0%, #DC2626 50%, #4B5563 100%); animation: move-bg 2s linear infinite; }
         @keyframes move-bg { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         #login-container { display: flex; }
-        #register-container, #app-container, #progress-modal { display: none; }
+        #register-container, #app-container, #progress-modal, #error-report-modal { display: none; }
         .prose { max-width: none; color: #374151; }
         .copy-btn.copied { background-color: #10b981; color: white; }
         
-        /* Estilo da tela de Login com a máscara */
-        .login-background {
-            background-color: #000000;
-            background-image: 
-                radial-gradient(circle at 80% 40%, rgba(220, 38, 38, 0.15), transparent 40%),
-                /* SVG da máscara de Dalí como background */
-                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 300'%3E%3Cpath d='M100 0 C 50 0, 0 50, 0 100 C 0 150, 50 300, 100 300 C 150 300, 200 150, 200 100 C 200 50, 150 0, 100 0 Z M 100 10 C 145 10, 190 55, 190 100 C 190 145, 145 290, 100 290 C 55 290, 10 145, 10 100 C 10 55, 55 10, 100 10 Z' fill='rgba(255,255,255,0.04)'/%3E%3Cpath d='M60 100 C 60 90, 70 80, 80 80 C 90 80, 100 90, 100 100 C 100 110, 90 120, 80 120 C 70 120, 60 110, 60 100 Z' fill='rgba(255,255,255,0.06)'/%3E%3Cpath d='M120 100 C 120 90, 130 80, 140 80 C 150 80, 160 90, 160 100 C 160 110, 150 120, 140 120 C 130 120, 120 110, 120 100 Z' fill='rgba(255,255,255,0.06)'/%3E%3Cpath d='M95 150 C 95 145, 98 140, 103 140 L 107 140 C 112 140, 115 145, 115 150 L 115 160 L 95 160 Z' fill='rgba(255,255,255,0.06)'/%3E%3Cpath d='M100 180 C 110 180, 120 190, 120 200 C 120 210, 110 220, 100 220 C 90 220, 80 210, 80 200 C 80 190, 90 180, 100 180 Z M100 185 C 95 185, 85 195, 85 200 C 85 205, 95 215, 100 215 C 105 215, 115 205, 115 200 C 115 195, 105 185, 100 185 Z' fill='rgba(255,255,255,0.06)'/%3E%3Cpath d='M140 60 C 140 55, 160 50, 160 60 C 160 70, 140 75, 140 60 Z' fill='rgba(255,255,255,0.06)'/%3E%3Cpath d='M60 60 C 60 55, 40 50, 40 60 C 40 70, 60 75, 60 60 Z' fill='rgba(255,255,255,0.06)'/%3E%3Cpath d='M100,170 C 140,170 150,210 150,210 C 150,210 140,250 100,250 C 60,250 50,210 50,210 C 50,210 60,170 100,170 Z' fill='none' stroke='rgba(255,255,255,0.03)' stroke-width='2'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: calc(50% + 200px) center;
-            background-size: contain;
-        }
-
         /* Mobile Responsiveness */
         @media (max-width: 768px) {
             #app-container { flex-direction: column; }
@@ -70,37 +59,34 @@
                 background-color: rgba(0,0,0,0.7);
                 z-index: 30;
             }
-            .login-background {
-                background-position: center center;
-                background-size: 200%;
-            }
         }
     </style>
 </head>
 <body class="text-slate-200" oncontextmenu="return false;">
 
     <!-- Telas de Autenticação -->
-    <div id="login-container" class="flex items-center justify-center h-screen login-background">
-        <div class="w-full max-w-xs p-8 space-y-8">
+    <div id="login-container" class="flex items-center justify-center h-screen bg-gray-900">
+        <div class="w-full max-w-sm p-8 space-y-8 bg-gray-900 rounded-2xl">
             <div class="text-center">
                 <h2 class="text-4xl font-extrabold text-white font-display">LA CASA</h2>
                 <div class="inline-block bg-red-600 px-4 py-1 mt-1">
                     <h2 class="text-4xl font-extrabold text-white font-display">CANAIS DARKS</h2>
                 </div>
+                <p class="mt-4 text-center text-sm text-gray-400">Faça login para continuar</p>
             </div>
             <form id="login-form" class="mt-8 space-y-6">
                 <div id="login-feedback" class="text-red-500 text-sm text-center min-h-[20px]"></div>
                 <div class="space-y-4">
-                    <input id="login-email" type="email" autocomplete="email" required class="appearance-none relative block w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Email">
-                    <input id="login-password" type="password" autocomplete="current-password" required class="appearance-none relative block w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Senha">
+                    <input id="login-email" type="email" autocomplete="email" required class="appearance-none relative block w-full px-3 py-3 bg-gray-800 border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Email">
+                    <input id="login-password" type="password" autocomplete="current-password" required class="appearance-none relative block w-full px-3 py-3 bg-gray-800 border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Senha">
                 </div>
                 <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-red-600 hover:bg-red-700">Login</button>
             </form>
             <p class="text-center text-sm text-gray-400">Não tem uma conta? <a href="#" id="show-register" class="font-medium text-red-500 hover:text-red-400">Registre-se</a></p>
         </div>
     </div>
-    <div id="register-container" class="hidden items-center justify-center h-screen login-background">
-        <div class="w-full max-w-xs p-8 space-y-6">
+    <div id="register-container" class="hidden items-center justify-center h-screen bg-gray-900">
+        <div class="w-full max-w-sm p-8 space-y-6 bg-gray-900 rounded-2xl">
             <div>
                 <h2 class="text-3xl font-extrabold text-center text-white font-display">Criar Conta</h2>
                 <p class="mt-2 text-center text-sm text-gray-400">Junte-se ao plano</p>
@@ -108,8 +94,8 @@
             <form id="register-form" class="mt-8 space-y-6">
                 <div id="register-feedback" class="text-red-500 text-sm text-center min-h-[20px]"></div>
                  <div class="space-y-4">
-                    <input id="register-email" type="email" required class="appearance-none relative block w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Seu melhor e-mail">
-                    <input id="register-password" type="password" required class="appearance-none relative block w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Crie uma senha forte">
+                    <input id="register-email" type="email" required class="appearance-none relative block w-full px-3 py-3 bg-gray-800 border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Seu melhor e-mail">
+                    <input id="register-password" type="password" required class="appearance-none relative block w-full px-3 py-3 bg-gray-800 border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Crie uma senha forte">
                 </div>
                 <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-red-600 hover:bg-red-700">Criar Conta</button>
             </form>
