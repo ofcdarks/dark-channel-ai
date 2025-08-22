@@ -51,7 +51,7 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
-        /* --- Estilos do Chat e Notificações (ATUALIZADO) --- */
+        /* --- Estilos do Chat e Notificações --- */
         #chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 100; display: none; }
         #chat-bubble { 
             width: 60px; height: 60px; border-radius: 50%; background-color: #DC2626; 
@@ -71,7 +71,8 @@
 
         #chat-container { display: none; width: 350px; height: 500px; background-color: #1f2937; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); flex-direction: column; overflow: hidden; border: 1px solid #4b5563; }
         .chat-header { background-color: #111827; padding: 10px; font-weight: bold; color: white; display: flex; justify-content: space-between; align-items: center; }
-        .chat-messages { flex-grow: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column-reverse; }
+        /* ALTERAÇÃO: Removido 'flex-direction: column-reverse' para corrigir a ordem das mensagens */
+        .chat-messages { flex-grow: 1; padding: 10px; overflow-y: auto; }
         .message-bubble { max-width: 80%; padding: 8px 12px; border-radius: 15px; margin-bottom: 8px; word-wrap: break-word; }
         .message-sent { background-color: #DC2626; color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
         .message-received { background-color: #4b5563; color: white; align-self: flex-start; border-bottom-left-radius: 3px; }
@@ -85,7 +86,7 @@
         .admin-status-dot.online { background-color: #22c55e; }
         .admin-status-dot.offline { background-color: #6b7280; }
 
-        /* --- Popup de Notificação de Mensagem (NOVO) --- */
+        /* --- Popup de Notificação de Mensagem --- */
         #login-notification-popup {
             display: none; position: fixed; top: 20px; right: 20px; z-index: 1000;
             background-color: #1f2937; color: white; padding: 16px; border-radius: 8px;
@@ -94,9 +95,9 @@
         }
         @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
         
-        /* --- Modal de Mensagem Offline (NOVO) --- */
+        /* --- Modal de Mensagem Offline --- */
         #offline-message-modal {
-            display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.75);
+            position: fixed; inset: 0; background-color: rgba(0,0,0,0.75);
             z-index: 500; display: flex; align-items: center; justify-content: center;
         }
 
@@ -232,7 +233,7 @@
         <div id="chat-container"></div>
     </div>
 
-    <!-- Popup de Notificação de Mensagem ao Login (NOVO) -->
+    <!-- Popup de Notificação de Mensagem ao Login -->
     <div id="login-notification-popup">
         <p class="font-semibold mb-2">📬 Novas Mensagens!</p>
         <p class="text-sm text-gray-300 mb-4">Você tem mensagens não lidas. Abra o chat para vê-las.</p>
@@ -242,7 +243,7 @@
         </div>
     </div>
 
-    <!-- Modal de Mensagem Offline (NOVO) -->
+    <!-- Modal de Mensagem Offline (ALTERAÇÃO: Adicionado 'hidden' para garantir que comece escondido) -->
     <div id="offline-message-modal" class="hidden">
         <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm border border-gray-700 space-y-4">
             <h3 class="text-lg font-semibold text-white">Enviar Mensagem para <span id="offline-user-email"></span></h3>
@@ -322,6 +323,7 @@
     };
 
     // --- API Communication ---
+    // ALTERAÇÃO: Corrigido o tratamento de erro para não ler a resposta duas vezes
     async function apiRequest(endpoint, method, body = null) {
         const token = localStorage.getItem('authToken');
         const options = { 
@@ -338,14 +340,14 @@
         const response = await fetch(endpoint, options);
         
         if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Erro de comunicação com o servidor.' }));
             if (response.status === 401 || response.status === 403) {
-                const errorData = await response.json().catch(() => ({}));
+                // Se o erro NÃO for sobre ativação, faz logout.
                 if (!errorData.message || !errorData.message.includes('ativada')) {
                      handleLogout();
                 }
             }
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Ocorreu um erro na comunicação com o servidor.');
+            throw new Error(errorData.message || 'Ocorreu um erro desconhecido.');
         }
         
         const contentType = response.headers.get("content-type");
@@ -354,6 +356,7 @@
         }
         return null;
     }
+
 
     // --- Authentication ---
     function showLoginScreen() {
@@ -368,6 +371,7 @@
         ELEMENTS.registerContainer.style.display = 'flex';
     }
     
+    // ALTERAÇÃO: Melhorada a exibição da mensagem de erro de ativação
     async function handleLogin(e) {
         e.preventDefault();
         ELEMENTS.loginFeedback.textContent = '';
@@ -379,6 +383,7 @@
             appState.currentUser = response.user;
             await initializeApp();
         } catch (error) {
+            // Verifica especificamente pela mensagem de ativação
             if (error.message.includes('ativada')) {
                 ELEMENTS.loginContainer.style.display = 'none';
                 ELEMENTS.activationContainer.style.display = 'flex';
@@ -402,6 +407,7 @@
         }
     }
     
+    // ALTERAÇÃO: Adicionado hideOfflineMessageModal para garantir que o modal suma ao sair
     function handleLogout() {
         localStorage.removeItem('authToken');
         if (heartbeatInterval) clearInterval(heartbeatInterval);
@@ -409,6 +415,7 @@
         appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null, lastUnreadCount: 0 } };
         ELEMENTS.appContainer.style.display = 'none';
         document.getElementById('chat-widget').style.display = 'none';
+        hideOfflineMessageModal(); // Garante que o modal de mensagem offline seja escondido
         showLoginScreen();
         document.getElementById('login-form').reset();
     }
@@ -1741,7 +1748,7 @@
         await apiRequest(`/api/settings`, 'POST', { settings: settingsToSave });
     }
 
-    // --- Lógica do Chat (ATUALIZADA) ---
+    // --- Lógica do Chat ---
     const chatWidget = document.getElementById('chat-widget');
     const chatContainer = document.getElementById('chat-container');
 
@@ -1807,12 +1814,16 @@
         await loadMessageHistory();
     }
 
+    // ALTERAÇÃO: Adicionado scroll para o final após carregar as mensagens
     async function loadMessageHistory() {
         const messagesArea = document.getElementById('chat-messages-area');
         if (!appState.chat.activePeer || !messagesArea) return;
         const history = await apiRequest(`/api/chat/history/${appState.chat.activePeer.id}`, 'GET');
-        if (history) messagesArea.innerHTML = history.map(msg => `<div class="message-bubble ${msg.sender_id === appState.currentUser.id ? 'message-sent' : 'message-received'}">${msg.message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`).join('');
-        messagesArea.scrollTop = 0;
+        if (history) {
+            messagesArea.innerHTML = history.map(msg => `<div class="message-bubble ${msg.sender_id === appState.currentUser.id ? 'message-sent' : 'message-received'}">${msg.message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`).join('');
+            // Rola para a mensagem mais recente (a última no container)
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
     }
 
     async function sendMessage() {
@@ -1851,14 +1862,17 @@
     function showOfflineMessageModal(userId, userEmail) {
         document.getElementById('offline-user-email').textContent = userEmail;
         ELEMENTS.offlineMessageModal.dataset.userId = userId;
+        ELEMENTS.offlineMessageModal.classList.remove('hidden');
         ELEMENTS.offlineMessageModal.style.display = 'flex';
         document.getElementById('offline-message-textarea').focus();
     }
     function hideOfflineMessageModal() {
+        ELEMENTS.offlineMessageModal.classList.add('hidden');
         ELEMENTS.offlineMessageModal.style.display = 'none';
         document.getElementById('offline-message-textarea').value = '';
     }
 
+    // ALTERAÇÃO: Adicionado botão de refresh e seu listener
     async function initializeAdminPanel() {
         const container = document.getElementById('admin-container');
         container.innerHTML = `<p class="text-white">A carregar...</p>`;
@@ -1866,7 +1880,10 @@
             const [users, stats] = await Promise.all([ apiRequest('/api/admin/users', 'GET'), apiRequest('/api/admin/stats', 'GET') ]);
             const pendingActivationUsers = users.filter(u => !u.is_active);
             const activeUsers = users.filter(u => u.is_active);
-            container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"><div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Total</p><p class="text-4xl font-bold text-slate-800">${stats.totalUsers}</p></div><div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Online</p><p class="text-4xl font-bold text-green-600">${stats.onlineNow}</p></div><div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Logins (24h)</p><p class="text-4xl font-bold text-slate-800">${stats.loginsLast24h}</p></div><div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Pendentes</p><p class="text-4xl font-bold text-yellow-600">${stats.pendingActivation}</p></div></div><div class="bg-white p-6 rounded-xl shadow-sm border"><h3 class="text-lg font-semibold mb-4 font-display">Utilizadores Ativos</h3><div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th class="px-6 py-3">Email</th><th class="px-6 py-3">Último Login</th><th class="px-6 py-3 text-center">Ações</th></tr></thead><tbody>${activeUsers.map(u => `<tr class="bg-white border-b"><td class="px-6 py-4 font-medium text-gray-900">${u.email}</td><td class="px-6 py-4">${u.last_login || 'Nunca'}</td><td class="px-6 py-4 text-center space-x-2"><button class="offline-message-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-email="${u.email}">Mensagem</button><button class="user-status-toggle bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="false" ${appState.currentUser.id === u.id ? 'disabled' : ''}>Desativar</button></td></tr>`).join('')}</tbody></table></div></div><div class="bg-yellow-900/30 p-6 rounded-xl shadow-sm border border-yellow-700"><h3 class="text-lg font-semibold mb-4 font-display text-yellow-400">Ativações Pendentes (${pendingActivationUsers.length})</h3>${pendingActivationUsers.length > 0 ? `<div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-300"><thead class="text-xs text-yellow-400 uppercase"><tr><th class="px-6 py-3">Email</th><th class="px-6 py-3 text-center">Ação</th></tr></thead><tbody>${pendingActivationUsers.map(u => `<tr class="border-b border-yellow-800"><td class="px-6 py-4">${u.email}</td><td class="px-6 py-4 text-center"><button class="user-status-toggle bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="true">Ativar</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="text-sm text-yellow-200">Nenhum utilizador a aguardar ativação.</p>'}</div>`;
+            container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"><div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Total</p><p class="text-4xl font-bold text-slate-800">${stats.totalUsers}</p></div><div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Online</p><p class="text-4xl font-bold text-green-600">${stats.onlineNow}</p></div><div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Logins (24h)</p><p class="text-4xl font-bold text-slate-800">${stats.loginsLast24h}</p></div><div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Pendentes</p><p class="text-4xl font-bold text-yellow-600">${stats.pendingActivation}</p></div></div><div class="bg-white p-6 rounded-xl shadow-sm border"><div class="flex justify-between items-center mb-4"><h3 class="text-lg font-semibold font-display">Utilizadores Ativos</h3><button id="refresh-admin-panel" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold py-2 px-3 rounded flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg>Atualizar</button></div><div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th class="px-6 py-3">Email</th><th class="px-6 py-3">Último Login</th><th class="px-6 py-3 text-center">Ações</th></tr></thead><tbody>${activeUsers.map(u => `<tr class="bg-white border-b"><td class="px-6 py-4 font-medium text-gray-900">${u.email}</td><td class="px-6 py-4">${u.last_login || 'Nunca'}</td><td class="px-6 py-4 text-center space-x-2"><button class="offline-message-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-email="${u.email}">Mensagem</button><button class="user-status-toggle bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="false" ${appState.currentUser.id === u.id ? 'disabled' : ''}>Desativar</button></td></tr>`).join('')}</tbody></table></div></div><div class="bg-yellow-900/30 p-6 rounded-xl shadow-sm border border-yellow-700"><h3 class="text-lg font-semibold mb-4 font-display text-yellow-400">Ativações Pendentes (${pendingActivationUsers.length})</h3>${pendingActivationUsers.length > 0 ? `<div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-300"><thead class="text-xs text-yellow-400 uppercase"><tr><th class="px-6 py-3">Email</th><th class="px-6 py-3 text-center">Ação</th></tr></thead><tbody>${pendingActivationUsers.map(u => `<tr class="border-b border-yellow-800"><td class="px-6 py-4">${u.email}</td><td class="px-6 py-4 text-center"><button class="user-status-toggle bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="true">Ativar</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="text-sm text-yellow-200">Nenhum utilizador a aguardar ativação.</p>'}</div>`;
+            
+            document.getElementById('refresh-admin-panel').addEventListener('click', initializeAdminPanel);
+
             document.querySelectorAll('.user-status-toggle').forEach(button => button.addEventListener('click', async (e) => {
                 const userId = e.target.dataset.userid;
                 const isActive = e.target.dataset.isActive === 'true';

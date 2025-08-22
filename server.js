@@ -17,7 +17,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-secreto-padrao';
 
 // Middlewares
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// ALTERAÇÃO: Removido o 'public' para servir o index.html da raiz
+app.use(express.static(__dirname));
 
 
 // 3. Conexão com o Banco de Dados PostgreSQL
@@ -142,6 +143,7 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
+// NENHUMA ALTERAÇÃO NECESSÁRIA AQUI. O PROBLEMA ERA NO FRONTEND.
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     const adminEmail = 'rudysilvaads@gmail.com';
@@ -507,7 +509,6 @@ app.get('/api/admin/stats', verifyToken, requireAdmin, async (req, res) => {
 });
 
 // 9. ROTAS DE CHAT
-// ALTERAÇÃO: Rota agora retorna status online e ordena por ele
 app.get('/api/chat/users', verifyToken, requireAdmin, async (req, res) => {
     try {
         const result = await pool.query(`
@@ -591,7 +592,7 @@ app.get('/api/chat/admin-status', verifyToken, async (req, res) => {
 
 // 10. Rota Genérica (Catch-all)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // 11. Inicialização do Servidor
