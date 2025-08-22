@@ -20,7 +20,9 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-secreto-padrao';
 
 // Obter o diretório base do projeto de forma segura
-const BASE_DIR = __dirname;
+// Usar process.cwd() para garantir que a aplicação encontra os arquivos
+// no diretório de trabalho atual, onde o comando 'node' foi executado.
+const BASE_DIR = process.cwd();
 
 // Middlewares
 app.use(express.json());
