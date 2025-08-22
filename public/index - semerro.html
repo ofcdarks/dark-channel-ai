@@ -34,31 +34,57 @@
         .prose { max-width: none; color: #374151; }
         .copy-btn.copied { background-color: #10b981; color: white; }
         
+        /* Estilo da tela de Login com a máscara */
         .login-background {
             background-color: #000000;
             background-image: 
                 radial-gradient(circle at 80% 40%, rgba(220, 38, 38, 0.25), transparent 40%),
+                /* LINK ATUALIZADO DA IMAGEM */
                 url('https://i.ibb.co/qMZz37Sr/logo-nostagia.png');
             background-repeat: no-repeat;
+            /* Ajuste para cortar a imagem embaixo */
             background-position: calc(50% + 200px) 45%; 
             background-size: contain;
             background-blend-mode: screen;
         }
 
         .login-form-container {
-            background-color: rgba(17, 24, 39, 0.6);
+            background-color: rgba(17, 24, 39, 0.6); /* bg-gray-900 com opacidade */
             backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
-        /* Estilo para o switch de ativar/desativar utilizador */
-        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #4b5563; transition: .4s; border-radius: 20px; }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #10b981; }
-        input:checked + .slider:before { transform: translateX(20px); }
+        /* Estilo Mobile Dashboard */
+        .mobile-dashboard-bg {
+            background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M11 10h2v2h-2zM15 10h2v2h-2zM19 10h2v2h-2zM23 10h2v2h-2zM27 10h2v2h-2zM31 10h2v2h-2zM35 10h2v2h-2zM39 10h2v2h-2zM43 10h2v2h-2zM47 10h2v2h-2zM51 10h2v2h-2zM55 10h2v2h-2zM59 10h2v2h-2zM63 10h2v2h-2zM67 10h2v2h-2zM71 10h2v2h-2zM75 10h2v2h-2zM79 10h2v2h-2zM83 10h2v2h-2zM87 10h2v2h-2z" fill-opacity="0.1" fill="%23FFFFFF"/><g fill-opacity="0.1" fill="%23FFFFFF"><path d="M10 11h2v2h-2zM10 15h2v2h-2zM10 19h2v2h-2zM10 23h2v2h-2zM10 27h2v2h-2zM10 31h2v2h-2zM10 35h2v2h-2zM10 39h2v2h-2zM10 43h2v2h-2zM10 47h2v2h-2zM10 51h2v2h-2zM10 55h2v2h-2zM10 59h2v2h-2zM10 63h2v2h-2zM10 67h2v2h-2zM10 71h2v2h-2zM10 75h2v2h-2zM10 79h2v2h-2zM10 83h2v2h-2zM10 87h2v2h-2z"/></g></svg>');
+            background-color: #111827;
+        }
 
+        .torn-paper {
+            position: relative;
+            padding: 20px;
+        }
+        .torn-paper::before, .torn-paper::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background-size: 100% 20px;
+        }
+        .torn-paper::before {
+            top: -10px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20" preserveAspectRatio="none"><path d="M0,10 Q2,0 4,10 T8,10 Q10,0 12,10 T16,10 Q18,0 20,10 T24,10 Q26,0 28,10 T32,10 Q34,0 36,10 T40,10 Q42,0 44,10 T48,10 Q50,0 52,10 T56,10 Q58,0 60,10 T64,10 Q66,0 68,10 T72,10 Q74,0 76,10 T80,10 Q82,0 84,10 T88,10 Q90,0 92,10 T96,10 Q98,0 100,10 V20 H0 Z" fill="black"/></svg>');
+        }
+        .torn-paper.red::before {
+             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20" preserveAspectRatio="none"><path d="M0,10 Q2,0 4,10 T8,10 Q10,0 12,10 T16,10 Q18,0 20,10 T24,10 Q26,0 28,10 T32,10 Q34,0 36,10 T40,10 Q42,0 44,10 T48,10 Q50,0 52,10 T56,10 Q58,0 60,10 T64,10 Q66,0 68,10 T72,10 Q74,0 76,10 T80,10 Q82,0 84,10 T88,10 Q90,0 92,10 T96,10 Q98,0 100,10 V20 H0 Z" fill="%23DC2626"/></svg>');
+        }
+        .torn-paper.white::before {
+             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20" preserveAspectRatio="none"><path d="M0,10 Q2,0 4,10 T8,10 Q10,0 12,10 T16,10 Q18,0 20,10 T24,10 Q26,0 28,10 T32,10 Q34,0 36,10 T40,10 Q42,0 44,10 T48,10 Q50,0 52,10 T56,10 Q58,0 60,10 T64,10 Q66,0 68,10 T72,10 Q74,0 76,10 T80,10 Q82,0 84,10 T88,10 Q90,0 92,10 T96,10 Q98,0 100,10 V20 H0 Z" fill="white"/></svg>');
+        }
+
+
+        /* Mobile Responsiveness */
         @media (max-width: 768px) {
             #app-container { flex-direction: column; }
             #sidebar { 
@@ -68,10 +94,10 @@
                 height: 100%;
                 z-index: 40;
                 transition: left 0.3s ease-in-out;
-                width: 288px;
+                width: 288px; /* w-72 */
             }
             #sidebar.open { left: 0; }
-            #main-content { margin-left: 0; padding-bottom: 80px; }
+            #main-content { margin-left: 0; padding-bottom: 80px; } /* Space for bottom nav */
             #log-bar { font-size: 0.75rem; }
             #menu-overlay {
                 position: fixed;
@@ -111,7 +137,7 @@
                 </div>
                 <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-red-600 hover:bg-red-700">Login</button>
             </form>
-            <p class="text-center text-sm text-gray-400">Não tem uma conta? <a href="#" id="show-register" class="font-medium text-red-500 hover:text-red-400">Registe-se</a></p>
+            <p class="text-center text-sm text-gray-400">Não tem uma conta? <a href="#" id="show-register" class="font-medium text-red-500 hover:text-red-400">Registre-se</a></p>
         </div>
     </div>
     <div id="register-container" class="hidden items-center justify-center h-screen login-background">
@@ -145,7 +171,9 @@
     <div id="app-container" class="hidden h-screen bg-gray-900">
         <div id="menu-overlay" class="hidden md:hidden"></div>
         <aside id="sidebar" class="w-72 bg-black flex-shrink-0 flex flex-col">
-            <div id="app-logo" class="p-6 border-b border-gray-800 flex justify-between items-center h-20"></div>
+            <div id="app-logo" class="p-6 border-b border-gray-800 flex justify-between items-center h-20">
+                <!-- O logo SVG será inserido aqui pelo JS -->
+            </div>
             <div class="p-4 text-sm text-gray-400" id="user-email-display"></div>
             <nav id="sidebar-nav" class="p-4 space-y-1 flex-1 overflow-y-auto"></nav>
             <div class="p-4 border-t border-gray-800">
@@ -180,7 +208,6 @@
         videoIdeas: [],
         currentVideoAnalysis: null
     };
-    let heartbeatInterval = null;
 
     // --- Constants ---
     const ELEMENTS = {
@@ -201,6 +228,7 @@
         userEmailDisplay: document.getElementById('user-email-display'),
         logoutBtn: document.getElementById('logout-btn'),
         openMenuBtn: document.getElementById('open-menu-btn'),
+        closeMenuBtn: document.getElementById('close-menu-btn'),
         menuOverlay: document.getElementById('menu-overlay'),
         mobileHeaderTitle: document.getElementById('mobile-header-title'),
         logMessage: document.getElementById('log-message'),
@@ -222,27 +250,20 @@
         return 'Baixa';
     };
 
-    // --- API Communication (Atualizado com JWT) ---
+    // --- API Communication ---
     async function apiRequest(endpoint, method, body = null) {
-        const token = localStorage.getItem('authToken');
         const options = { 
             method, 
             headers: { 
                 'Content-Type': 'application/json',
+                'x-user-id': appState.currentUser?.id
             } 
         };
-        if (token) {
-            options.headers['Authorization'] = `Bearer ${token}`;
-        }
         if (body) options.body = JSON.stringify(body);
         
         const response = await fetch(endpoint, options);
         
         if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
-                // Se o token for inválido, faz logout
-                handleLogout();
-            }
             const errorData = await response.json();
             throw new Error(errorData.message || 'Ocorreu um erro na comunicação com o servidor.');
         }
@@ -268,10 +289,8 @@
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
         try {
-            // A rota de login agora retorna o token e os dados do utilizador
-            const response = await apiRequest('/api/login', 'POST', { email, password });
-            localStorage.setItem('authToken', response.token); // Armazena o token
-            appState.currentUser = response.user;
+            const user = await apiRequest('/api/login', 'POST', { email, password });
+            appState.currentUser = user;
             await initializeApp();
         } catch (error) {
             ELEMENTS.loginFeedback.textContent = error.message;
@@ -285,10 +304,8 @@
         const password = document.getElementById('register-password').value;
         try {
             await apiRequest('/api/register', 'POST', { email, password });
-            // Após o registo, faz o login para obter o token
-            const response = await apiRequest('/api/login', 'POST', { email, password });
-            localStorage.setItem('authToken', response.token);
-            appState.currentUser = response.user;
+            const user = await apiRequest('/api/login', 'POST', { email, password });
+            appState.currentUser = user;
             await initializeApp();
         } catch (error) {
             ELEMENTS.registerFeedback.textContent = error.message;
@@ -296,8 +313,6 @@
     }
     
     function handleLogout() {
-        localStorage.removeItem('authToken'); // Limpa o token
-        if (heartbeatInterval) clearInterval(heartbeatInterval); // Para o heartbeat
         appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "" }, userChannels: [], videoIdeas: [] };
         ELEMENTS.appContainer.style.display = 'none';
         showLoginScreen();
@@ -309,8 +324,7 @@
         if (!appState.currentUser) return;
         
         try {
-            // As rotas agora são protegidas e usam o token
-            const settings = await apiRequest(`/api/settings`, 'GET');
+            const settings = await apiRequest(`/api/settings/${appState.currentUser.id}`, 'GET');
             if (settings && Object.keys(settings).length > 0) {
                 appState.apiKeys.gemini = Array.isArray(settings.gemini) && settings.gemini.length === 3 ? settings.gemini : [settings.gemini || "", "", ""];
                 appState.apiKeys.openai = settings.openai || "";
@@ -323,7 +337,16 @@
             addToLog("Falha ao carregar configurações.", true);
         }
         
-        const logoAndFavicon = `<svg width="100%" height="100%" viewBox="0 0 280 50" xmlns="http://www.w3.org/2000/svg"><style>.logo-text { font-family: 'Oswald', sans-serif; font-size: 34px; font-weight: 700; fill: white; text-transform: uppercase; letter-spacing: 0.05em; }.dark-text { filter: drop-shadow(0 0 1px rgba(220, 38, 38, 0.8)); }</style><text x="0" y="38" class="logo-text">La Casa</text><rect x="130" y="5" width="145" height="40" fill="#DC2626" /><text x="135" y="38" class="logo-text dark-text">Darks</text></svg>`;
+        const logoAndFavicon = `<svg width="100%" height="100%" viewBox="0 0 280 50" xmlns="http://www.w3.org/2000/svg">
+            <style>
+                .logo-text { font-family: 'Oswald', sans-serif; font-size: 34px; font-weight: 700; fill: white; text-transform: uppercase; letter-spacing: 0.05em; }
+                .dark-text { filter: drop-shadow(0 0 1px rgba(220, 38, 38, 0.8)); }
+            </style>
+            <text x="0" y="38" class="logo-text">La Casa</text>
+            <rect x="130" y="5" width="145" height="40" fill="#DC2626" />
+            <text x="135" y="38" class="logo-text dark-text">Darks</text>
+        </svg>`;
+
         document.getElementById('app-logo').innerHTML = logoAndFavicon;
         document.getElementById('favicon').href = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">👺</text></svg>')}`;
 
@@ -334,15 +357,11 @@
         
         buildSidebar();
         renderTabContent('dashboard');
-
-        // Inicia o heartbeat para manter a sessão ativa
-        if (heartbeatInterval) clearInterval(heartbeatInterval);
-        heartbeatInterval = setInterval(() => apiRequest('/api/heartbeat', 'POST'), 3 * 60 * 1000); // A cada 3 minutos
     }
 
     // --- UI Building ---
     function buildSidebar() {
-        let navItems = [
+        const navItems = [
             { id: 'dashboard', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" /><path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" /></svg>', label: 'Dashboard' },
             { type: 'divider', label: 'PESQUISA E ESTRATÉGIA' },
             { id: 'niche-finder', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>', label: 'Localizador de Nichos' },
@@ -363,16 +382,6 @@
             { id: 'planner', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" /></svg>', label: 'Planejador de Conteúdo' },
             { id: 'settings', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>', label: 'Configurações' },
         ];
-
-        // Adiciona o painel de admin apenas se o utilizador for admin
-        if (appState.currentUser && appState.currentUser.role === 'admin') {
-            navItems.push({ type: 'divider', label: 'ADMINISTRAÇÃO' });
-            navItems.push({ 
-                id: 'admin', 
-                icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>', 
-                label: 'Painel Admin' 
-            });
-        }
 
         ELEMENTS.sidebarNav.innerHTML = navItems.map(item => {
             if (item.type === 'divider') {
@@ -590,11 +599,6 @@
                         <div id="settings-feedback" class="mt-4 min-h-[20px]"></div>
                       </div>` 
         },
-        "admin": {
-            title: "Painel Administrativo",
-            desc: "Gerir utilizadores, ver sessões ativas e histórico de acessos.",
-            content: `<div id="admin-container" class="space-y-8"></div>`
-        }
     };
     
     // --- Handlers (Lógica das Ferramentas) ---
@@ -1308,7 +1312,6 @@
                 if(trendsChart) trendsChart.style.display = 'none';
             });
         }
-        if (tabId === 'admin') initializeAdminPanel(); // Nova função
 
         const legendContainer = document.getElementById('legend-container');
         if (legendContainer) {
@@ -1460,7 +1463,7 @@
             const feedbackEl = document.getElementById('settings-feedback');
             feedbackEl.textContent = '';
             try {
-                await apiRequest(`/api/settings`, 'POST', { settings: newSettings });
+                await apiRequest(`/api/settings/${appState.currentUser.id}`, 'POST', { settings: newSettings });
                 appState.apiKeys = { 
                     openai: newSettings.openai, 
                     gemini: newSettings.gemini,
@@ -1752,113 +1755,7 @@
             userChannels: appState.userChannels, 
             videoIdeas: appState.videoIdeas 
         };
-        await apiRequest(`/api/settings`, 'POST', { settings: settingsToSave });
-    }
-
-    // --- Nova Função: Inicializador do Painel de Admin ---
-    async function initializeAdminPanel() {
-        const container = document.getElementById('admin-container');
-        container.innerHTML = `<p class="text-white">A carregar dados do painel...</p>`;
-
-        try {
-            // Carrega todos os dados em paralelo
-            const [users, sessions, history] = await Promise.all([
-                apiRequest('/api/admin/users', 'GET'),
-                apiRequest('/api/admin/sessions', 'GET'),
-                apiRequest('/api/admin/history', 'GET')
-            ]);
-
-            // Renderiza o painel
-            container.innerHTML = `
-                <!-- Sessões Ativas -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border">
-                    <h3 class="text-lg font-semibold mb-4 font-display">Utilizadores Online (${sessions.length})</h3>
-                    <div id="active-sessions-list" class="space-y-2">
-                        ${sessions.length > 0 ? sessions.map(s => `
-                            <div class="flex justify-between items-center bg-slate-50 p-2 rounded-md">
-                                <span class="text-sm font-medium text-slate-700">${s.email}</span>
-                                <span class="text-xs text-slate-500">Visto por último: ${s.last_seen}</span>
-                            </div>
-                        `).join('') : '<p class="text-sm text-slate-500">Nenhum utilizador ativo neste momento.</p>'}
-                    </div>
-                </div>
-
-                <!-- Gestão de Utilizadores -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border">
-                    <h3 class="text-lg font-semibold mb-4 font-display">Gestão de Utilizadores</h3>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left text-gray-500">
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3">Email</th>
-                                    <th scope="col" class="px-6 py-3">Cargo</th>
-                                    <th scope="col" class="px-6 py-3">Último Login</th>
-                                    <th scope="col" class="px-6 py-3 text-center">Ativo</th>
-                                </tr>
-                            </thead>
-                            <tbody id="users-table-body">
-                                ${users.map(u => `
-                                    <tr class="bg-white border-b">
-                                        <td class="px-6 py-4 font-medium text-gray-900">${u.email}</td>
-                                        <td class="px-6 py-4">${u.role}</td>
-                                        <td class="px-6 py-4">${u.last_login || 'Nunca'}</td>
-                                        <td class="px-6 py-4 text-center">
-                                            <label class="switch">
-                                                <input type="checkbox" class="user-status-toggle" data-userid="${u.id}" ${u.is_active ? 'checked' : ''} ${appState.currentUser.id === u.id ? 'disabled' : ''}>
-                                                <span class="slider"></span>
-                                            </label>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Histórico de Logins -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border">
-                    <h3 class="text-lg font-semibold mb-4 font-display">Histórico de Acessos Recentes</h3>
-                    <div class="overflow-x-auto max-h-96">
-                        <table class="w-full text-sm text-left text-gray-500">
-                             <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3">Email</th>
-                                    <th scope="col" class="px-6 py-3">Data e Hora</th>
-                                    <th scope="col" class="px-6 py-3">Endereço IP</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${history.map(h => `
-                                    <tr class="bg-white border-b">
-                                        <td class="px-6 py-4">${h.email}</td>
-                                        <td class="px-6 py-4">${h.login_time}</td>
-                                        <td class="px-6 py-4">${h.ip_address}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-
-            // Adiciona event listeners para os toggles de status
-            document.querySelectorAll('.user-status-toggle').forEach(toggle => {
-                toggle.addEventListener('change', async (e) => {
-                    const userId = e.target.dataset.userid;
-                    const isActive = e.target.checked;
-                    try {
-                        await apiRequest(`/api/admin/user/${userId}/status`, 'PUT', { isActive });
-                        addToLog(`Status do utilizador ${userId} atualizado.`);
-                    } catch (error) {
-                        addToLog(`Erro ao atualizar status: ${error.message}`, true);
-                        e.target.checked = !isActive; // Reverte a alteração visual em caso de erro
-                    }
-                });
-            });
-
-        } catch (error) {
-            container.innerHTML = `<p class="text-red-500">Erro ao carregar o painel de administração: ${error.message}</p>`;
-        }
+        await apiRequest(`/api/settings/${appState.currentUser.id}`, 'POST', { settings: settingsToSave });
     }
 
     // --- Event Listeners ---
