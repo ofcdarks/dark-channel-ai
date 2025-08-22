@@ -20,12 +20,18 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-secreto-padrao';
 
 // Obter o diretório base do projeto de forma segura
-// Usar process.cwd() para garantir que a aplicação encontra os arquivos
-// no diretório de trabalho atual, onde o comando 'node' foi executado.
-const BASE_DIR = process.cwd();
+// Usar __dirname para garantir que a aplicação encontra os arquivos
+// no mesmo diretório do server.js.
+const BASE_DIR = __dirname;
 
 // Middlewares
 app.use(express.json());
+
+// Servir arquivos estáticos do diretório raiz do projeto antes de qualquer outra rota
+app.use(express.static(BASE_DIR)); 
+
+// Servir uploads de imagens
+app.use('/uploads', express.static(path.join(BASE_DIR, 'uploads'))); 
 
 // Configuração do Multer para Upload de Imagens no Chat
 const storage = multer.diskStorage({
@@ -764,13 +770,9 @@ app.get('/api/chat/admin-status', verifyToken, async (req, res) => {
 
 
 // 11. Rota Genérica (Catch-all)
-// Servir a página inicial para a rota raiz
-app.get('/', (req, res) => {
-  res.sendFile(path.resolve(BASE_DIR, 'index.html'));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(BASE_DIR, 'index.html'));
 });
-
-// Servir outros arquivos estáticos
-app.use(express.static(BASE_DIR));
 
 // 12. Inicialização do Servidor
 app.listen(PORT, () => {
