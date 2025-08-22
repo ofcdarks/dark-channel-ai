@@ -71,8 +71,7 @@
 
         #chat-container { display: none; width: 350px; height: 500px; background-color: #1f2937; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); flex-direction: column; overflow: hidden; border: 1px solid #4b5563; }
         .chat-header { background-color: #111827; padding: 10px; font-weight: bold; color: white; display: flex; justify-content: space-between; align-items: center; }
-        /* ALTERAÇÃO: Removido 'flex-direction: column-reverse' para corrigir a ordem das mensagens */
-        .chat-messages { flex-grow: 1; padding: 10px; overflow-y: auto; }
+        .chat-messages { flex-grow: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; }
         .message-bubble { max-width: 80%; padding: 8px 12px; border-radius: 15px; margin-bottom: 8px; word-wrap: break-word; }
         .message-sent { background-color: #DC2626; color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
         .message-received { background-color: #4b5563; color: white; align-self: flex-start; border-bottom-left-radius: 3px; }
@@ -96,9 +95,11 @@
         @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
         
         /* --- Modal de Mensagem Offline --- */
+        /* ALTERAÇÃO: Garantir que o modal comece escondido */
         #offline-message-modal {
+            display: none; 
             position: fixed; inset: 0; background-color: rgba(0,0,0,0.75);
-            z-index: 500; display: flex; align-items: center; justify-content: center;
+            z-index: 500; align-items: center; justify-content: center;
         }
 
         @media (max-width: 768px) {
@@ -243,8 +244,8 @@
         </div>
     </div>
 
-    <!-- Modal de Mensagem Offline (ALTERAÇÃO: Adicionado 'hidden' para garantir que comece escondido) -->
-    <div id="offline-message-modal" class="hidden">
+    <!-- Modal de Mensagem Offline -->
+    <div id="offline-message-modal">
         <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm border border-gray-700 space-y-4">
             <h3 class="text-lg font-semibold text-white">Enviar Mensagem para <span id="offline-user-email"></span></h3>
             <textarea id="offline-message-textarea" class="w-full bg-gray-700 text-white rounded-md p-2" rows="4" placeholder="Digite sua mensagem..."></textarea>
@@ -323,7 +324,6 @@
     };
 
     // --- API Communication ---
-    // ALTERAÇÃO: Corrigido o tratamento de erro para não ler a resposta duas vezes
     async function apiRequest(endpoint, method, body = null) {
         const token = localStorage.getItem('authToken');
         const options = { 
@@ -342,7 +342,6 @@
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: 'Erro de comunicação com o servidor.' }));
             if (response.status === 401 || response.status === 403) {
-                // Se o erro NÃO for sobre ativação, faz logout.
                 if (!errorData.message || !errorData.message.includes('ativada')) {
                      handleLogout();
                 }
@@ -371,7 +370,6 @@
         ELEMENTS.registerContainer.style.display = 'flex';
     }
     
-    // ALTERAÇÃO: Melhorada a exibição da mensagem de erro de ativação
     async function handleLogin(e) {
         e.preventDefault();
         ELEMENTS.loginFeedback.textContent = '';
@@ -383,7 +381,6 @@
             appState.currentUser = response.user;
             await initializeApp();
         } catch (error) {
-            // Verifica especificamente pela mensagem de ativação
             if (error.message.includes('ativada')) {
                 ELEMENTS.loginContainer.style.display = 'none';
                 ELEMENTS.activationContainer.style.display = 'flex';
@@ -407,7 +404,6 @@
         }
     }
     
-    // ALTERAÇÃO: Adicionado hideOfflineMessageModal para garantir que o modal suma ao sair
     function handleLogout() {
         localStorage.removeItem('authToken');
         if (heartbeatInterval) clearInterval(heartbeatInterval);
@@ -415,7 +411,7 @@
         appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null, lastUnreadCount: 0 } };
         ELEMENTS.appContainer.style.display = 'none';
         document.getElementById('chat-widget').style.display = 'none';
-        hideOfflineMessageModal(); // Garante que o modal de mensagem offline seja escondido
+        hideOfflineMessageModal();
         showLoginScreen();
         document.getElementById('login-form').reset();
     }
@@ -1814,14 +1810,12 @@
         await loadMessageHistory();
     }
 
-    // ALTERAÇÃO: Adicionado scroll para o final após carregar as mensagens
     async function loadMessageHistory() {
         const messagesArea = document.getElementById('chat-messages-area');
         if (!appState.chat.activePeer || !messagesArea) return;
         const history = await apiRequest(`/api/chat/history/${appState.chat.activePeer.id}`, 'GET');
         if (history) {
             messagesArea.innerHTML = history.map(msg => `<div class="message-bubble ${msg.sender_id === appState.currentUser.id ? 'message-sent' : 'message-received'}">${msg.message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`).join('');
-            // Rola para a mensagem mais recente (a última no container)
             messagesArea.scrollTop = messagesArea.scrollHeight;
         }
     }
@@ -1862,17 +1856,14 @@
     function showOfflineMessageModal(userId, userEmail) {
         document.getElementById('offline-user-email').textContent = userEmail;
         ELEMENTS.offlineMessageModal.dataset.userId = userId;
-        ELEMENTS.offlineMessageModal.classList.remove('hidden');
         ELEMENTS.offlineMessageModal.style.display = 'flex';
         document.getElementById('offline-message-textarea').focus();
     }
     function hideOfflineMessageModal() {
-        ELEMENTS.offlineMessageModal.classList.add('hidden');
         ELEMENTS.offlineMessageModal.style.display = 'none';
         document.getElementById('offline-message-textarea').value = '';
     }
 
-    // ALTERAÇÃO: Adicionado botão de refresh e seu listener
     async function initializeAdminPanel() {
         const container = document.getElementById('admin-container');
         container.innerHTML = `<p class="text-white">A carregar...</p>`;
@@ -1894,7 +1885,29 @@
         } catch (error) { container.innerHTML = `<p class="text-red-500">Erro: ${error.message}</p>`; }
     }
     
+    // --- Session Persistence ---
+    // ALTERAÇÃO: Nova função para verificar a sessão ao carregar a página
+    async function checkSession() {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            try {
+                const response = await apiRequest('/api/verify-session', 'GET');
+                if (response && response.user) {
+                    appState.currentUser = response.user;
+                    await initializeApp();
+                } else {
+                    handleLogout();
+                }
+            } catch (error) {
+                console.error("Falha na verificação da sessão:", error);
+                handleLogout();
+            }
+        }
+    }
+
     // --- Event Listeners ---
+    // ALTERAÇÃO: Adicionado listener para verificar a sessão
+    document.addEventListener('DOMContentLoaded', checkSession);
     ELEMENTS.loginForm.addEventListener('submit', handleLogin);
     ELEMENTS.registerForm.addEventListener('submit', handleRegister);
     ELEMENTS.showRegister.addEventListener('click', (e) => { e.preventDefault(); showRegisterScreen(); });
