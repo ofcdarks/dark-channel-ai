@@ -17,8 +17,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-secreto-padrao';
 
 // Middlewares
 app.use(express.json());
-// ALTERAÇÃO: Removido o 'public' para servir o index.html da raiz
-app.use(express.static(__dirname));
+// ALTERAÇÃO: Revertido para usar o diretório 'public'
+app.use(express.static(path.join(__dirname, 'public')));
 
 
 // 3. Conexão com o Banco de Dados PostgreSQL
