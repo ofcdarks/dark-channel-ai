@@ -5,7 +5,7 @@ const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken'); // Importado para segurança
+const jwt = require('jsonwebtoken');
 const { google } = require('googleapis');
 const googleTrends = require('google-trends-api');
 const axios = require('axios');
@@ -13,12 +13,10 @@ const axios = require('axios');
 // 2. Configuração Inicial
 const app = express();
 const PORT = process.env.PORT || 3000;
-// É crucial definir um segredo para o JWT nas suas variáveis de ambiente
 const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-secreto-padrao';
 
 // Middlewares
 app.use(express.json());
-// CORREÇÃO: Servir ficheiros estáticos da pasta 'public'
 app.use(express.static(path.join(__dirname, 'public')));
 
 
@@ -34,36 +32,32 @@ const pool = new Pool({
 const initializeDb = async () => {
   const client = await pool.connect();
   try {
-    // Passo 1: Garante que a tabela base de utilizadores existe
+    // Tabela de Utilizadores
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
-        settings JSONB
+        settings JSONB,
+        role VARCHAR(50) NOT NULL DEFAULT 'user',
+        is_active BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    console.log('Tabela "users" base verificada/criada com sucesso.');
+    console.log("Tabela 'users' verificada/criada com sucesso.");
 
-    // **CORREÇÃO DEFINITIVA: Adiciona colunas em falta a uma tabela existente**
-    // Isto funciona como uma "migração" automática da base de dados.
-    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'user'`);
-    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true`);
-    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`);
-    console.log("Colunas 'role', 'is_active' e 'created_at' verificadas/adicionadas à tabela 'users'.");
-
-
-    // Garante que as outras tabelas existem
+    // Tabela de Histórico de Login
     await client.query(`
       CREATE TABLE IF NOT EXISTS login_history (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id),
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         login_timestamp TIMESTAMPTZ DEFAULT NOW(),
         ip_address VARCHAR(50)
       );
     `);
     console.log('Tabela "login_history" verificada/criada com sucesso.');
     
+    // Tabela de Sessões Ativas
     await client.query(`
         CREATE TABLE IF NOT EXISTS active_sessions (
             user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -73,14 +67,27 @@ const initializeDb = async () => {
     `);
     console.log('Tabela "active_sessions" verificada/criada com sucesso.');
 
-    // **LÓGICA DE ADMINISTRAÇÃO REFORÇADA**
+    // Tabela de Mensagens do Chat
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id SERIAL PRIMARY KEY,
+            sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            receiver_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            message TEXT NOT NULL,
+            sent_at TIMESTAMPTZ DEFAULT NOW(),
+            is_read BOOLEAN DEFAULT false
+        );
+    `);
+    console.log('Tabela "chat_messages" verificada/criada com sucesso.');
+
+
+    // Lógica de Administração Reforçada
     const adminEmail = 'rudysilvaads@gmail.com';
     const adminPassword = '253031';
 
     const adminCheck = await client.query("SELECT id FROM users WHERE email = $1", [adminEmail]);
 
     if (adminCheck.rowCount === 0) {
-        // Se o admin não existir, cria-o com a senha especificada.
         console.log(`Utilizador admin ${adminEmail} não encontrado. A criar...`);
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(adminPassword, salt);
@@ -90,7 +97,6 @@ const initializeDb = async () => {
         );
         console.log(`Utilizador administrador ${adminEmail} criado com sucesso.`);
     } else {
-        // Se o admin já existir, garante que ele tem o cargo 'admin' E que está ATIVO.
         await client.query("UPDATE users SET role = 'admin', is_active = true WHERE email = $1", [adminEmail]);
         console.log(`Cargo de administrador e status ativo para ${adminEmail} verificado e garantido.`);
     }
@@ -102,29 +108,20 @@ const initializeDb = async () => {
   }
 };
 
-// 4. Middleware de Segurança (Verificação de Token JWT)
+// 4. Middleware de Segurança
 const verifyToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Formato "Bearer TOKEN"
-
-    if (!token) {
-        return res.status(401).json({ message: 'Acesso negado. Nenhum token fornecido.' });
-    }
-
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Acesso negado. Nenhum token fornecido.' });
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
-        if (err) {
-            return res.status(403).json({ message: 'Token inválido ou expirado.' });
-        }
-        req.user = decoded; // Adiciona os dados do utilizador (id, role) ao objeto req
+        if (err) return res.status(403).json({ message: 'Token inválido ou expirado.' });
+        req.user = decoded;
         next();
     });
 };
 
-// Middleware para exigir cargo de Admin
 const requireAdmin = (req, res, next) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Acesso negado. Recurso exclusivo para administradores.' });
-    }
+    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Acesso negado. Recurso exclusivo para administradores.' });
     next();
 };
 
@@ -136,8 +133,8 @@ app.post('/api/register', async (req, res) => {
     try {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
-        // Garante que o novo utilizador é criado como ativo
-        const result = await pool.query('INSERT INTO users (email, password_hash, settings, is_active) VALUES ($1, $2, $3, true) RETURNING id, email', [email, passwordHash, {}]);
+        // ALTERAÇÃO: Novos utilizadores são criados como inativos
+        const result = await pool.query('INSERT INTO users (email, password_hash, settings, is_active) VALUES ($1, $2, $3, false) RETURNING id, email', [email, passwordHash, {}]);
         res.status(201).json(result.rows[0]);
     } catch (err) {
         if (err.code === '23505') return res.status(409).json({ message: 'Este e-mail já está em uso.' });
@@ -149,80 +146,52 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     const adminEmail = 'rudysilvaads@gmail.com';
-
     if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
     try {
-        // Se o email de login for o do administrador, reativa a conta antes de qualquer outra verificação.
         if (email === adminEmail) {
-            console.log(`Tentativa de login do administrador ${adminEmail}. A garantir que a conta está ativa...`);
             await pool.query("UPDATE users SET is_active = true WHERE email = $1", [adminEmail]);
         }
-
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = result.rows[0];
 
-        // Lógica de verificação separada para melhor depuração
-        if (!user) {
-            return res.status(401).json({ message: 'Credenciais inválidas (utilizador não encontrado).' });
+        if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+            return res.status(401).json({ message: 'Email ou senha inválidos.' });
         }
         
-        const passwordMatch = await bcrypt.compare(password, user.password_hash);
-        if (!passwordMatch) {
-            return res.status(401).json({ message: 'Credenciais inválidas (senha incorreta).' });
-        }
-
-        // Esta verificação agora só irá bloquear outros utilizadores que não sejam o admin.
+        // ALTERAÇÃO: Mensagem específica para contas pendentes de ativação
         if (!user.is_active) {
-            return res.status(403).json({ message: 'A sua conta foi desativada por um administrador.' });
+            return res.status(403).json({ message: 'Sua conta precisa ser ativada por um administrador.' });
         }
 
-        // Gerar Token JWT
         const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
-
-        // Registar no histórico de logins
         const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
         await pool.query('INSERT INTO login_history (user_id, ip_address) VALUES ($1, $2)', [user.id, ip]);
-
-        // Registar na sessão ativa
         await pool.query(
             'INSERT INTO active_sessions (user_id, email, last_seen) VALUES ($1, $2, NOW()) ON CONFLICT (user_id) DO UPDATE SET last_seen = NOW(), email = $2',
             [user.id, user.email]
         );
-
         res.json({ 
             message: 'Login bem-sucedido!', 
-            token, // Enviar o token para o cliente
+            token,
             user: { id: user.id, email: user.email, role: user.role }
         });
-
     } catch (err) {
-        // Retorna a mensagem de erro detalhada para o frontend.
         console.error("ERRO DETALHADO NO LOGIN:", err);
         res.status(500).json({ message: `Erro interno: ${err.message}` });
     }
 });
 
-// Rota para o frontend reportar que o utilizador continua ativo
 app.post('/api/heartbeat', verifyToken, async (req, res) => {
     try {
-        const result = await pool.query(
-            'UPDATE active_sessions SET last_seen = NOW() WHERE user_id = $1',
-            [req.user.id]
-        );
-        if (result.rowCount > 0) {
+        const userResult = await pool.query('SELECT email FROM users WHERE id = $1', [req.user.id]);
+        if (userResult.rowCount > 0) {
+             await pool.query(
+                'INSERT INTO active_sessions (user_id, email, last_seen) VALUES ($1, $2, NOW()) ON CONFLICT (user_id) DO UPDATE SET last_seen = NOW()',
+                [req.user.id, userResult.rows[0].email]
+            );
             res.sendStatus(200);
         } else {
-            // Se não existir, insere (caso a sessão tenha expirado no servidor)
-            const userResult = await pool.query('SELECT email FROM users WHERE id = $1', [req.user.id]);
-            if (userResult.rowCount > 0) {
-                 await pool.query(
-                    'INSERT INTO active_sessions (user_id, email, last_seen) VALUES ($1, $2, NOW()) ON CONFLICT (user_id) DO UPDATE SET last_seen = NOW()',
-                    [req.user.id, userResult.rows[0].email]
-                );
-                res.sendStatus(200);
-            } else {
-                res.sendStatus(404);
-            }
+            res.sendStatus(404);
         }
     } catch (error) {
         console.error('Erro no heartbeat:', error);
@@ -234,11 +203,7 @@ app.post('/api/heartbeat', verifyToken, async (req, res) => {
 app.get('/api/settings', verifyToken, async (req, res) => {
     try {
         const result = await pool.query('SELECT settings FROM users WHERE id = $1', [req.user.id]);
-        if (result.rows.length > 0) {
-            res.json(result.rows[0].settings || {});
-        } else {
-            res.status(404).json({ message: 'Utilizador não encontrado.' });
-        }
+        res.json(result.rows.length > 0 ? result.rows[0].settings || {} : {});
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Erro interno do servidor.' });
@@ -248,18 +213,13 @@ app.get('/api/settings', verifyToken, async (req, res) => {
 app.post('/api/settings', verifyToken, async (req, res) => {
     const { settings } = req.body;
     try {
-        const result = await pool.query('UPDATE users SET settings = $1 WHERE id = $2 RETURNING id', [settings, req.user.id]);
-        if (result.rowCount > 0) {
-            res.json({ message: 'Configurações salvas com sucesso!' });
-        } else {
-            res.status(404).json({ message: 'Utilizador não encontrado.' });
-        }
+        await pool.query('UPDATE users SET settings = $1 WHERE id = $2', [settings, req.user.id]);
+        res.json({ message: 'Configurações salvas com sucesso!' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 });
-
 
 // 6. Rota Segura para Geração de Conteúdo com IA
 app.post('/api/generate', verifyToken, async (req, res) => {
@@ -332,7 +292,7 @@ app.post('/api/generate', verifyToken, async (req, res) => {
              }
         }
         
-        const errorMessage = lastError?.message || "Nenhuma API de IA disponível ou todas falharam.";
+        const errorMessage = lastError?.response?.data?.error?.message || lastError?.message || "Nenhuma API de IA disponível ou todas falharam.";
         return res.status(500).json({ message: `Falha ao gerar conteúdo. Verifique suas chaves de API. Último erro: ${errorMessage}` });
 
     } catch (error) {
@@ -342,13 +302,10 @@ app.post('/api/generate', verifyToken, async (req, res) => {
 });
 
 
-// 7. Rotas da API (YouTube Data & Google Trends) - Agora protegidas
+// 7. Rotas da API (YouTube Data & Google Trends)
 const getGoogleApiKey = async (userId) => {
     const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
-    if (result.rows.length > 0 && result.rows[0].settings) {
-        return result.rows[0].settings.google_api;
-    }
-    return null;
+    return result.rows.length > 0 && result.rows[0].settings ? result.rows[0].settings.google_api : null;
 };
 
 const formatStat = (stat) => stat ? parseInt(stat).toLocaleString('pt-BR') : '0';
@@ -477,7 +434,7 @@ app.get('/api/google-trends/:keyword/:country', verifyToken, async (req, res) =>
     }
 });
 
-// 8. Novas Rotas de Administração
+// 8. Rotas de Administração
 app.get('/api/admin/users', verifyToken, requireAdmin, async (req, res) => {
     try {
         const result = await pool.query(`
@@ -508,7 +465,6 @@ app.put('/api/admin/user/:userId/status', verifyToken, requireAdmin, async (req,
 
 app.get('/api/admin/sessions', verifyToken, requireAdmin, async (req, res) => {
     try {
-        // Considera ativos os utilizadores vistos nos últimos 5 minutos
         const result = await pool.query("SELECT user_id, email, TO_CHAR(last_seen, 'DD/MM/YYYY HH24:MI:SS') as last_seen FROM active_sessions WHERE last_seen > NOW() - INTERVAL '5 minutes' ORDER BY last_seen DESC");
         res.json(result.rows);
     } catch (error) {
@@ -533,13 +489,122 @@ app.get('/api/admin/history', verifyToken, requireAdmin, async (req, res) => {
     }
 });
 
+// NOVA ROTA: Estatísticas para o painel admin
+app.get('/api/admin/stats', verifyToken, requireAdmin, async (req, res) => {
+    try {
+        const totalUsersRes = await pool.query("SELECT COUNT(*) FROM users");
+        const pendingUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE is_active = false");
+        const onlineUsersRes = await pool.query("SELECT COUNT(*) FROM active_sessions WHERE last_seen > NOW() - INTERVAL '5 minutes'");
+        const logins24hRes = await pool.query("SELECT COUNT(*) FROM login_history WHERE login_timestamp > NOW() - INTERVAL '24 hours'");
 
-// 9. Rota Genérica (Catch-all) para servir o index.html
+        res.json({
+            totalUsers: totalUsersRes.rows[0].count,
+            pendingActivation: pendingUsersRes.rows[0].count,
+            onlineNow: onlineUsersRes.rows[0].count,
+            loginsLast24h: logins24hRes.rows[0].count
+        });
+    } catch (error) {
+        console.error("Erro ao buscar estatísticas do admin:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
+// 9. NOVAS ROTAS DE CHAT
+// Lista utilizadores para o admin
+app.get('/api/chat/users', verifyToken, requireAdmin, async (req, res) => {
+    try {
+        // Seleciona todos os utilizadores que não são o próprio admin, e conta as mensagens não lidas que eles enviaram PARA o admin.
+        const result = await pool.query(`
+            SELECT 
+                u.id as user_id, 
+                u.email,
+                (SELECT COUNT(*) FROM chat_messages WHERE sender_id = u.id AND receiver_id = $1 AND is_read = false) as unread_count
+            FROM users u
+            WHERE u.id != $1
+            ORDER BY u.email;
+        `, [req.user.id]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Erro ao listar utilizadores do chat:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
+// Obtém o histórico de mensagens com um utilizador específico
+app.get('/api/chat/history/:peerId', verifyToken, async (req, res) => {
+    const myId = req.user.id;
+    const peerId = parseInt(req.params.peerId, 10);
+    try {
+        // Marca as mensagens como lidas ao carregar o histórico
+        await pool.query(
+            "UPDATE chat_messages SET is_read = true WHERE sender_id = $1 AND receiver_id = $2",
+            [peerId, myId]
+        );
+        // Busca a conversa
+        const result = await pool.query(`
+            SELECT * FROM chat_messages 
+            WHERE (sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)
+            ORDER BY sent_at ASC;
+        `, [myId, peerId]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Erro ao buscar histórico do chat:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
+// Envia uma mensagem
+app.post('/api/chat/send', verifyToken, async (req, res) => {
+    const { receiverId, message } = req.body;
+    const senderId = req.user.id;
+    if (!receiverId || !message) return res.status(400).json({ message: "Destinatário e mensagem são obrigatórios." });
+    try {
+        await pool.query(
+            "INSERT INTO chat_messages (sender_id, receiver_id, message) VALUES ($1, $2, $3)",
+            [senderId, receiverId, message]
+        );
+        res.sendStatus(201);
+    } catch (error) {
+        console.error("Erro ao enviar mensagem:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
+// Verifica notificações de novas mensagens
+app.get('/api/chat/notifications', verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT sender_id, COUNT(*) as unread_count 
+            FROM chat_messages 
+            WHERE receiver_id = $1 AND is_read = false 
+            GROUP BY sender_id;
+        `, [req.user.id]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Erro ao buscar notificações:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
+// Verifica se o admin está online
+app.get('/api/chat/admin-status', verifyToken, async (req, res) => {
+    try {
+        // ID 1 é o admin por convenção da inicialização da DB
+        const result = await pool.query("SELECT 1 FROM active_sessions WHERE user_id = 1 AND last_seen > NOW() - INTERVAL '5 minutes'");
+        res.json({ isAdminOnline: result.rowCount > 0 });
+    } catch (error) {
+        console.error("Erro ao verificar status do admin:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
+
+// 10. Rota Genérica (Catch-all)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 10. Inicialização do Servidor
+// 11. Inicialização do Servidor
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
   initializeDb();

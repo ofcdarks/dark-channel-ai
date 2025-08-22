@@ -67,6 +67,9 @@
         .chat-user-item { cursor: pointer; padding: 10px; border-bottom: 1px solid #374151; }
         .chat-user-item:hover { background-color: #374151; }
         .unread-indicator { width: 10px; height: 10px; background-color: #fde047; border-radius: 50%; display: inline-block; margin-left: 8px; }
+        .admin-status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .admin-status-dot.online { background-color: #22c55e; }
+        .admin-status-dot.offline { background-color: #6b7280; }
 
         @media (max-width: 768px) {
             #app-container { flex-direction: column; }
@@ -136,7 +139,6 @@
                 <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-red-600 hover:bg-red-700">Login</button>
             </form>
             <p class="text-center text-sm text-gray-400">Não tem uma conta? <a href="#" id="show-register" class="font-medium text-red-500 hover:text-red-400">Registe-se</a></p>
-            <p class="text-center text-sm text-gray-400">Problemas com o acesso? <a href="#" id="show-activation-request" class="font-medium text-yellow-500 hover:text-yellow-400">Solicitar Acesso</a></p>
         </div>
     </div>
     <div id="register-container" class="hidden items-center justify-center h-screen login-background">
@@ -264,7 +266,7 @@
         return 'Baixa';
     };
 
-    // --- API Communication (Atualizado com JWT) ---
+    // --- API Communication ---
     async function apiRequest(endpoint, method, body = null) {
         const token = localStorage.getItem('authToken');
         const options = { 
@@ -282,15 +284,22 @@
         
         if (!response.ok) {
             if (response.status === 401 || response.status === 403) {
-                // Se o token for inválido, faz logout
-                handleLogout();
+                const errorData = await response.json().catch(() => ({}));
+                // Se o token for inválido OU a conta estiver inativa, faz logout
+                // A não ser que a mensagem seja sobre ativação pendente
+                if (!errorData.message || !errorData.message.includes('ativada')) {
+                     handleLogout();
+                }
             }
             const errorData = await response.json();
             throw new Error(errorData.message || 'Ocorreu um erro na comunicação com o servidor.');
         }
         
         const contentType = response.headers.get("content-type");
-        return contentType?.includes("application/json") ? response.json() : null;
+        if (contentType && contentType.includes("application/json")) {
+            return response.json();
+        }
+        return null; // Retorna null para respostas sem corpo JSON (ex: 204 No Content)
     }
 
     // --- Authentication ---
@@ -317,6 +326,7 @@
             appState.currentUser = response.user;
             await initializeApp();
         } catch (error) {
+            // ALTERAÇÃO: Lógica para mostrar a tela de ativação pendente
             if (error.message.includes('ativada')) {
                 ELEMENTS.loginContainer.style.display = 'none';
                 ELEMENTS.activationContainer.style.display = 'flex';
@@ -333,6 +343,7 @@
         const password = document.getElementById('register-password').value;
         try {
             await apiRequest('/api/register', 'POST', { email, password });
+            // ALTERAÇÃO: Após o registo, mostra a tela de ativação pendente
             ELEMENTS.registerContainer.style.display = 'none';
             ELEMENTS.activationContainer.style.display = 'flex';
         } catch (error) {
@@ -341,7 +352,7 @@
     }
     
     function handleLogout() {
-        localStorage.removeItem('authToken'); // Limpa o token
+        localStorage.removeItem('authToken');
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         if (appState.chat.pollInterval) clearInterval(appState.chat.pollInterval);
         appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null } };
@@ -387,7 +398,7 @@
 
         // Inicia o polling de notificações de chat
         if (appState.chat.pollInterval) clearInterval(appState.chat.pollInterval);
-        appState.chat.pollInterval = setInterval(pollForNotifications, 5000); // A cada 5 segundos
+        appState.chat.pollInterval = setInterval(pollForNotifications, 5000);
         document.getElementById('chat-widget').style.display = 'block';
     }
 
@@ -415,7 +426,6 @@
             { id: 'settings', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>', label: 'Configurações' },
         ];
 
-        // Adiciona o painel de admin apenas se o utilizador for admin
         if (appState.currentUser && appState.currentUser.role === 'admin') {
             navItems.push({ type: 'divider', label: 'ADMINISTRAÇÃO' });
             navItems.push({ 
@@ -505,7 +515,7 @@
         return `<div class="mt-8 text-sm p-4 bg-red-50 rounded-lg border border-red-200">${legendHtml}</div>`;
     };
 
-    // --- AI API Call Abstraction (Seguro e com Log) ---
+    // --- AI API Call Abstraction ---
     async function callAIModel(prompt, schema = null) {
         showProgressModal();
         try {
@@ -1346,19 +1356,11 @@
         ELEMENTS.sidebar.classList.remove('open');
         ELEMENTS.menuOverlay.style.display = 'none';
 
-        // Add specific initializers for complex tools
         if (tabId === 'settings') initializeSettings();
         if (tabId === 'dashboard') initializeDashboard();
         if (tabId === 'channel-organizer') initializeChannelOrganizer();
         if (tabId === 'planner') initializePlanner();
         if (tabId === 'text-divider') initializeTextDivider();
-        if (tabId === 'niche-analysis') {
-            const nicheInput = document.getElementById('analysis-niche');
-            nicheInput.addEventListener('input', () => {
-                const trendsChart = document.getElementById('trends-chart-container');
-                if(trendsChart) trendsChart.style.display = 'none';
-            });
-        }
         if (tabId === 'admin') initializeAdminPanel();
 
         const legendContainer = document.getElementById('legend-container');
@@ -1366,14 +1368,13 @@
             const legendHtml = getLegendForTool(tabId);
             if (legendHtml) {
                 legendContainer.innerHTML = legendHtml;
-                legendContainer.style.display = 'none'; // Começa escondido
+                legendContainer.style.display = 'none';
             }
         }
 
         const outputEl = document.getElementById('output');
         if (!outputEl) return;
 
-        // Generic button handlers
         Object.keys(handlers).forEach(buttonId => {
             const btn = document.getElementById(buttonId);
             if(btn) {
@@ -1412,11 +1413,7 @@
                 method: 'GET',
                 headers: { 'Authorization': `Bearer ${key}` }
             });
-            if (response.ok) {
-                statusEl.innerHTML = '<span title="Chave Válida">✅</span>';
-            } else {
-                statusEl.innerHTML = '<span title="Chave Inválida ou Expirada">❌</span>';
-            }
+            statusEl.innerHTML = response.ok ? '<span title="Chave Válida">✅</span>' : '<span title="Chave Inválida ou Expirada">❌</span>';
         } catch (error) {
             statusEl.innerHTML = '<span title="Erro de rede ao validar">❌</span>';
         }
@@ -1435,11 +1432,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contents: [{ parts: [{ text: "teste" }] }] })
             });
-            if (response.ok) {
-                statusEl.innerHTML = '<span title="Chave Válida">✅</span>';
-            } else {
-                statusEl.innerHTML = '<span title="Chave Inválida ou Expirada">❌</span>';
-            }
+            statusEl.innerHTML = response.ok ? '<span title="Chave Válida">✅</span>' : '<span title="Chave Inválida ou Expirada">❌</span>';
         } catch (error) {
             statusEl.innerHTML = '<span title="Erro de rede ao validar">❌</span>';
         }
@@ -1451,34 +1444,24 @@
             return;
         }
         statusEl.innerHTML = '<span class="animate-spin">⏳</span>';
-        const testVideoId = 'dQw4w9WgXcQ'; // Um vídeo público conhecido
+        const testVideoId = 'dQw4w9WgXcQ';
         const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${testVideoId}&key=${key}`;
         try {
             const response = await fetch(apiUrl);
-            if (response.ok) {
-                statusEl.innerHTML = '<span title="Chave Válida">✅</span>';
-            } else {
-                statusEl.innerHTML = '<span title="Chave Inválida ou sem permissão para YouTube API">❌</span>';
-            }
+            statusEl.innerHTML = response.ok ? '<span title="Chave Válida">✅</span>' : '<span title="Chave Inválida ou sem permissão para YouTube API">❌</span>';
         } catch (error) {
             statusEl.innerHTML = '<span title="Erro de rede ao validar">❌</span>';
         }
     }
 
-    async function initializeSettings() {
+    function initializeSettings() {
         const ids = {
-            openai: 'openai-key',
-            gemini1: 'gemini-key-1',
-            gemini2: 'gemini-key-2',
-            gemini3: 'gemini-key-3',
-            google: 'google-api-key'
+            openai: 'openai-key', gemini1: 'gemini-key-1', gemini2: 'gemini-key-2',
+            gemini3: 'gemini-key-3', google: 'google-api-key'
         };
-
         const inputs = {
-            openai: document.getElementById(ids.openai),
-            gemini1: document.getElementById(ids.gemini1),
-            gemini2: document.getElementById(ids.gemini2),
-            gemini3: document.getElementById(ids.gemini3),
+            openai: document.getElementById(ids.openai), gemini1: document.getElementById(ids.gemini1),
+            gemini2: document.getElementById(ids.gemini2), gemini3: document.getElementById(ids.gemini3),
             google: document.getElementById(ids.google)
         };
 
@@ -1488,35 +1471,23 @@
         inputs.gemini3.value = appState.apiKeys.gemini[2] || '';
         inputs.google.value = appState.apiKeys.google_api || '';
 
-        // Listeners para os botões de validação
         document.getElementById('validate-openai-key').addEventListener('click', () => validateOpenAIKey(inputs.openai.value, document.getElementById('openai-key-status')));
         document.getElementById('validate-gemini-key-1').addEventListener('click', () => validateGeminiKey(inputs.gemini1.value, document.getElementById('gemini-key-1-status')));
         document.getElementById('validate-gemini-key-2').addEventListener('click', () => validateGeminiKey(inputs.gemini2.value, document.getElementById('gemini-key-2-status')));
         document.getElementById('validate-gemini-key-3').addEventListener('click', () => validateGeminiKey(inputs.gemini3.value, document.getElementById('gemini-key-3-status')));
         document.getElementById('validate-google-api-key').addEventListener('click', () => validateGoogleApiKey(inputs.google.value, document.getElementById('google-api-key-status')));
 
-        // Listener para o botão de salvar
         document.getElementById('save-settings').addEventListener('click', async () => {
             const newSettings = {
                 openai: inputs.openai.value.trim(),
-                gemini: [
-                    inputs.gemini1.value.trim(),
-                    inputs.gemini2.value.trim(),
-                    inputs.gemini3.value.trim()
-                ],
+                gemini: [ inputs.gemini1.value.trim(), inputs.gemini2.value.trim(), inputs.gemini3.value.trim() ],
                 google_api: inputs.google.value.trim(),
-                userChannels: appState.userChannels,
-                videoIdeas: appState.videoIdeas
+                userChannels: appState.userChannels, videoIdeas: appState.videoIdeas
             };
             const feedbackEl = document.getElementById('settings-feedback');
-            feedbackEl.textContent = '';
             try {
                 await apiRequest(`/api/settings`, 'POST', { settings: newSettings });
-                appState.apiKeys = { 
-                    openai: newSettings.openai, 
-                    gemini: newSettings.gemini,
-                    google_api: newSettings.google_api
-                };
+                appState.apiKeys = { openai: newSettings.openai, gemini: newSettings.gemini, google_api: newSettings.google_api };
                 feedbackEl.textContent = 'Configurações salvas com sucesso!';
                 feedbackEl.className = 'text-green-600 text-sm mt-4';
             } catch (error) {
@@ -1533,21 +1504,14 @@
         const wordCountEl = document.getElementById('word-count');
         const charCountEl = document.getElementById('char-count');
         const timeEstimateEl = document.getElementById('time-estimate');
-        const chunkSizeInput = document.getElementById('split-chunk-size');
-        const chunkTypeSelect = document.getElementById('split-chunk-type');
         const splitBtn = document.getElementById('split-text-btn');
-        const outputEl = document.getElementById('output');
 
         const updateAnalytics = () => {
             const text = textInput.value;
             const words = text.trim().split(/\s+/).filter(Boolean);
-            const wordCount = words.length;
-            const charCount = text.length;
-            
-            wordCountEl.textContent = wordCount;
-            charCountEl.textContent = charCount;
-
-            const timeInSeconds = (wordCount / 150) * 60; // Average 150 WPM
+            wordCountEl.textContent = words.length;
+            charCountEl.textContent = text.length;
+            const timeInSeconds = (words.length / 150) * 60;
             const minutes = Math.floor(timeInSeconds / 60);
             const seconds = Math.floor(timeInSeconds % 60);
             timeEstimateEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
@@ -1555,45 +1519,38 @@
 
         const splitText = () => {
             const text = textInput.value.trim();
-            const chunkSize = parseInt(chunkSizeInput.value, 10);
-            const chunkType = chunkTypeSelect.value;
-            outputEl.innerHTML = '';
+            const chunkSize = parseInt(document.getElementById('split-chunk-size').value, 10);
+            const chunkType = document.getElementById('split-chunk-type').value;
+            const outputEl = document.getElementById('output');
 
             if (!text || isNaN(chunkSize) || chunkSize <= 0) {
-                outputEl.innerHTML = '<p class="text-center text-slate-500">Por favor, insira um texto e um tamanho de divisão válido.</p>';
+                outputEl.innerHTML = '<p class="text-center text-slate-500">Insira um texto e um tamanho de divisão válido.</p>';
                 return;
             }
-
             const parts = [];
             if (chunkType === 'word') {
                 const words = text.split(/\s+/).filter(Boolean);
                 for (let i = 0; i < words.length; i += chunkSize) {
                     parts.push(words.slice(i, i + chunkSize).join(' '));
                 }
-            } else { // 'char'
+            } else {
                 for (let i = 0; i < text.length; i += chunkSize) {
                     parts.push(text.substring(i, i + chunkSize));
                 }
             }
-
-            if (parts.length > 0) {
-                outputEl.innerHTML = parts.map((part, index) => `
-                    <div class="bg-slate-100 p-4 rounded-lg">
-                        <div class="flex justify-between items-center mb-2">
-                            <h4 class="font-semibold text-slate-800 font-display">Parte ${index + 1}</h4>
-                            ${createCopyButton(part)}
-                        </div>
-                        <p class="text-sm bg-white p-3 rounded border whitespace-pre-wrap">${part}</p>
+            outputEl.innerHTML = parts.map((part, index) => `
+                <div class="bg-slate-100 p-4 rounded-lg">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-semibold text-slate-800 font-display">Parte ${index + 1}</h4>
+                        ${createCopyButton(part)}
                     </div>
-                `).join('');
-            } else {
-                outputEl.innerHTML = '<p class="text-center text-slate-500">Nenhuma parte para exibir com as configurações atuais.</p>';
-            }
+                    <p class="text-sm bg-white p-3 rounded border whitespace-pre-wrap">${part}</p>
+                </div>`).join('');
         };
 
         textInput.addEventListener('input', updateAnalytics);
         splitBtn.addEventListener('click', splitText);
-        updateAnalytics(); // Initial call
+        updateAnalytics();
     }
     
     let mainChartInstance = null;
@@ -1616,7 +1573,6 @@
         
         const selector = document.getElementById('channel-selector');
         selector.addEventListener('change', (e) => renderDashboardData(e.target.value));
-        
         renderDashboardData(selector.value);
     }
 
@@ -1628,7 +1584,6 @@
         
         try {
             const stats = await apiRequest(`/api/youtube-stats/${channelId}`, 'GET');
-            
             contentContainer.innerHTML = `
                 <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border">
                     <h3 class="font-semibold mb-4 font-display">Visualizações e Inscritos (Tendência Simulada)</h3>
@@ -1641,17 +1596,14 @@
                         <div class="bg-slate-50 p-3 rounded-lg"><p class="text-sm text-slate-500">Visualizações Totais</p><p class="text-2xl font-bold text-slate-800">${stats.viewCount}</p></div>
                         <div class="bg-slate-50 p-3 rounded-lg"><p class="text-sm text-slate-500">Vídeos Publicados</p><p class="text-2xl font-bold text-slate-800">${stats.videoCount}</p></div>
                     </div>
-                </div>
-            `;
+                </div>`;
             
             const renderChart = (days) => {
                 const ctx = document.getElementById('main-chart').getContext('2d');
                 if (mainChartInstance) mainChartInstance.destroy();
-                
                 const gradient = ctx.createLinearGradient(0, 0, 0, 320);
                 gradient.addColorStop(0, 'rgba(220, 38, 38, 0.5)');
                 gradient.addColorStop(1, 'rgba(220, 38, 38, 0)');
-
                 mainChartInstance = new Chart(ctx, {
                     type: 'line',
                     data: { 
@@ -1659,14 +1611,8 @@
                         datasets: [{ 
                             label: 'Visualizações', 
                             data: Array.from({ length: days }, () => Math.floor(Math.random() * 50000) + 10000), 
-                            borderColor: '#DC2626',
-                            backgroundColor: gradient,
-                            pointBackgroundColor: '#fff',
-                            pointBorderColor: '#DC2626',
-                            pointHoverRadius: 6,
-                            borderWidth: 2,
-                            tension: 0.4, 
-                            fill: true 
+                            borderColor: '#DC2626', backgroundColor: gradient, pointBackgroundColor: '#fff',
+                            pointBorderColor: '#DC2626', pointHoverRadius: 6, borderWidth: 2, tension: 0.4, fill: true 
                         }] 
                     },
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
@@ -1677,17 +1623,12 @@
             filterContainer.innerHTML = [7, 15, 30].map(d => `<button class="filter-btn px-3 py-1 text-sm rounded-md ${d === 30 ? 'bg-red-600 text-white' : 'bg-white text-gray-800'}" data-days="${d}">${d} dias</button>`).join('');
             filterContainer.addEventListener('click', e => {
                 if(e.target.classList.contains('filter-btn')) {
-                    filterContainer.querySelectorAll('.filter-btn').forEach(btn => {
-                        btn.classList.remove('bg-red-600', 'text-white');
-                        btn.classList.add('bg-white', 'text-gray-800');
-                    });
+                    filterContainer.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('bg-red-600', 'text-white'));
                     e.target.classList.add('bg-red-600', 'text-white');
-                    e.target.classList.remove('bg-white', 'text-gray-800');
                     renderChart(parseInt(e.target.dataset.days));
                 }
             });
-
-            renderChart(30); // Initial render
+            renderChart(30);
 
             if (stats.uploadsPlaylistId) {
                 const recentVideos = await apiRequest(`/api/youtube-recent-videos/${stats.uploadsPlaylistId}`, 'GET');
@@ -1705,11 +1646,9 @@
                                     <span>👍 ${video.likeCount}</span>
                                     <span>💬 ${video.commentCount}</span>
                                 </div>
-                            </div>
-                        `).join('')}
+                            </div>`).join('')}
                     </div>`;
             }
-
         } catch (error) {
             contentContainer.innerHTML = `<div class="lg:col-span-3 text-center p-8 bg-red-900/30 rounded-lg"><p class="text-red-400">${error.message}</p><p class="text-sm text-gray-400 mt-2">Verifique se o ID do canal está correto no Organizador de Canais e se sua chave da API do Google está configurada.</p></div>`;
         }
@@ -1719,34 +1658,26 @@
         const form = document.getElementById('channel-form');
         const output = document.getElementById('organizer-output');
         const renderChannels = () => {
-            if (appState.userChannels.length === 0) {
-                output.innerHTML = `<p class="text-center text-gray-400 py-8">Nenhum canal adicionado.</p>`;
-                return;
-            }
-            output.innerHTML = appState.userChannels.map((ch, index) => `<div class="bg-white p-4 rounded-lg shadow-sm border"><div class="flex justify-between items-center"><h3 class="text-lg font-semibold font-display">${ch.name}</h3><button class="remove-channel text-red-500 text-2xl" data-index="${index}" title="Remover Canal">&times;</button></div><div class="text-sm text-slate-600 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2"><p><strong>Nicho:</strong> ${ch.niche}</p><p><strong>Idioma:</strong> ${ch.lang}</p><p><strong>Vídeos/Semana:</strong> ${ch.freq}</p><p><strong>Horário:</strong> ${ch.time}</p><p><strong>Backlog:</strong> ${ch.backlogQty || '0'}</p><p class="col-span-1 sm:col-span-2 break-all"><strong>ID do Canal:</strong> ${ch.id}</p></div></div>`).join('');
+            output.innerHTML = appState.userChannels.length === 0 ? `<p class="text-center text-gray-400 py-8">Nenhum canal adicionado.</p>` :
+                appState.userChannels.map((ch, index) => `<div class="bg-white p-4 rounded-lg shadow-sm border"><div class="flex justify-between items-center"><h3 class="text-lg font-semibold font-display">${ch.name}</h3><button class="remove-channel text-red-500 text-2xl" data-index="${index}" title="Remover Canal">&times;</button></div><div class="text-sm text-slate-600 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2"><p><strong>Nicho:</strong> ${ch.niche}</p><p><strong>Idioma:</strong> ${ch.lang}</p><p><strong>Vídeos/Semana:</strong> ${ch.freq}</p><p><strong>Horário:</strong> ${ch.time}</p><p><strong>Backlog:</strong> ${ch.backlogQty || '0'}</p><p class="col-span-1 sm:col-span-2 break-all"><strong>ID do Canal:</strong> ${ch.id}</p></div></div>`).join('');
         };
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const channelId = prompt("Por favor, insira o ID do Canal do YouTube (ex: UC_x5XG1OV2P6uZZ5FSM9Ttw)");
             if (!channelId) return;
-            const newChannel = {
-                id: channelId,
-                name: document.getElementById('org-channel-name').value,
-                niche: document.getElementById('org-channel-niche').value,
-                lang: document.getElementById('org-channel-lang').value,
-                freq: document.getElementById('org-videos-week').value,
-                time: document.getElementById('org-post-time').value,
+            appState.userChannels.push({
+                id: channelId, name: document.getElementById('org-channel-name').value,
+                niche: document.getElementById('org-channel-niche').value, lang: document.getElementById('org-channel-lang').value,
+                freq: document.getElementById('org-videos-week').value, time: document.getElementById('org-post-time').value,
                 backlogQty: document.getElementById('org-backlog-qty').value,
-            };
-            appState.userChannels.push(newChannel);
+            });
             await saveSettings();
             renderChannels();
             form.reset();
         });
         output.addEventListener('click', async (e) => {
             if (e.target.classList.contains('remove-channel')) {
-                const index = parseInt(e.target.dataset.index, 10);
-                appState.userChannels.splice(index, 1);
+                appState.userChannels.splice(parseInt(e.target.dataset.index, 10), 1);
                 await saveSettings();
                 renderChannels();
             }
@@ -1760,20 +1691,15 @@
         const channelSelect = document.getElementById('planner-channel-select');
         channelSelect.innerHTML = '<option value="">Selecione um Canal</option>' + appState.userChannels.map(ch => `<option value="${ch.name}">${ch.name}</option>`).join('');
         const renderPlanner = () => {
-            if (appState.videoIdeas.length === 0) {
-                output.innerHTML = `<p class="text-center text-gray-400 py-8">Nenhuma ideia adicionada.</p>`;
-                return;
-            }
-            output.innerHTML = appState.videoIdeas.map((idea, index) => `<div class="bg-white p-4 rounded-lg shadow-sm border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"><div><h4 class="font-semibold">${idea.title}</h4><p class="text-sm text-slate-500">${idea.channel}</p></div><div class="flex items-center gap-2"><select class="status-select bg-slate-100 border-slate-200 rounded-md text-sm p-1" data-index="${index}"><option value="Planejado" ${idea.status === 'Planejado' ? 'selected' : ''}>Planejado</option><option value="Em Produção" ${idea.status === 'Em Produção' ? 'selected' : ''}>Em Produção</option><option value="Publicado" ${idea.status === 'Publicado' ? 'selected' : ''}>Publicado</option></select><button class="delete-idea text-red-500 hover:text-red-700 text-2xl" data-index="${index}" title="Remover Ideia">&times;</button></div></div>`).join('');
+            output.innerHTML = appState.videoIdeas.length === 0 ? `<p class="text-center text-gray-400 py-8">Nenhuma ideia adicionada.</p>` :
+                appState.videoIdeas.map((idea, index) => `<div class="bg-white p-4 rounded-lg shadow-sm border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"><div><h4 class="font-semibold">${idea.title}</h4><p class="text-sm text-slate-500">${idea.channel}</p></div><div class="flex items-center gap-2"><select class="status-select bg-slate-100 border-slate-200 rounded-md text-sm p-1" data-index="${index}"><option value="Planejado" ${idea.status === 'Planejado' ? 'selected' : ''}>Planejado</option><option value="Em Produção" ${idea.status === 'Em Produção' ? 'selected' : ''}>Em Produção</option><option value="Publicado" ${idea.status === 'Publicado' ? 'selected' : ''}>Publicado</option></select><button class="delete-idea text-red-500 hover:text-red-700 text-2xl" data-index="${index}" title="Remover Ideia">&times;</button></div></div>`).join('');
         };
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const newIdea = {
+            appState.videoIdeas.push({
                 title: document.getElementById('idea-title').value,
-                channel: channelSelect.value,
-                status: 'Planejado'
-            };
-            appState.videoIdeas.push(newIdea);
+                channel: channelSelect.value, status: 'Planejado'
+            });
             await saveSettings();
             renderPlanner();
             form.reset();
@@ -1797,16 +1723,14 @@
     async function saveSettings() {
         if (!appState.currentUser) return;
         const settingsToSave = { 
-            gemini: appState.apiKeys.gemini,
-            openai: appState.apiKeys.openai,
-            google_api: appState.apiKeys.google_api,
-            userChannels: appState.userChannels, 
+            gemini: appState.apiKeys.gemini, openai: appState.apiKeys.openai,
+            google_api: appState.apiKeys.google_api, userChannels: appState.userChannels, 
             videoIdeas: appState.videoIdeas 
         };
         await apiRequest(`/api/settings`, 'POST', { settings: settingsToSave });
     }
 
-    // --- Lógica do Chat ---
+    // --- Lógica do Chat (REFEITA) ---
     const chatWidget = document.getElementById('chat-widget');
     const chatBubble = document.getElementById('chat-bubble');
     const chatContainer = document.getElementById('chat-container');
@@ -1816,11 +1740,12 @@
         appState.chat.isOpen = !appState.chat.isOpen;
         if (appState.chat.isOpen) {
             chatContainer.style.display = 'flex';
+            appState.chat.activePeer = null; // Reseta o peer ativo ao abrir
             if (appState.currentUser.role === 'admin') {
                 renderChatUserList();
             } else {
                 // Utilizador normal fala diretamente com o admin (ID 1 por convenção)
-                openChatWith({ id: 1, email: 'Admin' });
+                openChatWith({ id: 1, email: 'Suporte' });
             }
         } else {
             chatContainer.style.display = 'none';
@@ -1833,7 +1758,7 @@
         try {
             const users = await apiRequest('/api/chat/users', 'GET');
             const userListEl = document.getElementById('chat-user-list');
-            if (users.length > 0) {
+            if (users && users.length > 0) {
                 userListEl.innerHTML = users.map(user => `
                     <div class="chat-user-item flex justify-between items-center" data-peer-id="${user.user_id}" data-peer-email="${user.email}">
                         <span>${user.email}</span>
@@ -1841,7 +1766,7 @@
                     </div>
                 `).join('');
             } else {
-                userListEl.innerHTML = '<p class="text-center text-sm text-gray-400 p-4">Nenhum utilizador online.</p>';
+                userListEl.innerHTML = '<p class="text-center text-sm text-gray-400 p-4">Nenhum utilizador para exibir.</p>';
             }
         } catch (error) {
             document.getElementById('chat-user-list').innerHTML = `<p class="text-red-400 text-sm p-2">${error.message}</p>`;
@@ -1850,10 +1775,20 @@
 
     async function openChatWith(peer) {
         appState.chat.activePeer = peer;
+        let adminStatusHtml = '';
+        if (appState.currentUser.role !== 'admin') {
+            const status = await apiRequest('/api/chat/admin-status', 'GET');
+            const isOnline = status.isAdminOnline;
+            adminStatusHtml = `<span class="flex items-center text-xs font-normal normal-case"><span class="admin-status-dot ${isOnline ? 'online' : 'offline'}"></span>${isOnline ? 'Online' : 'Offline'}</span>`;
+        }
+
         chatContainer.innerHTML = `
             <div class="chat-header">
-                <button id="chat-back-btn" class="text-white">${appState.currentUser.role === 'admin' ? '&larr; Voltar' : ''}</button>
-                <span>${peer.email}</span>
+                ${appState.currentUser.role === 'admin' ? '<button id="chat-back-btn" class="text-white">&larr; Voltar</button>' : '<div></div>'}
+                <div class="text-center">
+                    <span>${peer.email}</span>
+                    ${adminStatusHtml}
+                </div>
                 <button id="chat-close-btn" class="text-white">&times;</button>
             </div>
             <div class="chat-messages" id="chat-messages-area"></div>
@@ -1879,12 +1814,13 @@
         const messagesArea = document.getElementById('chat-messages-area');
         if (!appState.chat.activePeer || !messagesArea) return;
         const history = await apiRequest(`/api/chat/history/${appState.chat.activePeer.id}`, 'GET');
-        messagesArea.innerHTML = history.map(msg => `
-            <div class="message-bubble ${msg.sender_id === appState.currentUser.id ? 'message-sent' : 'message-received'}">
-                ${msg.message}
-            </div>
-        `).join('');
-        // Scroll to the bottom (actually top because of flex-direction: column-reverse)
+        if (history) {
+            messagesArea.innerHTML = history.map(msg => `
+                <div class="message-bubble ${msg.sender_id === appState.currentUser.id ? 'message-sent' : 'message-received'}">
+                    ${msg.message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+                </div>
+            `).join('');
+        }
         messagesArea.scrollTop = 0;
     }
 
@@ -1898,7 +1834,7 @@
             message: message
         });
         input.value = '';
-        await loadMessageHistory(); // Recarrega para mostrar a nova mensagem
+        await loadMessageHistory();
     }
 
     async function pollForNotifications() {
@@ -1907,41 +1843,47 @@
             const notifications = await apiRequest('/api/chat/notifications', 'GET');
             const totalUnread = notifications.reduce((sum, notif) => sum + parseInt(notif.unread_count, 10), 0);
             
-            if (totalUnread > 0) {
-                chatNotificationDot.style.display = 'block';
-                if (appState.chat.isOpen && appState.currentUser.role === 'admin' && !appState.chat.activePeer) {
+            chatNotificationDot.style.display = totalUnread > 0 ? 'block' : 'none';
+            
+            if (appState.chat.isOpen) {
+                if (appState.currentUser.role === 'admin' && !appState.chat.activePeer) {
                     renderChatUserList();
                 }
-                if (appState.chat.isOpen && appState.chat.activePeer) {
+                if (appState.chat.activePeer) {
                     const isFromActivePeer = notifications.some(n => n.sender_id === appState.chat.activePeer.id);
                     if (isFromActivePeer) {
                         loadMessageHistory();
                     }
                 }
-            } else {
-                chatNotificationDot.style.display = 'none';
             }
         } catch (error) {
             console.error("Erro ao buscar notificações:", error);
         }
     }
     
-    // --- Painel de Admin Atualizado ---
+    // --- Painel de Admin (REFEITO) ---
     async function initializeAdminPanel() {
         const container = document.getElementById('admin-container');
         container.innerHTML = `<p class="text-white">A carregar dados do painel...</p>`;
 
         try {
-            const [users, sessions, history] = await Promise.all([
+            const [users, stats] = await Promise.all([
                 apiRequest('/api/admin/users', 'GET'),
-                apiRequest('/api/admin/sessions', 'GET'),
-                apiRequest('/api/admin/history', 'GET')
+                apiRequest('/api/admin/stats', 'GET')
             ]);
             
             const pendingActivationUsers = users.filter(u => !u.is_active);
             const activeUsers = users.filter(u => u.is_active);
 
             container.innerHTML = `
+                <!-- Estatísticas -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Total de Utilizadores</p><p class="text-4xl font-bold text-slate-800">${stats.totalUsers}</p></div>
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Online Agora</p><p class="text-4xl font-bold text-green-600">${stats.onlineNow}</p></div>
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Logins (24h)</p><p class="text-4xl font-bold text-slate-800">${stats.loginsLast24h}</p></div>
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Ativações Pendentes</p><p class="text-4xl font-bold text-yellow-600">${stats.pendingActivation}</p></div>
+                </div>
+
                 <!-- Ativações Pendentes -->
                 <div class="bg-yellow-900/30 p-6 rounded-xl shadow-sm border border-yellow-700">
                     <h3 class="text-lg font-semibold mb-4 font-display text-yellow-400">Ativações Pendentes (${pendingActivationUsers.length})</h3>
@@ -1984,46 +1926,8 @@
                                         <td class="px-6 py-4 font-medium text-gray-900">${u.email}</td>
                                         <td class="px-6 py-4">${u.last_login || 'Nunca'}</td>
                                         <td class="px-6 py-4 text-center">
-                                             <button class="user-status-toggle bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="false" ${appState.currentUser.id === u.id ? 'disabled' : ''}>Desativar</button>
+                                             <button class="user-status-toggle bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="false" ${appState.currentUser.id === u.id ? 'disabled title="Não pode desativar a si mesmo"' : ''}>Desativar</button>
                                         </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                 <!-- Sessões Ativas -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border">
-                    <h3 class="text-lg font-semibold mb-4 font-display">Utilizadores Online (${sessions.length})</h3>
-                    <div class="overflow-x-auto max-h-72">
-                        <table class="w-full text-sm text-left text-gray-500">
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0"><tr><th class="px-6 py-3">Email</th><th class="px-6 py-3">Visto por último</th></tr></thead>
-                            <tbody>
-                            ${sessions.length > 0 ? sessions.map(s => `<tr class="bg-white border-b"><td class="px-6 py-4">${s.email}</td><td class="px-6 py-4">${s.last_seen}</td></tr>`).join('') : '<tr><td colspan="2" class="px-6 py-4 text-center">Nenhum utilizador ativo.</td></tr>'}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                
-                <!-- Histórico de Logins -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border">
-                    <h3 class="text-lg font-semibold mb-4 font-display">Histórico de Acessos Recentes</h3>
-                     <div class="overflow-x-auto max-h-96">
-                        <table class="w-full text-sm text-left text-gray-500">
-                             <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3">Email</th>
-                                    <th scope="col" class="px-6 py-3">Data e Hora</th>
-                                    <th scope="col" class="px-6 py-3">Endereço IP</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${history.map(h => `
-                                    <tr class="bg-white border-b">
-                                        <td class="px-6 py-4">${h.email}</td>
-                                        <td class="px-6 py-4">${h.login_time}</td>
-                                        <td class="px-6 py-4">${h.ip_address}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -2032,7 +1936,6 @@
                 </div>
             `;
 
-            // Adiciona event listeners para os botões de ativar/desativar
             document.querySelectorAll('.user-status-toggle').forEach(button => {
                 button.addEventListener('click', async (e) => {
                     const userId = e.target.dataset.userid;
@@ -2040,7 +1943,7 @@
                     try {
                         await apiRequest(`/api/admin/user/${userId}/status`, 'PUT', { isActive });
                         addToLog(`Status do utilizador ${userId} atualizado.`);
-                        initializeAdminPanel(); // Recarrega o painel para refletir a mudança
+                        initializeAdminPanel();
                     } catch (error) {
                         addToLog(`Erro ao atualizar status: ${error.message}`, true);
                     }
@@ -2057,7 +1960,6 @@
     ELEMENTS.registerForm.addEventListener('submit', handleRegister);
     ELEMENTS.showRegister.addEventListener('click', (e) => { e.preventDefault(); showRegisterScreen(); });
     ELEMENTS.showLogin.addEventListener('click', (e) => { e.preventDefault(); showLoginScreen(); });
-    document.getElementById('show-activation-request').addEventListener('click', (e) => { e.preventDefault(); ELEMENTS.loginContainer.style.display = 'none'; ELEMENTS.activationContainer.style.display = 'flex'; });
     document.getElementById('back-to-login').addEventListener('click', (e) => { e.preventDefault(); showLoginScreen(); });
     ELEMENTS.logoutBtn.addEventListener('click', handleLogout);
     
