@@ -161,6 +161,8 @@
         <div class="max-w-2xl">
             <h2 class="text-4xl font-extrabold text-red-500 font-display mb-4">EM MANUTENÇÃO</h2>
             <p id="maintenance-message" class="text-lg text-gray-300">Estamos a realizar algumas melhorias na plataforma. Voltaremos em breve!</p>
+            <!-- NOVO: Botão de logout para utilizadores presos na manutenção -->
+            <button id="logout-from-maintenance" class="mt-6 bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700">Sair</button>
         </div>
     </div>
 
@@ -202,7 +204,6 @@
                     <input id="login-email" type="email" autocomplete="email" required class="appearance-none relative block w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Email">
                     <input id="login-password" type="password" autocomplete="current-password" required class="appearance-none relative block w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Senha">
                 </div>
-                <!-- NOVO: Lembrar-me e Esqueceu a senha -->
                 <div class="flex items-center justify-between text-sm">
                     <div class="flex items-center">
                         <input id="remember-me" type="checkbox" class="h-4 w-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500">
@@ -232,7 +233,6 @@
             <p class="text-center text-sm text-gray-400">Já tem uma conta? <a href="#" id="show-login" class="font-medium text-red-500 hover:text-red-400">Faça login</a></p>
         </div>
     </div>
-    <!-- NOVO: Ecrã de Recuperação de Senha -->
     <div id="forgot-password-container" class="hidden items-center justify-center h-screen login-background">
         <div class="w-full max-w-xs p-8 space-y-6 rounded-lg form-container">
              <h2 class="text-3xl font-extrabold text-center text-white font-display">Recuperar Senha</h2>
@@ -245,7 +245,6 @@
             <p class="text-center text-sm text-gray-400"><a href="#" id="show-login-from-forgot" class="font-medium text-red-500 hover:text-red-400">Voltar para o Login</a></p>
         </div>
     </div>
-    <!-- NOVO: Ecrã de Redefinição de Senha -->
      <div id="reset-password-container" class="hidden items-center justify-center h-screen login-background">
         <div class="w-full max-w-xs p-8 space-y-6 rounded-lg form-container">
              <h2 class="text-3xl font-extrabold text-center text-white font-display">Redefinir Senha</h2>
@@ -412,12 +411,16 @@
         if (body) options.body = JSON.stringify(body);
         
         const response = await fetch(endpoint, options);
+        
+        if (response.status === 503) {
+            const data = await response.json().catch(() => ({ message: 'Serviço indisponível.' }));
+            // A lógica de manutenção agora é tratada após o login, mas mantemos o throw para outros casos
+            throw new Error(data.message);
+        }
+
         const data = await response.json().catch(() => null);
         
         if (!response.ok) {
-            if (response.status === 503 && data && data.message) {
-                showMaintenanceMode(data.message);
-            }
             if (response.status === 401 || response.status === 403) {
                 if (!data || !data.message || !data.message.includes('ativada')) {
                      handleLogout();
@@ -446,7 +449,16 @@
             const response = await apiRequest('/api/login', 'POST', { email, password, rememberMe });
             localStorage.setItem('authToken', response.token);
             appState.currentUser = response.user;
-            await initializeApp();
+
+            // CORRIGIDO: Verificar status da aplicação APÓS o login
+            const appStatus = await apiRequest('/api/status', 'GET');
+
+            if (appStatus.maintenance && appStatus.maintenance.is_on && appState.currentUser.role !== 'admin') {
+                showMaintenanceMode(appStatus.maintenance.message);
+            } else {
+                await initializeApp(appStatus.announcement);
+            }
+
         } catch (error) {
             if (error.message.includes('ativada')) {
                 showScreen('activation-container');
@@ -530,7 +542,7 @@
 
     // --- Maintenance & Announcement Logic ---
     function showMaintenanceMode(message) {
-        document.getElementById('maintenance-message').textContent = message;
+        document.getElementById('maintenance-message').textContent = message || 'Estamos a realizar algumas melhorias na plataforma. Voltaremos em breve!';
         showScreen('maintenance-overlay');
     }
 
@@ -544,15 +556,19 @@
     async function pollForStatus() {
         if (!appState.currentUser) return;
         try {
-            const announcement = await apiRequest('/api/announcement', 'GET');
-            if (announcement) showAnnouncement(announcement);
+            const status = await apiRequest('/api/status', 'GET');
+            if (status.announcement) showAnnouncement(status.announcement);
+            // CORRIGIDO: Verificação de manutenção em tempo real
+            if (status.maintenance && status.maintenance.is_on && appState.currentUser.role !== 'admin') {
+                showMaintenanceMode(status.maintenance.message);
+            }
         } catch (error) {
             console.error("Erro ao verificar status:", error.message);
         }
     }
 
     // --- App Initialization ---
-    async function initializeApp() {
+    async function initializeApp(initialAnnouncement = null) {
         if (!appState.currentUser) return;
         
         try {
@@ -593,7 +609,11 @@
 
         if (appState.statusPollInterval) clearInterval(appState.statusPollInterval);
         appState.statusPollInterval = setInterval(pollForStatus, 30000);
-        pollForStatus();
+        
+        // Exibe o anúncio inicial se houver um
+        if(initialAnnouncement) {
+            showAnnouncement(initialAnnouncement);
+        }
     }
 
     // --- UI Building ---
@@ -1880,7 +1900,7 @@
         await apiRequest(`/api/settings`, 'POST', { settings: settingsToSave });
     }
 
-    // --- Lógica do Chat ---
+     // --- Lógica do Chat ---
     const chatWidget = document.getElementById('chat-widget');
     const chatContainer = document.getElementById('chat-container');
 
@@ -1956,6 +1976,7 @@
     }
 
     function escapeHTML(str) {
+        if (typeof str !== 'string') return '';
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
     
@@ -2054,19 +2075,14 @@
         const container = document.getElementById('admin-container');
         container.innerHTML = `<p class="text-white">A carregar...</p>`;
         try {
-            const [users, stats] = await Promise.all([ apiRequest('/api/admin/users', 'GET'), apiRequest('/api/admin/stats', 'GET') ]);
+            const [users, stats, appStatus] = await Promise.all([ 
+                apiRequest('/api/admin/users', 'GET'), 
+                apiRequest('/api/admin/stats', 'GET'),
+                apiRequest('/api/status', 'GET') // Usamos a rota de status geral
+            ]);
             
-            let maintenanceStatus = { is_on: false, message: '' };
-            try { 
-                const status = await apiRequest('/api/admin/maintenance-status', 'GET');
-                if(status) maintenanceStatus = status;
-            } catch(e) { console.warn("Não foi possível obter o status de manutenção.") }
-            
-            let announcement = { message: '' };
-            try { 
-                const ann = await apiRequest('/api/announcement', 'GET');
-                if(ann) announcement = ann;
-            } catch(e) { console.warn("Não foi possível obter o anúncio.") }
+            const maintenanceStatus = appStatus.maintenance;
+            const announcement = appStatus.announcement;
 
             const pendingActivationUsers = users.filter(u => !u.is_active);
             const activeUsers = users.filter(u => u.is_active);
@@ -2149,7 +2165,7 @@
                     <div>
                         <h3 class="text-lg font-semibold font-display">Anúncio Global</h3>
                         <p class="text-sm text-slate-500 mb-2">Envie uma mensagem pop-up para todos os utilizadores online.</p>
-                        <textarea id="announcement-message-input" class="w-full px-3 py-2 border rounded-md mb-2" rows="3" placeholder="Digite a sua mensagem...">${escapeHTML(announcement.message)}</textarea>
+                        <textarea id="announcement-message-input" class="w-full px-3 py-2 border rounded-md mb-2" rows="3" placeholder="Digite a sua mensagem...">${escapeHTML(announcement?.message)}</textarea>
                         <div class="flex justify-end gap-2">
                             <button id="clear-announcement-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Limpar Anúncio</button>
                             <button id="send-announcement-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Enviar Anúncio</button>
@@ -2197,6 +2213,7 @@
                     }
                 });
                 
+                // CORRIGIDO: Event listener para o botão de limpar anúncio
                 document.getElementById('clear-announcement-btn')?.addEventListener('click', async () => {
                      try {
                         await apiRequest('/api/admin/announcement', 'DELETE');
@@ -2217,12 +2234,25 @@
     // --- Session Persistence ---
     async function checkSession() {
         const token = localStorage.getItem('authToken');
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        if (urlParams.has('reset_token')) {
+            showScreen('reset-password-container');
+            return;
+        }
+
         if (token) {
             try {
                 const response = await apiRequest('/api/verify-session', 'GET');
                 if (response && response.user) {
                     appState.currentUser = response.user;
-                    await initializeApp();
+                    // CORRIGIDO: Lógica de verificação de manutenção movida para o handleLogin e aqui
+                    const appStatus = await apiRequest('/api/status', 'GET');
+                    if (appStatus.maintenance && appStatus.maintenance.is_on && appState.currentUser.role !== 'admin') {
+                        showMaintenanceMode(appStatus.maintenance.message);
+                    } else {
+                        await initializeApp(appStatus.announcement);
+                    }
                 } else {
                     handleLogout();
                 }
@@ -2231,12 +2261,7 @@
                 handleLogout();
             }
         } else {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('reset_token')) {
-                showScreen('reset-password-container');
-            } else {
-                showScreen('login-container');
-            }
+            showScreen('login-container');
         }
     }
 
@@ -2246,6 +2271,7 @@
     ELEMENTS.registerForm.addEventListener('submit', handleRegister);
     document.getElementById('forgot-password-form').addEventListener('submit', handleForgotPassword);
     document.getElementById('reset-password-form').addEventListener('submit', handleResetPassword);
+    document.getElementById('logout-from-maintenance').addEventListener('click', handleLogout);
 
     ELEMENTS.showRegister.addEventListener('click', (e) => { e.preventDefault(); showScreen('register-container'); });
     ELEMENTS.showLogin.addEventListener('click', (e) => { e.preventDefault(); showScreen('login-container'); });
@@ -2318,3 +2344,10 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+

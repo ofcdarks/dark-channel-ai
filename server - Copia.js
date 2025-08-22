@@ -5,18 +5,47 @@ const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { google } = require('googleapis');
 const googleTrends = require('google-trends-api');
+const axios = require('axios');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const multer = require('multer');
+const fs = require('fs');
 
 // 2. Configuração Inicial
 const app = express();
 const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-secreto-padrao';
+
+// Obter o diretório base do projeto de forma segura
+const BASE_DIR = __dirname;
 
 // Middlewares
 app.use(express.json());
-// [CORREÇÃO] Para resolver o erro 'ENOENT', o servidor precisa saber onde encontrar seu arquivo principal.
-// A convenção é usar uma pasta 'public'. Certifique-se de que seu 'index.html' está dentro de uma pasta 'public' na raiz do projeto.
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Servir arquivos estáticos da pasta 'public'.
+// O Express irá automaticamente procurar por "index.html" ao aceder a "/".
+app.use(express.static(path.join(BASE_DIR, 'public')));
+
+// Servir uploads de imagens
+app.use('/uploads', express.static(path.join(BASE_DIR, 'uploads')));
+
+// Configuração do Multer para Upload de Imagens no Chat
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const dir = path.join(BASE_DIR, 'uploads/');
+    if (!fs.existsSync(dir)){
+        fs.mkdirSync(dir);
+    }
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname)); // Nome do arquivo único
+  }
+});
+const upload = multer({ storage: storage });
 
 // 3. Conexão com o Banco de Dados PostgreSQL
 const pool = new Pool({
@@ -26,33 +55,155 @@ const pool = new Pool({
   }
 });
 
+// Função de inicialização da base de dados atualizada
 const initializeDb = async () => {
   const client = await pool.connect();
   try {
+    // Tabela de Utilizadores
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
-        settings JSONB
+        settings JSONB,
+        role VARCHAR(50) NOT NULL DEFAULT 'user',
+        is_active BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    console.log('Tabela "users" verificada/criada com sucesso.');
+    
+    // Tabela de Histórico de Login
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS login_history (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        login_timestamp TIMESTAMPTZ DEFAULT NOW(),
+        ip_address VARCHAR(50)
+      );
+    `);
+    
+    // Tabela de Sessões Ativas
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS active_sessions (
+            user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            email VARCHAR(255),
+            last_seen TIMESTAMPTZ NOT NULL
+        );
+    `);
+
+    // Tabela de Mensagens do Chat
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id SERIAL PRIMARY KEY,
+            sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            receiver_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            message TEXT NOT NULL,
+            sent_at TIMESTAMPTZ DEFAULT NOW(),
+            is_read BOOLEAN DEFAULT false
+        );
+    `);
+
+    // Tabela de Recuperação de Senha
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS password_resets (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token VARCHAR(255) NOT NULL,
+            expires_at TIMESTAMPTZ NOT NULL
+        );
+    `);
+
+    // Tabela de Status da Aplicação (Manutenção/Anúncios)
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS app_status (
+            key VARCHAR(50) PRIMARY KEY,
+            value JSONB
+        );
+    `);
+    
+    console.log("Tabelas verificadas/criadas com sucesso.");
+
+    // Lógica de Administração Reforçada
+    const adminEmail = 'rudysilvaads@gmail.com';
+    const adminPassword = '253031';
+
+    const adminCheck = await client.query("SELECT id FROM users WHERE email = $1", [adminEmail]);
+
+    if (adminCheck.rowCount === 0) {
+        console.log(`Utilizador admin ${adminEmail} não encontrado. A criar...`);
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(adminPassword, salt);
+        await client.query(
+            "INSERT INTO users (email, password_hash, role, is_active, settings) VALUES ($1, $2, 'admin', true, '{}')",
+            [adminEmail, passwordHash]
+        );
+        console.log(`Utilizador administrador ${adminEmail} criado com sucesso.`);
+    } else {
+        await client.query("UPDATE users SET role = 'admin', is_active = true WHERE email = $1", [adminEmail]);
+        console.log(`Cargo de administrador e status ativo para ${adminEmail} verificado e garantido.`);
+    }
+
   } catch (err) {
-    console.error('Erro ao criar a tabela de usuários:', err);
+    console.error('Erro ao inicializar a base de dados:', err);
   } finally {
     client.release();
   }
 };
 
-// 4. Rotas da API (Autenticação e Configurações)
+// 4. Middlewares de Segurança e Manutenção
+const verifyToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Acesso negado. Nenhum token fornecido.' });
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) return res.status(403).json({ message: 'Token inválido ou expirado.' });
+        req.user = decoded;
+        next();
+    });
+};
+
+const requireAdmin = (req, res, next) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Acesso negado. Recurso exclusivo para administradores.' });
+    next();
+};
+
+const checkMaintenance = async (req, res, next) => {
+    // Rotas que devem funcionar mesmo em manutenção
+    const allowedRoutes = ['/api/login', '/api/admin/maintenance', '/api/verify-session'];
+    if (allowedRoutes.includes(req.path)) {
+        return next();
+    }
+
+    try {
+        const result = await pool.query("SELECT value FROM app_status WHERE key = 'maintenance'");
+        if (result.rows.length > 0 && result.rows[0].value.is_on) {
+            // Permite que admins continuem a usar a plataforma
+            if (req.headers['authorization']) {
+                const token = req.headers['authorization'].split(' ')[1];
+                const decoded = jwt.decode(token);
+                if (decoded && decoded.role === 'admin') {
+                    return next();
+                }
+            }
+            return res.status(503).json({ message: result.rows[0].value.message });
+        }
+        next();
+    } catch (error) {
+        console.error("Erro ao verificar modo de manutenção:", error);
+        next(); // Se houver erro, permite o acesso para não bloquear a aplicação
+    }
+};
+app.use(checkMaintenance);
+
+
+// 5. Rotas da API (Autenticação e Configurações)
 app.post('/api/register', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
     try {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
-        const result = await pool.query('INSERT INTO users (email, password_hash, settings) VALUES ($1, $2, $3) RETURNING id, email', [email, passwordHash, {}]);
+        const result = await pool.query('INSERT INTO users (email, password_hash, settings, is_active) VALUES ($1, $2, $3, false) RETURNING id, email', [email, passwordHash, {}]);
         res.status(201).json(result.rows[0]);
     } catch (err) {
         if (err.code === '23505') return res.status(409).json({ message: 'Este e-mail já está em uso.' });
@@ -62,95 +213,272 @@ app.post('/api/register', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
     if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
     try {
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = result.rows[0];
-        if (user && await bcrypt.compare(password, user.password_hash)) {
-            res.json({ id: user.id, email: user.email, message: 'Login bem-sucedido!' });
-        } else {
-            res.status(401).json({ message: 'Credenciais inválidas.' });
+
+        if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+            return res.status(401).json({ message: 'Email ou senha inválidos.' });
         }
+        
+        if (!user.is_active) {
+            return res.status(403).json({ message: 'Sua conta precisa ser ativada por um administrador.' });
+        }
+
+        const expiresIn = rememberMe ? '30d' : '24h';
+        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn });
+        
+        const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        await pool.query('INSERT INTO login_history (user_id, ip_address) VALUES ($1, $2)', [user.id, ip]);
+        await pool.query(
+            'INSERT INTO active_sessions (user_id, email, last_seen) VALUES ($1, $2, NOW()) ON CONFLICT (user_id) DO UPDATE SET last_seen = NOW(), email = $2',
+            [user.id, user.email]
+        );
+        res.json({ 
+            message: 'Login bem-sucedido!', 
+            token,
+            user: { id: user.id, email: user.email, role: user.role }
+        });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
+        console.error("ERRO DETALHADO NO LOGIN:", err);
+        res.status(500).json({ message: `Erro interno: ${err.message}` });
     }
 });
 
-app.get('/api/settings/:userId', async (req, res) => {
-    const { userId } = req.params;
+app.get('/api/verify-session', verifyToken, async (req, res) => {
     try {
-        const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
+        const result = await pool.query('SELECT id, email, role FROM users WHERE id = $1', [req.user.id]);
         if (result.rows.length > 0) {
-            res.json(result.rows[0].settings || {});
+            res.json({ user: result.rows[0] });
         } else {
-            res.status(404).json({ message: 'Usuário não encontrado.' });
+            res.status(404).json({ message: 'Utilizador não encontrado.' });
         }
+    } catch (error) {
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+
+app.post('/api/heartbeat', verifyToken, async (req, res) => {
+    try {
+        const userResult = await pool.query('SELECT email FROM users WHERE id = $1', [req.user.id]);
+        if (userResult.rowCount > 0) {
+             await pool.query(
+                'INSERT INTO active_sessions (user_id, email, last_seen) VALUES ($1, $2, NOW()) ON CONFLICT (user_id) DO UPDATE SET last_seen = NOW()',
+                [req.user.id, userResult.rows[0].email]
+            );
+            res.sendStatus(200);
+        } else {
+            res.sendStatus(404);
+        }
+    } catch (error) {
+        console.error('Erro no heartbeat:', error);
+        res.sendStatus(500);
+    }
+});
+
+
+app.get('/api/settings', verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT settings FROM users WHERE id = $1', [req.user.id]);
+        res.json(result.rows.length > 0 ? result.rows[0].settings || {} : {});
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 });
 
-app.post('/api/settings/:userId', async (req, res) => {
-    const { userId } = req.params;
+app.post('/api/settings', verifyToken, async (req, res) => {
     const { settings } = req.body;
     try {
-        const result = await pool.query('UPDATE users SET settings = $1 WHERE id = $2 RETURNING id', [settings, userId]);
-        if (result.rowCount > 0) {
-            res.json({ message: 'Configurações salvas com sucesso!' });
-        } else {
-            res.status(404).json({ message: 'Usuário não encontrado.' });
-        }
+        await pool.query('UPDATE users SET settings = $1 WHERE id = $2', [settings, req.user.id]);
+        res.json({ message: 'Configurações salvas com sucesso!' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 });
 
-// 5. Rotas da API (YouTube Data & Google Trends)
+// 6. Rotas de Recuperação de Senha
+const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    secure: true,
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
+
+app.post('/api/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    try {
+        const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Se este e-mail estiver registado, um link de recuperação foi enviado.' });
+        }
+        const user = userResult.rows[0];
+        const token = crypto.randomBytes(32).toString('hex');
+        const expires = new Date(Date.now() + 3600000); // 1 hora
+
+        await pool.query('INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)', [user.id, token, expires]);
+
+        const resetLink = `http://${req.headers.host}/index.html?reset_token=${token}`;
+        
+        const mailOptions = {
+            from: `"La Casa Canais Darks" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: 'Recuperação de Senha - La Casa Canais Darks',
+            html: `
+                <div style="font-family: Arial, sans-serif; background-color: #111827; color: #e5e7eb; padding: 20px; text-align: center;">
+                    <h1 style="color: #DC2626; font-family: Oswald, sans-serif;">LA CASA CANAIS DARKS</h1>
+                    <p style="font-size: 16px;">Recebemos um pedido para redefinir a sua senha.</p>
+                    <p style="font-size: 16px;">Clique no botão abaixo para criar uma nova senha:</p>
+                    <a href="${resetLink}" style="background-color: #DC2626; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin: 20px 0;">REDEFINIR SENHA</a>
+                    <p style="font-size: 14px;">Se você não solicitou isso, por favor, ignore este e-mail.</p>
+                </div>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.json({ message: 'Se este e-mail estiver registado, um link de recuperação foi enviado.' });
+
+    } catch (error) {
+        console.error("Erro em forgot-password:", error);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+app.post('/api/reset-password', async (req, res) => {
+    const { token, password } = req.body;
+    try {
+        const resetResult = await pool.query('SELECT * FROM password_resets WHERE token = $1 AND expires_at > NOW()', [token]);
+        if (resetResult.rows.length === 0) {
+            return res.status(400).json({ message: 'Token inválido ou expirado.' });
+        }
+        const resetRequest = resetResult.rows[0];
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+        await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, resetRequest.user_id]);
+        await pool.query('DELETE FROM password_resets WHERE id = $1', [resetRequest.id]);
+        res.json({ message: 'Senha redefinida com sucesso.' });
+    } catch (error) {
+        console.error("Erro em reset-password:", error);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+
+// 7. Rota Segura para Geração de Conteúdo com IA
+app.post('/api/generate', verifyToken, async (req, res) => {
+    const userId = req.user.id;
+    const { prompt, schema } = req.body;
+
+    if (!prompt) return res.status(400).json({ message: "O prompt é obrigatório." });
+
+    try {
+        const settingsResult = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
+        if (settingsResult.rows.length === 0) return res.status(404).json({ message: 'Utilizador não encontrado.' });
+        
+        const apiKeys = settingsResult.rows[0].settings || {};
+        const openAIKey = apiKeys.openai;
+        const geminiKeys = (apiKeys.gemini || []).filter(k => k && k.trim() !== '');
+        let lastError = null;
+
+        if (openAIKey) {
+            try {
+                console.log("Tentando com a API da OpenAI...");
+                const payload = { model: "gpt-3.5-turbo", messages: [{ role: "user", content: prompt }] };
+                if (schema) payload.response_format = { type: "json_object" };
+
+                const response = await axios.post('https://api.openai.com/v1/chat/completions', payload, {
+                    headers: { 'Authorization': `Bearer ${openAIKey}` },
+                    timeout: 60000
+                });
+                
+                const content = response.data.choices[0].message.content;
+                let data;
+                try {
+                    data = schema ? JSON.parse(content) : { text: content };
+                } catch (e) {
+                    throw new Error("OpenAI retornou um JSON malformado.");
+                }
+                console.log("Sucesso com OpenAI.");
+                return res.json({ data, apiSource: 'OpenAI' });
+
+            } catch (error) {
+                lastError = error;
+                console.error("Erro na API da OpenAI, tentando Gemini como fallback:", error.message);
+            }
+        }
+
+        if (geminiKeys.length > 0) {
+             console.log("Usando a API Gemini...");
+             for (const key of geminiKeys) {
+                try {
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${key}`;
+                    let payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                    if (schema) payload.generationConfig = { response_mime_type: "application/json", response_schema: schema };
+                    
+                    const response = await axios.post(apiUrl, payload, { headers: { 'Content-Type': 'application/json' }, timeout: 60000 });
+                    
+                    if (response.data.candidates?.[0]?.content?.parts?.[0]) {
+                        const text = response.data.candidates[0].content.parts[0].text;
+                        let data;
+                        try {
+                           data = schema ? JSON.parse(text) : { text };
+                        } catch(e) {
+                            throw new Error("Gemini retornou um JSON malformado.");
+                        }
+                        console.log("Sucesso com Gemini.");
+                        return res.json({ data, apiSource: 'Gemini' });
+                    }
+                } catch (error) {
+                    lastError = error;
+                    console.error(`Falha com uma chave Gemini. Tentando a próxima. Erro:`, error.message);
+                }
+             }
+        }
+        
+        const errorMessage = lastError?.response?.data?.error?.message || lastError?.message || "Nenhuma API de IA disponível ou todas falharam.";
+        return res.status(500).json({ message: `Falha ao gerar conteúdo. Verifique suas chaves de API. Último erro: ${errorMessage}` });
+
+    } catch (error) {
+        console.error("Erro geral na rota /api/generate:", error);
+        res.status(500).json({ message: 'Erro interno do servidor ao processar a requisição de IA.' });
+    }
+});
+
+
+// 8. Rotas da API (YouTube Data & Google Trends)
 const getGoogleApiKey = async (userId) => {
     const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
-    if (result.rows.length > 0 && result.rows[0].settings) {
-        return result.rows[0].settings.google_api;
-    }
-    return null;
+    return result.rows.length > 0 && result.rows[0].settings ? result.rows[0].settings.google_api : null;
 };
 
 const formatStat = (stat) => stat ? parseInt(stat).toLocaleString('pt-BR') : '0';
 
-app.get('/api/video-details/:videoId', async (req, res) => {
+app.get('/api/video-details/:videoId', verifyToken, async (req, res) => {
     const { videoId } = req.params;
-    const userId = req.headers['x-user-id']; 
-    if (!userId) return res.status(401).json({ message: "Usuário não autenticado." });
-
     try {
-        const apiKey = await getGoogleApiKey(userId);
+        const apiKey = await getGoogleApiKey(req.user.id);
         if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
-
         const youtube = google.youtube({ version: 'v3', auth: apiKey });
-        const response = await youtube.videos.list({
-            part: 'snippet,statistics',
-            id: videoId,
-        });
-
-        if (response.data.items.length === 0) {
-            return res.status(404).json({ message: 'Vídeo não encontrado.' });
-        }
+        const response = await youtube.videos.list({ part: 'snippet,statistics', id: videoId });
+        if (response.data.items.length === 0) return res.status(404).json({ message: 'Vídeo não encontrado.' });
         const video = response.data.items[0];
-        const snippet = video.snippet;
-        const stats = video.statistics;
-        
         res.json({
-            title: snippet.title,
-            description: snippet.description,
-            tags: snippet.tags || [],
-            channelTitle: snippet.channelTitle,
-            viewCount: formatStat(stats.viewCount),
-            likeCount: formatStat(stats.likeCount),
-            commentCount: formatStat(stats.commentCount),
-            detectedLanguage: snippet.defaultAudioLanguage || snippet.defaultLanguage || 'pt'
+            title: video.snippet.title,
+            description: video.snippet.description,
+            tags: video.snippet.tags || [],
+            channelId: video.snippet.channelId,
+            channelTitle: video.snippet.channelTitle,
+            viewCount: formatStat(video.statistics.viewCount),
+            likeCount: formatStat(video.statistics.likeCount),
+            commentCount: formatStat(video.statistics.commentCount),
+            detectedLanguage: video.snippet.defaultAudioLanguage || video.snippet.defaultLanguage || 'pt'
         });
     } catch (error) {
         console.error("Erro na API do YouTube:", error.message);
@@ -158,70 +486,56 @@ app.get('/api/video-details/:videoId', async (req, res) => {
     }
 });
 
-app.get('/api/youtube-stats/:channelId', async (req, res) => {
+app.get('/api/channel-details/:channelId', verifyToken, async (req, res) => {
     const { channelId } = req.params;
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json({ message: "Usuário não autenticado." });
-
     try {
-        const apiKey = await getGoogleApiKey(userId);
+        const apiKey = await getGoogleApiKey(req.user.id);
         if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
-
         const youtube = google.youtube({ version: 'v3', auth: apiKey });
-        const response = await youtube.channels.list({
-            part: 'statistics,snippet,contentDetails', 
-            id: channelId,
-        });
-
-        if (response.data.items.length === 0) {
-            return res.status(404).json({ message: 'Canal não encontrado.' });
-        }
-        const channel = response.data.items[0];
-        const stats = channel.statistics;
-        const snippet = channel.snippet;
-        
+        const response = await youtube.channels.list({ part: 'statistics', id: channelId });
+        if (response.data.items.length === 0) return res.status(404).json({ message: 'Canal não encontrado.' });
+        const stats = response.data.items[0].statistics;
         res.json({
             subscriberCount: formatStat(stats.subscriberCount),
             videoCount: formatStat(stats.videoCount),
-            viewCount: formatStat(stats.viewCount),
-            publishedAt: snippet.publishedAt ? new Date(snippet.publishedAt).toLocaleDateString('pt-BR') : 'N/A',
-            country: snippet.country || 'Não especificado',
-            uploadsPlaylistId: channel.contentDetails.relatedPlaylists.uploads
         });
     } catch (error) {
-        console.error("Erro na API do YouTube:", error.message);
-        res.status(500).json({ message: "Erro ao buscar dados do canal. Verifique a chave da API e o ID do canal." });
+        console.error("Erro na API do YouTube (detalhes do canal):", error.message);
+        res.status(500).json({ message: "Erro ao buscar dados do canal." });
     }
 });
 
-app.get('/api/youtube-recent-videos/:uploadsPlaylistId', async (req, res) => {
-    const { uploadsPlaylistId } = req.params;
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json({ message: "Usuário não autenticado." });
-
+app.get('/api/youtube-stats/:channelId', verifyToken, async (req, res) => {
+    const { channelId } = req.params;
     try {
-        const apiKey = await getGoogleApiKey(userId);
+        const apiKey = await getGoogleApiKey(req.user.id);
         if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
-
         const youtube = google.youtube({ version: 'v3', auth: apiKey });
-        
-        const playlistResponse = await youtube.playlistItems.list({
-            part: 'snippet',
-            playlistId: uploadsPlaylistId,
-            maxResults: 5
+        const response = await youtube.channels.list({ part: 'statistics,snippet,contentDetails', id: channelId });
+        if (response.data.items.length === 0) return res.status(404).json({ message: 'Canal não encontrado.' });
+        const channel = response.data.items[0];
+        res.json({
+            subscriberCount: formatStat(channel.statistics.subscriberCount),
+            videoCount: formatStat(channel.statistics.videoCount),
+            viewCount: formatStat(channel.statistics.viewCount),
+            uploadsPlaylistId: channel.contentDetails.relatedPlaylists.uploads
         });
+    } catch (error) {
+        console.error("Erro na API do YouTube (stats):", error.message);
+        res.status(500).json({ message: "Erro ao buscar dados do canal." });
+    }
+});
 
-        if (playlistResponse.data.items.length === 0) {
-            return res.json([]);
-        }
-        
+app.get('/api/youtube-recent-videos/:uploadsPlaylistId', verifyToken, async (req, res) => {
+    const { uploadsPlaylistId } = req.params;
+    try {
+        const apiKey = await getGoogleApiKey(req.user.id);
+        if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
+        const youtube = google.youtube({ version: 'v3', auth: apiKey });
+        const playlistResponse = await youtube.playlistItems.list({ part: 'snippet', playlistId: uploadsPlaylistId, maxResults: 5 });
+        if (playlistResponse.data.items.length === 0) return res.json([]);
         const videoIds = playlistResponse.data.items.map(item => item.snippet.resourceId.videoId);
-
-        const videosResponse = await youtube.videos.list({
-            part: 'snippet,statistics',
-            id: videoIds.join(',')
-        });
-
+        const videosResponse = await youtube.videos.list({ part: 'snippet,statistics', id: videoIds.join(',') });
         const videosData = videosResponse.data.items.map(video => ({
             id: video.id,
             title: video.snippet.title,
@@ -230,53 +544,38 @@ app.get('/api/youtube-recent-videos/:uploadsPlaylistId', async (req, res) => {
             likeCount: formatStat(video.statistics.likeCount),
             commentCount: formatStat(video.statistics.commentCount)
         }));
-
         res.json(videosData);
     } catch (error) {
-        console.error("Erro na API do YouTube ao buscar vídeos recentes:", error.message);
-        res.status(500).json({ message: "Erro ao buscar vídeos recentes. Verifique a chave da API." });
+        console.error("Erro na API do YouTube (vídeos recentes):", error.message);
+        res.status(500).json({ message: "Erro ao buscar vídeos recentes." });
     }
 });
 
-// [NOVA ROTA] Busca os comentários de um vídeo
-app.get('/api/video-comments/:videoId', async (req, res) => {
+app.get('/api/video-comments/:videoId', verifyToken, async (req, res) => {
     const { videoId } = req.params;
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json({ message: "Usuário não autenticado." });
-
     try {
-        const apiKey = await getGoogleApiKey(userId);
+        const apiKey = await getGoogleApiKey(req.user.id);
         if (!apiKey) return res.status(400).json({ message: "Chave da API do Google não configurada." });
-
         const youtube = google.youtube({ version: 'v3', auth: apiKey });
-        
-        const response = await youtube.commentThreads.list({
-            part: 'snippet',
-            videoId: videoId,
-            maxResults: 50, // Pega os 50 comentários principais
-            order: 'relevance' // Pega os mais relevantes
-        });
-
+        const response = await youtube.commentThreads.list({ part: 'snippet', videoId: videoId, maxResults: 50, order: 'relevance' });
         const comments = response.data.items.map(item => item.snippet.topLevelComment.snippet.textDisplay);
         res.json(comments);
-
     } catch (error) {
-        console.error("Erro na API do YouTube ao buscar comentários:", error.response?.data?.error || error.message);
+        console.error("Erro na API do YouTube (comentários):", error.response?.data?.error || error.message);
         if (error.response?.data?.error?.errors[0]?.reason === 'commentsDisabled') {
              return res.status(403).json({ message: "Os comentários estão desativados para este vídeo." });
         }
-        res.status(500).json({ message: "Erro ao buscar comentários. Verifique a chave da API e se o vídeo permite comentários." });
+        res.status(500).json({ message: "Erro ao buscar comentários." });
     }
 });
 
-
-app.get('/api/google-trends/:keyword/:country', async (req, res) => {
+app.get('/api/google-trends/:keyword/:country', verifyToken, async (req, res) => {
     const { keyword, country } = req.params;
     try {
         const results = await googleTrends.interestOverTime({
             keyword: keyword,
             geo: country,
-            startTime: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) // Last 12 months
+            startTime: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
         });
         res.json(JSON.parse(results));
     } catch (error) {
@@ -285,13 +584,197 @@ app.get('/api/google-trends/:keyword/:country', async (req, res) => {
     }
 });
 
-
-// 6. Rota Genérica (Catch-all) para servir o index.html
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// 9. Rotas de Administração
+app.get('/api/admin/users', verifyToken, requireAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT u.id, u.email, u.role, u.is_active, TO_CHAR(MAX(lh.login_timestamp), 'DD/MM/YYYY HH24:MI:SS') as last_login
+            FROM users u
+            LEFT JOIN login_history lh ON u.id = lh.user_id
+            GROUP BY u.id
+            ORDER BY u.created_at DESC
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Erro ao buscar utilizadores:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
 });
 
-// 7. Inicialização do Servidor
+app.put('/api/admin/user/:userId/status', verifyToken, requireAdmin, async (req, res) => {
+    const { userId } = req.params;
+    const { isActive } = req.body;
+    try {
+        await pool.query('UPDATE users SET is_active = $1 WHERE id = $2', [isActive, userId]);
+        res.json({ message: 'Status do utilizador atualizado com sucesso.' });
+    } catch (error) {
+        console.error("Erro ao atualizar status do utilizador:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
+app.get('/api/admin/stats', verifyToken, requireAdmin, async (req, res) => {
+    try {
+        const totalUsersRes = await pool.query("SELECT COUNT(*) FROM users");
+        const pendingUsersRes = await pool.query("SELECT COUNT(*) FROM users WHERE is_active = false");
+        const onlineUsersRes = await pool.query("SELECT COUNT(*) FROM active_sessions WHERE last_seen > NOW() - INTERVAL '5 minutes'");
+        const logins24hRes = await pool.query("SELECT COUNT(*) FROM login_history WHERE login_timestamp > NOW() - INTERVAL '24 hours'");
+
+        res.json({
+            totalUsers: totalUsersRes.rows[0].count,
+            pendingActivation: pendingUsersRes.rows[0].count,
+            onlineNow: onlineUsersRes.rows[0].count,
+            loginsLast24h: logins24hRes.rows[0].count
+        });
+    } catch (error) {
+        console.error("Erro ao buscar estatísticas do admin:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
+app.post('/api/admin/maintenance', verifyToken, requireAdmin, async (req, res) => {
+    const { is_on, message } = req.body;
+    try {
+        const value = { is_on, message };
+        await pool.query(
+            "INSERT INTO app_status (key, value) VALUES ('maintenance', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+            [value]
+        );
+        res.json({ message: 'Status de manutenção atualizado.' });
+    } catch (error) {
+        console.error("Erro ao atualizar status de manutenção:", error);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+app.post('/api/admin/announcement', verifyToken, requireAdmin, async (req, res) => {
+    const { message } = req.body;
+    try {
+        const value = { message, timestamp: new Date() };
+        await pool.query(
+            "INSERT INTO app_status (key, value) VALUES ('announcement', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+            [value]
+        );
+        res.json({ message: 'Anúncio global publicado.' });
+    } catch (error) {
+        console.error("Erro ao publicar anúncio:", error);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+app.get('/api/announcement', verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query("SELECT value FROM app_status WHERE key = 'announcement'");
+        if (result.rows.length > 0) {
+            res.json(result.rows[0].value);
+        } else {
+            res.json(null);
+        }
+    } catch (error) {
+        console.error("Erro ao buscar anúncio:", error);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+
+// 10. ROTAS DE CHAT
+app.get('/api/chat/users', verifyToken, requireAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                u.id as user_id, 
+                u.email,
+                (SELECT COUNT(*) FROM chat_messages WHERE sender_id = u.id AND receiver_id = $1 AND is_read = false) as unread_count,
+                (SELECT EXISTS (SELECT 1 FROM active_sessions WHERE user_id = u.id AND last_seen > NOW() - INTERVAL '5 minutes')) as is_online
+            FROM users u
+            WHERE u.id != $1
+            ORDER BY is_online DESC, u.email;
+        `, [req.user.id]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Erro ao listar utilizadores do chat:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
+app.get('/api/chat/history/:peerId', verifyToken, async (req, res) => {
+    const myId = req.user.id;
+    const peerId = parseInt(req.params.peerId, 10);
+    try {
+        await pool.query(
+            "UPDATE chat_messages SET is_read = true WHERE sender_id = $1 AND receiver_id = $2",
+            [peerId, myId]
+        );
+        const result = await pool.query(`
+            SELECT * FROM chat_messages 
+            WHERE (sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)
+            ORDER BY sent_at ASC;
+        `, [myId, peerId]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Erro ao buscar histórico do chat:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
+app.post('/api/chat/send', verifyToken, async (req, res) => {
+    const { receiverId, message } = req.body;
+    const senderId = req.user.id;
+    if (!receiverId || !message) return res.status(400).json({ message: "Destinatário e mensagem são obrigatórios." });
+    try {
+        await pool.query(
+            "INSERT INTO chat_messages (sender_id, receiver_id, message) VALUES ($1, $2, $3)",
+            [senderId, receiverId, message]
+        );
+        res.sendStatus(201);
+    } catch (error) {
+        console.error("Erro ao enviar mensagem:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
+app.post('/api/chat/upload', verifyToken, upload.single('image'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).send('Nenhum ficheiro enviado.');
+    }
+    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    res.json({ imageUrl });
+});
+
+
+app.get('/api/chat/notifications', verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT sender_id, COUNT(*) as unread_count 
+            FROM chat_messages 
+            WHERE receiver_id = $1 AND is_read = false 
+            GROUP BY sender_id;
+        `, [req.user.id]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Erro ao buscar notificações:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
+app.get('/api/chat/admin-status', verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query("SELECT 1 FROM active_sessions WHERE user_id = 1 AND last_seen > NOW() - INTERVAL '5 minutes'");
+        res.json({ isAdminOnline: result.rowCount > 0 });
+    } catch (error) {
+        console.error("Erro ao verificar status do admin:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
+
+// 11. Rota Genérica (Catch-all)
+// Removido, pois express.static já lida com isto
+// app.get('*', (req, res) => {
+//   res.sendFile(path.join(BASE_DIR, 'index.html'));
+// });
+
+// 12. Inicialização do Servidor
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
   initializeDb();

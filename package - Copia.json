@@ -1,7 +1,7 @@
 {
-  "name": "darks-vips-ai-backend",
-  "version": "3.2.0",
-  "description": "Backend for Darks Vips AI",
+  "name": "la-casa-canais-darks-backend",
+  "version": "1.0.0",
+  "description": "Backend for La Casa Canais Darks",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -17,6 +17,8 @@
     "google-trends-api": "^4.9.2",
     "googleapis": "^126.0.1",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.13",
     "pg": "^8.11.3"
   },
   "devDependencies": {
