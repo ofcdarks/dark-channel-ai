@@ -20,19 +20,17 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-secreto-padrao';
 
 // Obter o diretório base do projeto de forma segura
-// Usar __dirname para garantir que a aplicação encontra os arquivos
-// no mesmo diretório do server.js.
 const BASE_DIR = __dirname;
 
 // Middlewares
 app.use(express.json());
 
-// Servir arquivos estáticos do diretório raiz do projeto.
+// Servir arquivos estáticos da pasta 'public'.
 // O Express irá automaticamente procurar por "index.html" ao aceder a "/".
-app.use(express.static(BASE_DIR)); 
+app.use(express.static(path.join(BASE_DIR, 'public')));
 
 // Servir uploads de imagens
-app.use('/uploads', express.static(path.join(BASE_DIR, 'uploads'))); 
+app.use('/uploads', express.static(path.join(BASE_DIR, 'uploads')));
 
 // Configuração do Multer para Upload de Imagens no Chat
 const storage = multer.diskStorage({
