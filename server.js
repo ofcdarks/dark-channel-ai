@@ -34,21 +34,26 @@ const pool = new Pool({
 const initializeDb = async () => {
   const client = await pool.connect();
   try {
-    // Tabela de utilizadores atualizada com cargo e status
+    // Passo 1: Garante que a tabela base de utilizadores existe
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
-        settings JSONB,
-        role VARCHAR(50) NOT NULL DEFAULT 'user',
-        is_active BOOLEAN NOT NULL DEFAULT true,
-        created_at TIMESTAMPTZ DEFAULT NOW()
+        settings JSONB
       );
     `);
-    console.log('Tabela "users" verificada/criada com sucesso.');
+    console.log('Tabela "users" base verificada/criada com sucesso.');
 
-    // Nova tabela para histórico de logins
+    // **CORREÇÃO DEFINITIVA: Adiciona colunas em falta a uma tabela existente**
+    // Isto funciona como uma "migração" automática da base de dados.
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'user'`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`);
+    console.log("Colunas 'role', 'is_active' e 'created_at' verificadas/adicionadas à tabela 'users'.");
+
+
+    // Garante que as outras tabelas existem
     await client.query(`
       CREATE TABLE IF NOT EXISTS login_history (
         id SERIAL PRIMARY KEY,
@@ -59,7 +64,6 @@ const initializeDb = async () => {
     `);
     console.log('Tabela "login_history" verificada/criada com sucesso.');
     
-    // Nova tabela para sessões ativas
     await client.query(`
         CREATE TABLE IF NOT EXISTS active_sessions (
             user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -70,7 +74,6 @@ const initializeDb = async () => {
     console.log('Tabela "active_sessions" verificada/criada com sucesso.');
 
     // **LÓGICA DE ADMINISTRAÇÃO REFORÇADA**
-    // Garante que o utilizador administrador principal existe, tem o cargo correto e está ativo.
     const adminEmail = 'rudysilvaads@gmail.com';
     const adminPassword = '253031';
 
@@ -193,7 +196,6 @@ app.post('/api/login', async (req, res) => {
         });
 
     } catch (err) {
-        // **MUDANÇA PARA DEPURAÇÃO**
         // Retorna a mensagem de erro detalhada para o frontend.
         console.error("ERRO DETALHADO NO LOGIN:", err);
         res.status(500).json({ message: `Erro interno: ${err.message}` });
