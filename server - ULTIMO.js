@@ -9,10 +9,6 @@ const jwt = require('jsonwebtoken');
 const { google } = require('googleapis');
 const googleTrends = require('google-trends-api');
 const axios = require('axios');
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
-const multer = require('multer');
-const fs = require('fs');
 
 // 2. Configuração Inicial
 const app = express();
@@ -21,23 +17,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-secreto-padrao';
 
 // Middlewares
 app.use(express.json());
-app.use(express.static(__dirname)); // Servir arquivos estáticos da raiz
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Servir uploads
+// ALTERAÇÃO: Revertido para usar o diretório 'public'
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Configuração do Multer para Upload de Imagens no Chat
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const dir = 'uploads/';
-    if (!fs.existsSync(dir)){
-        fs.mkdirSync(dir);
-    }
-    cb(null, dir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname)); // Nome do arquivo único
-  }
-});
-const upload = multer({ storage: storage });
 
 // 3. Conexão com o Banco de Dados PostgreSQL
 const pool = new Pool({
@@ -63,7 +45,8 @@ const initializeDb = async () => {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    
+    console.log("Tabela 'users' verificada/criada com sucesso.");
+
     // Tabela de Histórico de Login
     await client.query(`
       CREATE TABLE IF NOT EXISTS login_history (
@@ -73,6 +56,7 @@ const initializeDb = async () => {
         ip_address VARCHAR(50)
       );
     `);
+    console.log('Tabela "login_history" verificada/criada com sucesso.');
     
     // Tabela de Sessões Ativas
     await client.query(`
@@ -82,6 +66,7 @@ const initializeDb = async () => {
             last_seen TIMESTAMPTZ NOT NULL
         );
     `);
+    console.log('Tabela "active_sessions" verificada/criada com sucesso.');
 
     // Tabela de Mensagens do Chat
     await client.query(`
@@ -94,26 +79,8 @@ const initializeDb = async () => {
             is_read BOOLEAN DEFAULT false
         );
     `);
+    console.log('Tabela "chat_messages" verificada/criada com sucesso.');
 
-    // Tabela de Recuperação de Senha
-    await client.query(`
-        CREATE TABLE IF NOT EXISTS password_resets (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            token VARCHAR(255) NOT NULL,
-            expires_at TIMESTAMPTZ NOT NULL
-        );
-    `);
-
-    // Tabela de Status da Aplicação (Manutenção/Anúncios)
-    await client.query(`
-        CREATE TABLE IF NOT EXISTS app_status (
-            key VARCHAR(50) PRIMARY KEY,
-            value JSONB
-        );
-    `);
-    
-    console.log("Tabelas verificadas/criadas com sucesso.");
 
     // Lógica de Administração Reforçada
     const adminEmail = 'rudysilvaads@gmail.com';
@@ -142,7 +109,7 @@ const initializeDb = async () => {
   }
 };
 
-// 4. Middlewares de Segurança e Manutenção
+// 4. Middleware de Segurança
 const verifyToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -158,34 +125,6 @@ const requireAdmin = (req, res, next) => {
     if (req.user.role !== 'admin') return res.status(403).json({ message: 'Acesso negado. Recurso exclusivo para administradores.' });
     next();
 };
-
-const checkMaintenance = async (req, res, next) => {
-    // Rotas que devem funcionar mesmo em manutenção
-    const allowedRoutes = ['/api/login', '/api/admin/maintenance', '/api/verify-session'];
-    if (allowedRoutes.includes(req.path)) {
-        return next();
-    }
-
-    try {
-        const result = await pool.query("SELECT value FROM app_status WHERE key = 'maintenance'");
-        if (result.rows.length > 0 && result.rows[0].value.is_on) {
-            // Permite que admins continuem a usar a plataforma
-            if (req.headers['authorization']) {
-                const token = req.headers['authorization'].split(' ')[1];
-                const decoded = jwt.decode(token);
-                if (decoded && decoded.role === 'admin') {
-                    return next();
-                }
-            }
-            return res.status(503).json({ message: result.rows[0].value.message });
-        }
-        next();
-    } catch (error) {
-        console.error("Erro ao verificar modo de manutenção:", error);
-        next(); // Se houver erro, permite o acesso para não bloquear a aplicação
-    }
-};
-app.use(checkMaintenance);
 
 
 // 5. Rotas da API (Autenticação e Configurações)
@@ -204,10 +143,15 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
+// NENHUMA ALTERAÇÃO NECESSÁRIA AQUI. O PROBLEMA ERA NO FRONTEND.
 app.post('/api/login', async (req, res) => {
-    const { email, password, rememberMe } = req.body;
+    const { email, password } = req.body;
+    const adminEmail = 'rudysilvaads@gmail.com';
     if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
     try {
+        if (email === adminEmail) {
+            await pool.query("UPDATE users SET is_active = true WHERE email = $1", [adminEmail]);
+        }
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = result.rows[0];
 
@@ -219,9 +163,7 @@ app.post('/api/login', async (req, res) => {
             return res.status(403).json({ message: 'Sua conta precisa ser ativada por um administrador.' });
         }
 
-        const expiresIn = rememberMe ? '30d' : '24h';
-        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn });
-        
+        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
         const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
         await pool.query('INSERT INTO login_history (user_id, ip_address) VALUES ($1, $2)', [user.id, ip]);
         await pool.query(
@@ -238,20 +180,6 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ message: `Erro interno: ${err.message}` });
     }
 });
-
-app.get('/api/verify-session', verifyToken, async (req, res) => {
-    try {
-        const result = await pool.query('SELECT id, email, role FROM users WHERE id = $1', [req.user.id]);
-        if (result.rows.length > 0) {
-            res.json({ user: result.rows[0] });
-        } else {
-            res.status(404).json({ message: 'Utilizador não encontrado.' });
-        }
-    } catch (error) {
-        res.status(500).json({ message: 'Erro interno do servidor.' });
-    }
-});
-
 
 app.post('/api/heartbeat', verifyToken, async (req, res) => {
     try {
@@ -293,77 +221,7 @@ app.post('/api/settings', verifyToken, async (req, res) => {
     }
 });
 
-// 6. Rotas de Recuperação de Senha
-const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    secure: true,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
-
-app.post('/api/forgot-password', async (req, res) => {
-    const { email } = req.body;
-    try {
-        const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
-        if (userResult.rows.length === 0) {
-            return res.status(404).json({ message: 'Se este e-mail estiver registado, um link de recuperação foi enviado.' });
-        }
-        const user = userResult.rows[0];
-        const token = crypto.randomBytes(32).toString('hex');
-        const expires = new Date(Date.now() + 3600000); // 1 hora
-
-        await pool.query('INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)', [user.id, token, expires]);
-
-        const resetLink = `http://${req.headers.host}/index.html?reset_token=${token}`;
-        
-        const mailOptions = {
-            from: `"La Casa Canais Darks" <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: 'Recuperação de Senha - La Casa Canais Darks',
-            html: `
-                <div style="font-family: Arial, sans-serif; background-color: #111827; color: #e5e7eb; padding: 20px; text-align: center;">
-                    <h1 style="color: #DC2626; font-family: Oswald, sans-serif;">LA CASA CANAIS DARKS</h1>
-                    <p style="font-size: 16px;">Recebemos um pedido para redefinir a sua senha.</p>
-                    <p style="font-size: 16px;">Clique no botão abaixo para criar uma nova senha:</p>
-                    <a href="${resetLink}" style="background-color: #DC2626; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin: 20px 0;">REDEFINIR SENHA</a>
-                    <p style="font-size: 14px;">Se você não solicitou isso, por favor, ignore este e-mail.</p>
-                </div>
-            `,
-        };
-
-        await transporter.sendMail(mailOptions);
-        res.json({ message: 'Se este e-mail estiver registado, um link de recuperação foi enviado.' });
-
-    } catch (error) {
-        console.error("Erro em forgot-password:", error);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
-    }
-});
-
-app.post('/api/reset-password', async (req, res) => {
-    const { token, password } = req.body;
-    try {
-        const resetResult = await pool.query('SELECT * FROM password_resets WHERE token = $1 AND expires_at > NOW()', [token]);
-        if (resetResult.rows.length === 0) {
-            return res.status(400).json({ message: 'Token inválido ou expirado.' });
-        }
-        const resetRequest = resetResult.rows[0];
-        const salt = await bcrypt.genSalt(10);
-        const passwordHash = await bcrypt.hash(password, salt);
-        await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, resetRequest.user_id]);
-        await pool.query('DELETE FROM password_resets WHERE id = $1', [resetRequest.id]);
-        res.json({ message: 'Senha redefinida com sucesso.' });
-    } catch (error) {
-        console.error("Erro em reset-password:", error);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
-    }
-});
-
-
-// 7. Rota Segura para Geração de Conteúdo com IA
+// 6. Rota Segura para Geração de Conteúdo com IA
 app.post('/api/generate', verifyToken, async (req, res) => {
     const userId = req.user.id;
     const { prompt, schema } = req.body;
@@ -444,7 +302,7 @@ app.post('/api/generate', verifyToken, async (req, res) => {
 });
 
 
-// 8. Rotas da API (YouTube Data & Google Trends)
+// 7. Rotas da API (YouTube Data & Google Trends)
 const getGoogleApiKey = async (userId) => {
     const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
     return result.rows.length > 0 && result.rows[0].settings ? result.rows[0].settings.google_api : null;
@@ -576,7 +434,7 @@ app.get('/api/google-trends/:keyword/:country', verifyToken, async (req, res) =>
     }
 });
 
-// 9. Rotas de Administração
+// 8. Rotas de Administração
 app.get('/api/admin/users', verifyToken, requireAdmin, async (req, res) => {
     try {
         const result = await pool.query(`
@@ -605,6 +463,32 @@ app.put('/api/admin/user/:userId/status', verifyToken, requireAdmin, async (req,
     }
 });
 
+app.get('/api/admin/sessions', verifyToken, requireAdmin, async (req, res) => {
+    try {
+        const result = await pool.query("SELECT user_id, email, TO_CHAR(last_seen, 'DD/MM/YYYY HH24:MI:SS') as last_seen FROM active_sessions WHERE last_seen > NOW() - INTERVAL '5 minutes' ORDER BY last_seen DESC");
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Erro ao buscar sessões ativas:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
+app.get('/api/admin/history', verifyToken, requireAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT lh.id, u.email, TO_CHAR(lh.login_timestamp, 'DD/MM/YYYY HH24:MI:SS') as login_time, lh.ip_address
+            FROM login_history lh
+            JOIN users u ON lh.user_id = u.id
+            ORDER BY lh.login_timestamp DESC
+            LIMIT 50
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Erro ao buscar histórico de logins:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+
 app.get('/api/admin/stats', verifyToken, requireAdmin, async (req, res) => {
     try {
         const totalUsersRes = await pool.query("SELECT COUNT(*) FROM users");
@@ -624,52 +508,7 @@ app.get('/api/admin/stats', verifyToken, requireAdmin, async (req, res) => {
     }
 });
 
-app.post('/api/admin/maintenance', verifyToken, requireAdmin, async (req, res) => {
-    const { is_on, message } = req.body;
-    try {
-        const value = { is_on, message };
-        await pool.query(
-            "INSERT INTO app_status (key, value) VALUES ('maintenance', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
-            [value]
-        );
-        res.json({ message: 'Status de manutenção atualizado.' });
-    } catch (error) {
-        console.error("Erro ao atualizar status de manutenção:", error);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
-    }
-});
-
-app.post('/api/admin/announcement', verifyToken, requireAdmin, async (req, res) => {
-    const { message } = req.body;
-    try {
-        const value = { message, timestamp: new Date() };
-        await pool.query(
-            "INSERT INTO app_status (key, value) VALUES ('announcement', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
-            [value]
-        );
-        res.json({ message: 'Anúncio global publicado.' });
-    } catch (error) {
-        console.error("Erro ao publicar anúncio:", error);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
-    }
-});
-
-app.get('/api/announcement', verifyToken, async (req, res) => {
-    try {
-        const result = await pool.query("SELECT value FROM app_status WHERE key = 'announcement'");
-        if (result.rows.length > 0) {
-            res.json(result.rows[0].value);
-        } else {
-            res.json(null);
-        }
-    } catch (error) {
-        console.error("Erro ao buscar anúncio:", error);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
-    }
-});
-
-
-// 10. ROTAS DE CHAT
+// 9. ROTAS DE CHAT
 app.get('/api/chat/users', verifyToken, requireAdmin, async (req, res) => {
     try {
         const result = await pool.query(`
@@ -725,15 +564,6 @@ app.post('/api/chat/send', verifyToken, async (req, res) => {
     }
 });
 
-app.post('/api/chat/upload', verifyToken, upload.single('image'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).send('Nenhum ficheiro enviado.');
-    }
-    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-    res.json({ imageUrl });
-});
-
-
 app.get('/api/chat/notifications', verifyToken, async (req, res) => {
     try {
         const result = await pool.query(`
@@ -760,12 +590,12 @@ app.get('/api/chat/admin-status', verifyToken, async (req, res) => {
 });
 
 
-// 11. Rota Genérica (Catch-all)
+// 10. Rota Genérica (Catch-all)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 12. Inicialização do Servidor
+// 11. Inicialização do Servidor
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
   initializeDb();
