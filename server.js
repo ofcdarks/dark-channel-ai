@@ -26,10 +26,6 @@ const BASE_DIR = process.cwd();
 
 // Middlewares
 app.use(express.json());
-// Servir arquivos estáticos do diretório raiz do projeto
-app.use(express.static(BASE_DIR)); 
-// Servir uploads de imagens
-app.use('/uploads', express.static(path.join(BASE_DIR, 'uploads'))); 
 
 // Configuração do Multer para Upload de Imagens no Chat
 const storage = multer.diskStorage({
@@ -768,9 +764,13 @@ app.get('/api/chat/admin-status', verifyToken, async (req, res) => {
 
 
 // 11. Rota Genérica (Catch-all)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(BASE_DIR, 'index.html'));
+// Servir a página inicial para a rota raiz
+app.get('/', (req, res) => {
+  res.sendFile(path.resolve(BASE_DIR, 'index.html'));
 });
+
+// Servir outros arquivos estáticos
+app.use(express.static(BASE_DIR));
 
 // 12. Inicialização do Servidor
 app.listen(PORT, () => {
