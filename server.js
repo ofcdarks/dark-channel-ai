@@ -124,8 +124,8 @@ app.post('/api/register', async (req, res) => {
     try {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
-        // Por defeito, o primeiro utilizador é ativo. Admins podem desativar depois.
-        const result = await pool.query('INSERT INTO users (email, password_hash, settings) VALUES ($1, $2, $3) RETURNING id, email', [email, passwordHash, {}]);
+        // CORREÇÃO: Garante que o novo utilizador é criado como ativo
+        const result = await pool.query('INSERT INTO users (email, password_hash, settings, is_active) VALUES ($1, $2, $3, true) RETURNING id, email', [email, passwordHash, {}]);
         res.status(201).json(result.rows[0]);
     } catch (err) {
         if (err.code === '23505') return res.status(409).json({ message: 'Este e-mail já está em uso.' });
