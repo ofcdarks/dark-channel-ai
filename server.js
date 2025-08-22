@@ -149,7 +149,6 @@ app.post('/api/login', async (req, res) => {
 
     if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
     try {
-        // **CORREÇÃO FINAL E DEFINITIVA**
         // Se o email de login for o do administrador, reativa a conta antes de qualquer outra verificação.
         if (email === adminEmail) {
             console.log(`Tentativa de login do administrador ${adminEmail}. A garantir que a conta está ativa...`);
@@ -159,8 +158,14 @@ app.post('/api/login', async (req, res) => {
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = result.rows[0];
 
-        if (!user || !(await bcrypt.compare(password, user.password_hash))) {
-            return res.status(401).json({ message: 'Credenciais inválidas.' });
+        // Lógica de verificação separada para melhor depuração
+        if (!user) {
+            return res.status(401).json({ message: 'Credenciais inválidas (utilizador não encontrado).' });
+        }
+        
+        const passwordMatch = await bcrypt.compare(password, user.password_hash);
+        if (!passwordMatch) {
+            return res.status(401).json({ message: 'Credenciais inválidas (senha incorreta).' });
         }
 
         // Esta verificação agora só irá bloquear outros utilizadores que não sejam o admin.
@@ -188,8 +193,10 @@ app.post('/api/login', async (req, res) => {
         });
 
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
+        // **MUDANÇA PARA DEPURAÇÃO**
+        // Retorna a mensagem de erro detalhada para o frontend.
+        console.error("ERRO DETALHADO NO LOGIN:", err);
+        res.status(500).json({ message: `Erro interno: ${err.message}` });
     }
 });
 
