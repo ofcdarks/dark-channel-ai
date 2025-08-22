@@ -69,18 +69,27 @@ const initializeDb = async () => {
     `);
     console.log('Tabela "active_sessions" verificada/criada com sucesso.');
 
-    // Verifica se existe algum administrador. Se não, define um.
-    const adminCheck = await client.query("SELECT 1 FROM users WHERE role = 'admin' LIMIT 1");
+    // **NOVA LÓGICA DE ADMINISTRAÇÃO**
+    // Garante que o utilizador administrador principal existe e tem o cargo correto.
+    const adminEmail = 'rudysilvaads@gmail.com';
+    const adminPassword = '253031';
+
+    const adminCheck = await client.query("SELECT id FROM users WHERE email = $1", [adminEmail]);
+
     if (adminCheck.rowCount === 0) {
-        // Tenta promover o email específico a admin
-        const specificAdminUpdate = await client.query("UPDATE users SET role = 'admin' WHERE email = 'rudysilvaads@gmail.com'");
-        if (specificAdminUpdate.rowCount > 0) {
-            console.log('Utilizador rudysilvaads@gmail.com promovido a administrador.');
-        } else {
-            // Se o email específico não for encontrado, promove o primeiro utilizador como fallback
-            await client.query("UPDATE users SET role = 'admin' WHERE id = (SELECT id FROM users ORDER BY created_at ASC LIMIT 1)");
-            console.log('Email específico não encontrado. Primeiro utilizador da base de dados foi promovido a administrador.');
-        }
+        // Se o admin não existir, cria-o com a senha especificada.
+        console.log(`Utilizador admin ${adminEmail} não encontrado. A criar...`);
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(adminPassword, salt);
+        await client.query(
+            "INSERT INTO users (email, password_hash, role, is_active, settings) VALUES ($1, $2, 'admin', true, '{}')",
+            [adminEmail, passwordHash]
+        );
+        console.log(`Utilizador administrador ${adminEmail} criado com sucesso.`);
+    } else {
+        // Se o admin já existir, apenas garante que ele tem o cargo de 'admin'.
+        await client.query("UPDATE users SET role = 'admin' WHERE email = $1", [adminEmail]);
+        console.log(`Cargo de administrador para ${adminEmail} verificado e garantido.`);
     }
 
   } catch (err) {
