@@ -69,8 +69,8 @@ const initializeDb = async () => {
     `);
     console.log('Tabela "active_sessions" verificada/criada com sucesso.');
 
-    // **NOVA LÓGICA DE ADMINISTRAÇÃO**
-    // Garante que o utilizador administrador principal existe e tem o cargo correto.
+    // **LÓGICA DE ADMINISTRAÇÃO REFORÇADA**
+    // Garante que o utilizador administrador principal existe, tem o cargo correto e está ativo.
     const adminEmail = 'rudysilvaads@gmail.com';
     const adminPassword = '253031';
 
@@ -87,9 +87,9 @@ const initializeDb = async () => {
         );
         console.log(`Utilizador administrador ${adminEmail} criado com sucesso.`);
     } else {
-        // Se o admin já existir, apenas garante que ele tem o cargo de 'admin'.
-        await client.query("UPDATE users SET role = 'admin' WHERE email = $1", [adminEmail]);
-        console.log(`Cargo de administrador para ${adminEmail} verificado e garantido.`);
+        // CORREÇÃO FINAL: Se o admin já existir, garante que ele tem o cargo 'admin' E que está ATIVO.
+        await client.query("UPDATE users SET role = 'admin', is_active = true WHERE email = $1", [adminEmail]);
+        console.log(`Cargo de administrador e status ativo para ${adminEmail} verificado e garantido.`);
     }
 
   } catch (err) {
@@ -133,7 +133,7 @@ app.post('/api/register', async (req, res) => {
     try {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
-        // CORREÇÃO: Garante que o novo utilizador é criado como ativo
+        // Garante que o novo utilizador é criado como ativo
         const result = await pool.query('INSERT INTO users (email, password_hash, settings, is_active) VALUES ($1, $2, $3, true) RETURNING id, email', [email, passwordHash, {}]);
         res.status(201).json(result.rows[0]);
     } catch (err) {
