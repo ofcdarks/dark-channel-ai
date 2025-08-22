@@ -69,11 +69,18 @@ const initializeDb = async () => {
     `);
     console.log('Tabela "active_sessions" verificada/criada com sucesso.');
 
-    // Verifica se existe algum administrador. Se não, torna o primeiro utilizador um admin.
+    // Verifica se existe algum administrador. Se não, define um.
     const adminCheck = await client.query("SELECT 1 FROM users WHERE role = 'admin' LIMIT 1");
     if (adminCheck.rowCount === 0) {
-        await client.query("UPDATE users SET role = 'admin' WHERE id = (SELECT id FROM users ORDER BY created_at ASC LIMIT 1)");
-        console.log('Primeiro utilizador promovido a administrador.');
+        // Tenta promover o email específico a admin
+        const specificAdminUpdate = await client.query("UPDATE users SET role = 'admin' WHERE email = 'rudysilvaads@gmail.com'");
+        if (specificAdminUpdate.rowCount > 0) {
+            console.log('Utilizador rudysilvaads@gmail.com promovido a administrador.');
+        } else {
+            // Se o email específico não for encontrado, promove o primeiro utilizador como fallback
+            await client.query("UPDATE users SET role = 'admin' WHERE id = (SELECT id FROM users ORDER BY created_at ASC LIMIT 1)");
+            console.log('Email específico não encontrado. Primeiro utilizador da base de dados foi promovido a administrador.');
+        }
     }
 
   } catch (err) {
