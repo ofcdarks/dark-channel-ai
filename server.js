@@ -87,7 +87,7 @@ const initializeDb = async () => {
         );
         console.log(`Utilizador administrador ${adminEmail} criado com sucesso.`);
     } else {
-        // CORREÇÃO FINAL: Se o admin já existir, garante que ele tem o cargo 'admin' E que está ATIVO.
+        // Se o admin já existir, garante que ele tem o cargo 'admin' E que está ATIVO.
         await client.query("UPDATE users SET role = 'admin', is_active = true WHERE email = $1", [adminEmail]);
         console.log(`Cargo de administrador e status ativo para ${adminEmail} verificado e garantido.`);
     }
@@ -145,8 +145,17 @@ app.post('/api/register', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
+    const adminEmail = 'rudysilvaads@gmail.com';
+
     if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
     try {
+        // **CORREÇÃO FINAL E DEFINITIVA**
+        // Se o email de login for o do administrador, reativa a conta antes de qualquer outra verificação.
+        if (email === adminEmail) {
+            console.log(`Tentativa de login do administrador ${adminEmail}. A garantir que a conta está ativa...`);
+            await pool.query("UPDATE users SET is_active = true WHERE email = $1", [adminEmail]);
+        }
+
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = result.rows[0];
 
@@ -154,6 +163,7 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ message: 'Credenciais inválidas.' });
         }
 
+        // Esta verificação agora só irá bloquear outros utilizadores que não sejam o admin.
         if (!user.is_active) {
             return res.status(403).json({ message: 'A sua conta foi desativada por um administrador.' });
         }
