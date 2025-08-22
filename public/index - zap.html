@@ -51,24 +51,11 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
-        /* --- Estilos do Chat e Notificações (ATUALIZADO) --- */
+        /* Estilos do Chat */
         #chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 100; display: none; }
-        #chat-bubble { 
-            width: 60px; height: 60px; border-radius: 50%; background-color: #DC2626; 
-            cursor: pointer; display: flex; align-items: center; justify-content: center; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4); transition: transform 0.2s; 
-        }
+        #chat-bubble { width: 60px; height: 60px; border-radius: 50%; background-color: #DC2626; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); transition: transform 0.2s; }
         #chat-bubble:hover { transform: scale(1.1); }
-        #chat-bubble.pulsate { animation: pulsate 1.5s infinite; }
-        @keyframes pulsate { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
-        
-        #chat-notification-badge {
-            position: absolute; top: -5px; right: -5px; min-width: 24px; height: 24px;
-            background-color: #fde047; color: #111827; border-radius: 50%;
-            display: none; align-items: center; justify-content: center;
-            font-size: 12px; font-weight: bold; border: 2px solid #DC2626;
-        }
-
+        #chat-notification-dot { position: absolute; top: 0; right: 0; width: 15px; height: 15px; background-color: #fde047; border-radius: 50%; border: 2px solid #DC2626; display: none; }
         #chat-container { display: none; width: 350px; height: 500px; background-color: #1f2937; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); flex-direction: column; overflow: hidden; border: 1px solid #4b5563; }
         .chat-header { background-color: #111827; padding: 10px; font-weight: bold; color: white; display: flex; justify-content: space-between; align-items: center; }
         .chat-messages { flex-grow: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column-reverse; }
@@ -77,28 +64,12 @@
         .message-received { background-color: #4b5563; color: white; align-self: flex-start; border-bottom-left-radius: 3px; }
         .chat-input { display: flex; padding: 10px; background-color: #111827; }
         #chat-user-list { max-height: 400px; overflow-y: auto; }
-        .chat-user-item { cursor: pointer; padding: 10px; border-bottom: 1px solid #374151; display: flex; justify-content: space-between; align-items: center; }
+        .chat-user-item { cursor: pointer; padding: 10px; border-bottom: 1px solid #374151; }
         .chat-user-item:hover { background-color: #374151; }
-        .unread-indicator { width: 10px; height: 10px; background-color: #fde047; border-radius: 50%; }
-        .online-status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; background-color: #22c55e; }
+        .unread-indicator { width: 10px; height: 10px; background-color: #fde047; border-radius: 50%; display: inline-block; margin-left: 8px; }
         .admin-status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
         .admin-status-dot.online { background-color: #22c55e; }
         .admin-status-dot.offline { background-color: #6b7280; }
-
-        /* --- Popup de Notificação de Mensagem (NOVO) --- */
-        #login-notification-popup {
-            display: none; position: fixed; top: 20px; right: 20px; z-index: 1000;
-            background-color: #1f2937; color: white; padding: 16px; border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #4b5563;
-            animation: slideIn 0.5s ease-in-out;
-        }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
-        
-        /* --- Modal de Mensagem Offline (NOVO) --- */
-        #offline-message-modal {
-            display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.75);
-            z-index: 500; display: flex; align-items: center; justify-content: center;
-        }
 
         @media (max-width: 768px) {
             #app-container { flex-direction: column; }
@@ -227,30 +198,10 @@
     <div id="chat-widget">
         <div id="chat-bubble">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clip-rule="evenodd" /></svg>
-            <div id="chat-notification-badge"></div>
+            <div id="chat-notification-dot"></div>
         </div>
-        <div id="chat-container"></div>
-    </div>
-
-    <!-- Popup de Notificação de Mensagem ao Login (NOVO) -->
-    <div id="login-notification-popup">
-        <p class="font-semibold mb-2">📬 Novas Mensagens!</p>
-        <p class="text-sm text-gray-300 mb-4">Você tem mensagens não lidas. Abra o chat para vê-las.</p>
-        <div class="flex gap-2">
-            <button id="open-chat-from-popup" class="flex-1 bg-red-600 text-white px-3 py-1 rounded text-sm">Abrir Chat</button>
-            <button id="close-popup" class="flex-1 bg-gray-600 text-white px-3 py-1 rounded text-sm">Fechar</button>
-        </div>
-    </div>
-
-    <!-- Modal de Mensagem Offline (NOVO) -->
-    <div id="offline-message-modal" class="hidden">
-        <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm border border-gray-700 space-y-4">
-            <h3 class="text-lg font-semibold text-white">Enviar Mensagem para <span id="offline-user-email"></span></h3>
-            <textarea id="offline-message-textarea" class="w-full bg-gray-700 text-white rounded-md p-2" rows="4" placeholder="Digite sua mensagem..."></textarea>
-            <div class="flex justify-end gap-3">
-                <button id="cancel-offline-message" class="bg-gray-600 text-white px-4 py-2 rounded">Cancelar</button>
-                <button id="send-offline-message" class="bg-red-600 text-white px-4 py-2 rounded">Enviar</button>
-            </div>
+        <div id="chat-container">
+            <!-- O conteúdo do chat será renderizado aqui pelo JS -->
         </div>
     </div>
 
@@ -269,12 +220,10 @@
         chat: {
             isOpen: false,
             activePeer: null, // {id, email}
-            pollInterval: null,
-            lastUnreadCount: 0
+            pollInterval: null
         }
     };
     let heartbeatInterval = null;
-    let audioContext; // Para o som de notificação
 
     // --- Constants ---
     const ELEMENTS = {
@@ -299,10 +248,6 @@
         menuOverlay: document.getElementById('menu-overlay'),
         mobileHeaderTitle: document.getElementById('mobile-header-title'),
         logMessage: document.getElementById('log-message'),
-        chatBubble: document.getElementById('chat-bubble'),
-        chatNotificationBadge: document.getElementById('chat-notification-badge'),
-        loginNotificationPopup: document.getElementById('login-notification-popup'),
-        offlineMessageModal: document.getElementById('offline-message-modal'),
     };
 
     const PROGRESS_PHRASES = [ "Decodificando o algoritmo...", "Buscando brechas no sistema...", "Analisando os alvos...", "Interceptando dados de tendência...", "Preparando o plano de ataque..." ];
@@ -340,6 +285,8 @@
         if (!response.ok) {
             if (response.status === 401 || response.status === 403) {
                 const errorData = await response.json().catch(() => ({}));
+                // Se o token for inválido OU a conta estiver inativa, faz logout
+                // A não ser que a mensagem seja sobre ativação pendente
                 if (!errorData.message || !errorData.message.includes('ativada')) {
                      handleLogout();
                 }
@@ -352,7 +299,7 @@
         if (contentType && contentType.includes("application/json")) {
             return response.json();
         }
-        return null;
+        return null; // Retorna null para respostas sem corpo JSON (ex: 204 No Content)
     }
 
     // --- Authentication ---
@@ -379,6 +326,7 @@
             appState.currentUser = response.user;
             await initializeApp();
         } catch (error) {
+            // ALTERAÇÃO: Lógica para mostrar a tela de ativação pendente
             if (error.message.includes('ativada')) {
                 ELEMENTS.loginContainer.style.display = 'none';
                 ELEMENTS.activationContainer.style.display = 'flex';
@@ -395,6 +343,7 @@
         const password = document.getElementById('register-password').value;
         try {
             await apiRequest('/api/register', 'POST', { email, password });
+            // ALTERAÇÃO: Após o registo, mostra a tela de ativação pendente
             ELEMENTS.registerContainer.style.display = 'none';
             ELEMENTS.activationContainer.style.display = 'flex';
         } catch (error) {
@@ -406,7 +355,7 @@
         localStorage.removeItem('authToken');
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         if (appState.chat.pollInterval) clearInterval(appState.chat.pollInterval);
-        appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null, lastUnreadCount: 0 } };
+        appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null } };
         ELEMENTS.appContainer.style.display = 'none';
         document.getElementById('chat-widget').style.display = 'none';
         showLoginScreen();
@@ -447,14 +396,10 @@
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         heartbeatInterval = setInterval(() => apiRequest('/api/heartbeat', 'POST'), 3 * 60 * 1000);
 
+        // Inicia o polling de notificações de chat
         if (appState.chat.pollInterval) clearInterval(appState.chat.pollInterval);
         appState.chat.pollInterval = setInterval(pollForNotifications, 5000);
         document.getElementById('chat-widget').style.display = 'block';
-
-        const initialNotifications = await apiRequest('/api/chat/notifications', 'GET');
-        if (initialNotifications && initialNotifications.length > 0) {
-            showLoginNotificationPopup();
-        }
     }
 
     // --- UI Building ---
@@ -518,19 +463,53 @@
         const novelBadge = isNovel ? '<span class="inline-flex items-center rounded-md bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700">✨ Inédita</span>' : '';
         const subScoresHtml = Object.entries(subScores).map(([key, value]) => {
             if (typeof value === 'string') {
-                return `<div class="mb-2"><div class="flex justify-between items-center text-sm mb-1"><span class="text-slate-600">${key}</span><span class="font-semibold text-slate-700 px-2 py-0.5 rounded-md ${value === 'Alta' ? 'bg-green-100 text-green-800' : value === 'Média' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}">${value}</span></div></div>`;
+                return `
+                <div class="mb-2">
+                    <div class="flex justify-between items-center text-sm mb-1">
+                        <span class="text-slate-600">${key}</span>
+                        <span class="font-semibold text-slate-700 px-2 py-0.5 rounded-md ${value === 'Alta' ? 'bg-green-100 text-green-800' : value === 'Média' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}">${value}</span>
+                    </div>
+                </div>`;
             }
             const cappedValue = Math.min(100, Math.round(value || 0));
-            return `<div class="mb-2"><div class="flex justify-between items-center text-sm mb-1"><span class="text-slate-600">${key}</span><span class="font-semibold text-slate-700">${cappedValue}/100</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="h-2 rounded-full ${getScoreColor(cappedValue)}" style="width: ${cappedValue}%;"></div></div></div>`;
+            return `
+            <div class="mb-2">
+                <div class="flex justify-between items-center text-sm mb-1"><span class="text-slate-600">${key}</span><span class="font-semibold text-slate-700">${cappedValue}/100</span></div>
+                <div class="progress-bar-container bg-gray-200"><div class="progress-bar-inner ${getScoreColor(cappedValue)}" style="width: ${cappedValue}%;"></div></div>
+            </div>`;
         }).join('');
-        return `<div class="bg-white p-4 rounded-lg border w-full md:w-72 flex-shrink-0"><h4 class="font-semibold text-slate-800 mb-2 font-display">${title}</h4><div class="flex items-center justify-between mb-4"><div class="flex items-baseline gap-1"><span class="text-3xl font-bold ${getScoreTextColor(intMainScore)}">${intMainScore}</span><span class="text-slate-500 text-sm">/ 100</span></div>${novelBadge}</div>${subScoresHtml}${suggestion ? `<p class="text-xs text-slate-500 mt-4"><strong class="text-slate-600">A Virada de Chave:</strong> ${suggestion}</p>` : ''}</div>`;
+        return `<div class="bg-white p-4 rounded-lg border w-full md:w-72 flex-shrink-0">
+                    <h4 class="font-semibold text-slate-800 mb-2 font-display">${title}</h4>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-3xl font-bold ${getScoreTextColor(intMainScore)}">${intMainScore}</span>
+                            <span class="text-slate-500 text-sm">/ 100</span>
+                        </div>
+                        ${novelBadge}
+                    </div>
+                    ${subScoresHtml}
+                    ${suggestion ? `<p class="text-xs text-slate-500 mt-4"><strong class="text-slate-600">A Virada de Chave:</strong> ${suggestion}</p>` : ''}
+                </div>`;
     };
 
     const getLegendForTool = (toolId) => {
         const legends = {
-            'niche-analysis': `<h4 class="font-semibold text-slate-800 mb-2 font-display">💡 Entendendo as Métricas</h4><ul class="space-y-2 text-slate-600"><li><strong>Hype Score:</strong> Mede o "buzz" e o potencial de viralização.</li><li><strong>Potencial de RPM:</strong> Estimativa de ganho por mil visualizações.</li><li><strong>Demanda de Busca:</strong> Avalia o interesse geral no tópico.</li></ul>`,
-             'video-optimizer': `<h4 class="font-semibold text-slate-800 mb-2 font-display">💡 Entendendo as Métricas</h4><ul class="space-y-2 text-slate-600"><li><strong>Pontuação:</strong> Avalia a qualidade geral do SEO e potencial de CTR.</li><li><strong>Virada de Chave:</strong> Aponta a principal melhoria estratégica aplicada.</li></ul>`,
-            'default': `<h4 class="font-semibold text-slate-800 mb-2 font-display">💡 Entendendo as Métricas</h4><p class="text-slate-600">As pontuações de 0 a 100 indicam o potencial. Valores mais altos sugerem maior sucesso.</p>`
+            'niche-analysis': `
+                <h4 class="font-semibold text-slate-800 mb-2 font-display">💡 Entendendo as Métricas</h4>
+                <ul class="space-y-2 text-slate-600">
+                    <li><strong>Hype Score:</strong> Mede o "buzz" e o potencial de viralização de um nicho. Pontuações altas indicam que o tópico está em alta no momento.</li>
+                    <li><strong>Potencial de RPM:</strong> Uma estimativa do ganho por mil visualizações (RPM) em dólares. Nichos com RPMs mais altos são mais lucrativos.</li>
+                    <li><strong>Demanda de Busca:</strong> Avalia o interesse geral do público no tópico, com base em dados de tendências de busca. 'Alta' é o ideal.</li>
+                </ul>`,
+             'video-optimizer': `
+                <h4 class="font-semibold text-slate-800 mb-2 font-display">💡 Entendendo as Métricas</h4>
+                <ul class="space-y-2 text-slate-600">
+                    <li><strong>Pontuação:</strong> Uma nota de 0 a 100 que avalia a qualidade geral do SEO, clareza para o espectador e o potencial de taxa de cliques (CTR) do título, descrição ou tags.</li>
+                    <li><strong>Virada de Chave:</strong> Aponta a principal melhoria estratégica que foi aplicada na sugestão otimizada para impulsionar os resultados.</li>
+                </ul>`,
+            'default': `
+                <h4 class="font-semibold text-slate-800 mb-2 font-display">💡 Entendendo as Métricas</h4>
+                <p class="text-slate-600">As pontuações de 0 a 100 indicam o potencial de cada item. Valores mais altos sugerem maior probabilidade de sucesso. Analise a "Virada de Chave" para insights estratégicos.</p>`
         };
         const legendHtml = legends[toolId] || legends['default'];
         return `<div class="mt-8 text-sm p-4 bg-red-50 rounded-lg border border-red-200">${legendHtml}</div>`;
@@ -560,7 +539,17 @@
         "niche-finder": { 
             title: "Localizador de Nichos", 
             desc: "Encontre nichos e tendências de mercado com estimativas de RPM.", 
-            content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="niche-keyword" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Palavra-chave (opcional)"><select id="niche-country" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="BR">Brasil</option><option value="US">EUA</option><option value="PT">Portugal</option><option value="ES">Espanha</option><option value="DE">Alemanha</option><option value="FR">França</option><option value="GB">Reino Unido</option><option value="JP">Japão</option></select></div><button id="generate-niches" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🔎 Encontrar Nichos</button><div id="output" class="mt-6"></div><button id="generate-more-niches" class="hidden w-full mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Gerar Mais</button></div>` 
+            content: `<div class="bg-white p-6 rounded-xl shadow-sm border">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <input type="text" id="niche-keyword" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Palavra-chave (opcional)">
+                            <select id="niche-country" class="w-full px-4 py-3 bg-slate-100 border rounded-lg">
+                                <option value="BR">Brasil</option><option value="US">EUA</option><option value="PT">Portugal</option><option value="ES">Espanha</option><option value="DE">Alemanha</option><option value="FR">França</option><option value="GB">Reino Unido</option><option value="JP">Japão</option>
+                            </select>
+                        </div>
+                        <button id="generate-niches" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🔎 Encontrar Nichos</button>
+                        <div id="output" class="mt-6"></div>
+                        <button id="generate-more-niches" class="hidden w-full mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Gerar Mais</button>
+                      </div>` 
         },
         "niche-analysis": { title: "Análise de Nicho (RPM/Hype)", desc: "Analise o potencial de um nicho específico.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="analysis-niche" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nicho a ser analisado"><select id="analysis-country" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="BR">Brasil</option><option value="US">EUA</option><option value="PT">Portugal</option><option value="ES">Espanha</option><option value="DE">Alemanha</option><option value="FR">França</option></select></div><button id="analyze-niche" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">📊 Analisar Nicho</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
         "video-optimizer": { title: "Analisador de Vídeo (URL)", desc: "Otimize títulos, descrições e tags a partir de uma URL do YouTube.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="url" id="video-url" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="https://www.youtube.com/watch?v=..."><button id="analyze-video" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🚀 Otimizar Vídeo</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
@@ -1741,54 +1730,47 @@
         await apiRequest(`/api/settings`, 'POST', { settings: settingsToSave });
     }
 
-    // --- Lógica do Chat (ATUALIZADA) ---
+    // --- Lógica do Chat (REFEITA) ---
     const chatWidget = document.getElementById('chat-widget');
+    const chatBubble = document.getElementById('chat-bubble');
     const chatContainer = document.getElementById('chat-container');
-
-    function playNotificationSound() {
-        if (!audioContext) {
-            try { audioContext = new (window.AudioContext || window.webkitAudioContext)(); } 
-            catch(e) { console.error("Web Audio API não suportada."); return; }
-        }
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.5);
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
-    }
+    const chatNotificationDot = document.getElementById('chat-notification-dot');
 
     function toggleChatWindow() {
         appState.chat.isOpen = !appState.chat.isOpen;
         if (appState.chat.isOpen) {
             chatContainer.style.display = 'flex';
-            ELEMENTS.chatBubble.classList.remove('pulsate');
-            appState.chat.activePeer = null;
-            if (appState.currentUser.role === 'admin') renderChatUserList();
-            else openChatWith({ id: 1, email: 'Suporte' });
+            appState.chat.activePeer = null; // Reseta o peer ativo ao abrir
+            if (appState.currentUser.role === 'admin') {
+                renderChatUserList();
+            } else {
+                // Utilizador normal fala diretamente com o admin (ID 1 por convenção)
+                openChatWith({ id: 1, email: 'Suporte' });
+            }
         } else {
             chatContainer.style.display = 'none';
         }
     }
 
     async function renderChatUserList() {
-        chatContainer.innerHTML = `<div class="chat-header"><span>Utilizadores</span><button id="chat-close-btn" class="text-white">&times;</button></div><div id="chat-user-list" class="p-2">A carregar...</div>`;
+        chatContainer.innerHTML = `<div class="chat-header"><span>Utilizadores Online</span><button id="chat-close-btn" class="text-white">&times;</button></div><div id="chat-user-list" class="p-2">A carregar...</div>`;
         document.getElementById('chat-close-btn').addEventListener('click', toggleChatWindow);
         try {
             const users = await apiRequest('/api/chat/users', 'GET');
             const userListEl = document.getElementById('chat-user-list');
-            const onlineUsers = users.filter(u => u.is_online);
-            const offlineUsers = users.filter(u => !u.is_online);
-            let html = '<div class="px-2 text-xs font-semibold text-green-400">ONLINE</div>';
-            html += onlineUsers.length > 0 ? onlineUsers.map(user => `<div class="chat-user-item" data-peer-id="${user.user_id}" data-peer-email="${user.email}"><span><span class="online-status-dot"></span>${user.email}</span>${user.unread_count > 0 ? `<span class="unread-indicator"></span>` : ''}</div>`).join('') : '<p class="text-center text-xs text-gray-400 p-2">Ninguém online.</p>';
-            html += '<div class="mt-4 px-2 text-xs font-semibold text-gray-500">OFFLINE</div>';
-            if (offlineUsers.length > 0) html += offlineUsers.map(user => `<div class="chat-user-item" data-peer-id="${user.user_id}" data-peer-email="${user.email}"><span>${user.email}</span>${user.unread_count > 0 ? `<span class="unread-indicator"></span>` : ''}</div>`).join('');
-            userListEl.innerHTML = html;
-        } catch (error) { userListEl.innerHTML = `<p class="text-red-400 text-sm p-2">${error.message}</p>`; }
+            if (users && users.length > 0) {
+                userListEl.innerHTML = users.map(user => `
+                    <div class="chat-user-item flex justify-between items-center" data-peer-id="${user.user_id}" data-peer-email="${user.email}">
+                        <span>${user.email}</span>
+                        ${user.unread_count > 0 ? `<span class="unread-indicator" title="${user.unread_count} novas mensagens"></span>` : ''}
+                    </div>
+                `).join('');
+            } else {
+                userListEl.innerHTML = '<p class="text-center text-sm text-gray-400 p-4">Nenhum utilizador para exibir.</p>';
+            }
+        } catch (error) {
+            document.getElementById('chat-user-list').innerHTML = `<p class="text-red-400 text-sm p-2">${error.message}</p>`;
+        }
     }
 
     async function openChatWith(peer) {
@@ -1799,11 +1781,32 @@
             const isOnline = status.isAdminOnline;
             adminStatusHtml = `<span class="flex items-center text-xs font-normal normal-case"><span class="admin-status-dot ${isOnline ? 'online' : 'offline'}"></span>${isOnline ? 'Online' : 'Offline'}</span>`;
         }
-        chatContainer.innerHTML = `<div class="chat-header">${appState.currentUser.role === 'admin' ? '<button id="chat-back-btn" class="text-white">&larr; Voltar</button>' : '<div></div>'}<div class="text-center"><span>${peer.email}</span>${adminStatusHtml}</div><button id="chat-close-btn" class="text-white">&times;</button></div><div class="chat-messages" id="chat-messages-area"></div><div class="chat-input"><input type="text" id="chat-message-input" class="w-full bg-gray-800 text-white rounded-l-md px-3 py-2" placeholder="Digite uma mensagem..."><button id="chat-send-btn" class="bg-red-600 text-white px-4 rounded-r-md">Enviar</button></div>`;
+
+        chatContainer.innerHTML = `
+            <div class="chat-header">
+                ${appState.currentUser.role === 'admin' ? '<button id="chat-back-btn" class="text-white">&larr; Voltar</button>' : '<div></div>'}
+                <div class="text-center">
+                    <span>${peer.email}</span>
+                    ${adminStatusHtml}
+                </div>
+                <button id="chat-close-btn" class="text-white">&times;</button>
+            </div>
+            <div class="chat-messages" id="chat-messages-area"></div>
+            <div class="chat-input">
+                <input type="text" id="chat-message-input" class="w-full bg-gray-800 text-white rounded-l-md px-3 py-2" placeholder="Digite uma mensagem...">
+                <button id="chat-send-btn" class="bg-red-600 text-white px-4 rounded-r-md">Enviar</button>
+            </div>
+        `;
+        
         document.getElementById('chat-close-btn').addEventListener('click', toggleChatWindow);
-        if (appState.currentUser.role === 'admin') document.getElementById('chat-back-btn').addEventListener('click', renderChatUserList);
+        if (appState.currentUser.role === 'admin') {
+            document.getElementById('chat-back-btn').addEventListener('click', renderChatUserList);
+        }
         document.getElementById('chat-send-btn').addEventListener('click', sendMessage);
-        document.getElementById('chat-message-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+        document.getElementById('chat-message-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
         await loadMessageHistory();
     }
 
@@ -1811,7 +1814,13 @@
         const messagesArea = document.getElementById('chat-messages-area');
         if (!appState.chat.activePeer || !messagesArea) return;
         const history = await apiRequest(`/api/chat/history/${appState.chat.activePeer.id}`, 'GET');
-        if (history) messagesArea.innerHTML = history.map(msg => `<div class="message-bubble ${msg.sender_id === appState.currentUser.id ? 'message-sent' : 'message-received'}">${msg.message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`).join('');
+        if (history) {
+            messagesArea.innerHTML = history.map(msg => `
+                <div class="message-bubble ${msg.sender_id === appState.currentUser.id ? 'message-sent' : 'message-received'}">
+                    ${msg.message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+                </div>
+            `).join('');
+        }
         messagesArea.scrollTop = 0;
     }
 
@@ -1819,7 +1828,11 @@
         const input = document.getElementById('chat-message-input');
         const message = input.value.trim();
         if (!message || !appState.chat.activePeer) return;
-        await apiRequest('/api/chat/send', 'POST', { receiverId: appState.chat.activePeer.id, message });
+
+        await apiRequest('/api/chat/send', 'POST', {
+            receiverId: appState.chat.activePeer.id,
+            message: message
+        });
         input.value = '';
         await loadMessageHistory();
     }
@@ -1829,52 +1842,117 @@
         try {
             const notifications = await apiRequest('/api/chat/notifications', 'GET');
             const totalUnread = notifications.reduce((sum, notif) => sum + parseInt(notif.unread_count, 10), 0);
-            if (totalUnread > 0) {
-                ELEMENTS.chatNotificationBadge.textContent = totalUnread;
-                ELEMENTS.chatNotificationBadge.style.display = 'flex';
-                if (!appState.chat.isOpen) ELEMENTS.chatBubble.classList.add('pulsate');
-                if (totalUnread > appState.chat.lastUnreadCount) playNotificationSound();
-            } else {
-                ELEMENTS.chatNotificationBadge.style.display = 'none';
-                ELEMENTS.chatBubble.classList.remove('pulsate');
-            }
-            appState.chat.lastUnreadCount = totalUnread;
+            
+            chatNotificationDot.style.display = totalUnread > 0 ? 'block' : 'none';
+            
             if (appState.chat.isOpen) {
-                if (appState.currentUser.role === 'admin' && !appState.chat.activePeer) renderChatUserList();
-                if (appState.chat.activePeer && notifications.some(n => n.sender_id === appState.chat.activePeer.id)) loadMessageHistory();
+                if (appState.currentUser.role === 'admin' && !appState.chat.activePeer) {
+                    renderChatUserList();
+                }
+                if (appState.chat.activePeer) {
+                    const isFromActivePeer = notifications.some(n => n.sender_id === appState.chat.activePeer.id);
+                    if (isFromActivePeer) {
+                        loadMessageHistory();
+                    }
+                }
             }
-        } catch (error) { console.error("Erro ao buscar notificações:", error); }
+        } catch (error) {
+            console.error("Erro ao buscar notificações:", error);
+        }
     }
-
-    function showLoginNotificationPopup() { ELEMENTS.loginNotificationPopup.style.display = 'block'; }
-    function hideLoginNotificationPopup() { ELEMENTS.loginNotificationPopup.style.display = 'none'; }
-    function showOfflineMessageModal(userId, userEmail) {
-        document.getElementById('offline-user-email').textContent = userEmail;
-        ELEMENTS.offlineMessageModal.dataset.userId = userId;
-        ELEMENTS.offlineMessageModal.style.display = 'flex';
-        document.getElementById('offline-message-textarea').focus();
-    }
-    function hideOfflineMessageModal() {
-        ELEMENTS.offlineMessageModal.style.display = 'none';
-        document.getElementById('offline-message-textarea').value = '';
-    }
-
+    
+    // --- Painel de Admin (REFEITO) ---
     async function initializeAdminPanel() {
         const container = document.getElementById('admin-container');
-        container.innerHTML = `<p class="text-white">A carregar...</p>`;
+        container.innerHTML = `<p class="text-white">A carregar dados do painel...</p>`;
+
         try {
-            const [users, stats] = await Promise.all([ apiRequest('/api/admin/users', 'GET'), apiRequest('/api/admin/stats', 'GET') ]);
+            const [users, stats] = await Promise.all([
+                apiRequest('/api/admin/users', 'GET'),
+                apiRequest('/api/admin/stats', 'GET')
+            ]);
+            
             const pendingActivationUsers = users.filter(u => !u.is_active);
             const activeUsers = users.filter(u => u.is_active);
-            container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"><div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Total</p><p class="text-4xl font-bold text-slate-800">${stats.totalUsers}</p></div><div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Online</p><p class="text-4xl font-bold text-green-600">${stats.onlineNow}</p></div><div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Logins (24h)</p><p class="text-4xl font-bold text-slate-800">${stats.loginsLast24h}</p></div><div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Pendentes</p><p class="text-4xl font-bold text-yellow-600">${stats.pendingActivation}</p></div></div><div class="bg-white p-6 rounded-xl shadow-sm border"><h3 class="text-lg font-semibold mb-4 font-display">Utilizadores Ativos</h3><div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th class="px-6 py-3">Email</th><th class="px-6 py-3">Último Login</th><th class="px-6 py-3 text-center">Ações</th></tr></thead><tbody>${activeUsers.map(u => `<tr class="bg-white border-b"><td class="px-6 py-4 font-medium text-gray-900">${u.email}</td><td class="px-6 py-4">${u.last_login || 'Nunca'}</td><td class="px-6 py-4 text-center space-x-2"><button class="offline-message-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-email="${u.email}">Mensagem</button><button class="user-status-toggle bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="false" ${appState.currentUser.id === u.id ? 'disabled' : ''}>Desativar</button></td></tr>`).join('')}</tbody></table></div></div><div class="bg-yellow-900/30 p-6 rounded-xl shadow-sm border border-yellow-700"><h3 class="text-lg font-semibold mb-4 font-display text-yellow-400">Ativações Pendentes (${pendingActivationUsers.length})</h3>${pendingActivationUsers.length > 0 ? `<div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-300"><thead class="text-xs text-yellow-400 uppercase"><tr><th class="px-6 py-3">Email</th><th class="px-6 py-3 text-center">Ação</th></tr></thead><tbody>${pendingActivationUsers.map(u => `<tr class="border-b border-yellow-800"><td class="px-6 py-4">${u.email}</td><td class="px-6 py-4 text-center"><button class="user-status-toggle bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="true">Ativar</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="text-sm text-yellow-200">Nenhum utilizador a aguardar ativação.</p>'}</div>`;
-            document.querySelectorAll('.user-status-toggle').forEach(button => button.addEventListener('click', async (e) => {
-                const userId = e.target.dataset.userid;
-                const isActive = e.target.dataset.isActive === 'true';
-                await apiRequest(`/api/admin/user/${userId}/status`, 'PUT', { isActive });
-                initializeAdminPanel();
-            }));
-            document.querySelectorAll('.offline-message-btn').forEach(button => button.addEventListener('click', (e) => showOfflineMessageModal(e.target.dataset.userid, e.target.dataset.email)));
-        } catch (error) { container.innerHTML = `<p class="text-red-500">Erro: ${error.message}</p>`; }
+
+            container.innerHTML = `
+                <!-- Estatísticas -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Total de Utilizadores</p><p class="text-4xl font-bold text-slate-800">${stats.totalUsers}</p></div>
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Online Agora</p><p class="text-4xl font-bold text-green-600">${stats.onlineNow}</p></div>
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Logins (24h)</p><p class="text-4xl font-bold text-slate-800">${stats.loginsLast24h}</p></div>
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Ativações Pendentes</p><p class="text-4xl font-bold text-yellow-600">${stats.pendingActivation}</p></div>
+                </div>
+
+                <!-- Ativações Pendentes -->
+                <div class="bg-yellow-900/30 p-6 rounded-xl shadow-sm border border-yellow-700">
+                    <h3 class="text-lg font-semibold mb-4 font-display text-yellow-400">Ativações Pendentes (${pendingActivationUsers.length})</h3>
+                    ${pendingActivationUsers.length > 0 ? `
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-300">
+                            <thead class="text-xs text-yellow-400 uppercase">
+                                <tr><th scope="col" class="px-6 py-3">Email</th><th scope="col" class="px-6 py-3 text-center">Ação</th></tr>
+                            </thead>
+                            <tbody>
+                                ${pendingActivationUsers.map(u => `
+                                    <tr class="border-b border-yellow-800">
+                                        <td class="px-6 py-4">${u.email}</td>
+                                        <td class="px-6 py-4 text-center">
+                                            <button class="user-status-toggle bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="true">Ativar</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    ` : '<p class="text-sm text-yellow-200">Nenhum utilizador a aguardar ativação.</p>'}
+                </div>
+
+                <!-- Gestão de Utilizadores Ativos -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border">
+                    <h3 class="text-lg font-semibold mb-4 font-display">Gestão de Utilizadores Ativos</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-500">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3">Email</th>
+                                    <th scope="col" class="px-6 py-3">Último Login</th>
+                                    <th scope="col" class="px-6 py-3 text-center">Desativar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${activeUsers.map(u => `
+                                    <tr class="bg-white border-b">
+                                        <td class="px-6 py-4 font-medium text-gray-900">${u.email}</td>
+                                        <td class="px-6 py-4">${u.last_login || 'Nunca'}</td>
+                                        <td class="px-6 py-4 text-center">
+                                             <button class="user-status-toggle bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="false" ${appState.currentUser.id === u.id ? 'disabled title="Não pode desativar a si mesmo"' : ''}>Desativar</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            document.querySelectorAll('.user-status-toggle').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const userId = e.target.dataset.userid;
+                    const isActive = e.target.dataset.isActive === 'true';
+                    try {
+                        await apiRequest(`/api/admin/user/${userId}/status`, 'PUT', { isActive });
+                        addToLog(`Status do utilizador ${userId} atualizado.`);
+                        initializeAdminPanel();
+                    } catch (error) {
+                        addToLog(`Erro ao atualizar status: ${error.message}`, true);
+                    }
+                });
+            });
+
+        } catch (error) {
+            container.innerHTML = `<p class="text-red-500">Erro ao carregar o painel: ${error.message}</p>`;
+        }
     }
     
     // --- Event Listeners ---
@@ -1884,6 +1962,7 @@
     ELEMENTS.showLogin.addEventListener('click', (e) => { e.preventDefault(); showLoginScreen(); });
     document.getElementById('back-to-login').addEventListener('click', (e) => { e.preventDefault(); showLoginScreen(); });
     ELEMENTS.logoutBtn.addEventListener('click', handleLogout);
+    
     ELEMENTS.sidebarNav.addEventListener('click', (event) => {
         const clickedButton = event.target.closest('.sidebar-btn');
         if (clickedButton) {
@@ -1892,39 +1971,49 @@
             renderTabContent(clickedButton.getAttribute('data-tab'));
         }
     });
+
     ELEMENTS.tabContent.addEventListener('click', (e) => {
         if (e.target.classList.contains('copy-btn')) {
-            const text = decodeURIComponent(e.target.dataset.copyText);
+            const button = e.target;
+            const text = decodeURIComponent(button.dataset.copyText);
             const textArea = document.createElement('textarea');
             textArea.value = text;
+            textArea.style.position = 'fixed';
             document.body.appendChild(textArea);
             textArea.select();
-            document.execCommand('copy');
+            try {
+                document.execCommand('copy');
+                button.textContent = 'Copiado!';
+                button.classList.add('copied');
+                setTimeout(() => {
+                    button.textContent = 'Copiar';
+                    button.classList.remove('copied');
+                }, 2000);
+            } catch (err) { console.error('Falha ao copiar', err); }
             document.body.removeChild(textArea);
-            e.target.textContent = 'Copiado!';
-            setTimeout(() => { e.target.textContent = 'Copiar'; }, 2000);
         }
     });
-    ELEMENTS.openMenuBtn.addEventListener('click', () => { ELEMENTS.sidebar.classList.add('open'); ELEMENTS.menuOverlay.style.display = 'block'; });
-    ELEMENTS.menuOverlay.addEventListener('click', () => { ELEMENTS.sidebar.classList.remove('open'); ELEMENTS.menuOverlay.style.display = 'none'; });
-    ELEMENTS.chatBubble.addEventListener('click', toggleChatWindow);
+
+    // Mobile Menu Listeners
+    ELEMENTS.openMenuBtn.addEventListener('click', () => {
+        ELEMENTS.sidebar.classList.add('open');
+        ELEMENTS.menuOverlay.style.display = 'block';
+    });
+    
+    ELEMENTS.menuOverlay.addEventListener('click', () => {
+        ELEMENTS.sidebar.classList.remove('open');
+        ELEMENTS.menuOverlay.style.display = 'none';
+    });
+
+    // Chat Listeners
+    chatBubble.addEventListener('click', toggleChatWindow);
     document.body.addEventListener('click', (e) => {
         const userItem = e.target.closest('.chat-user-item');
-        if (userItem) openChatWith({ id: parseInt(userItem.dataset.peerId), email: userItem.dataset.peerEmail });
-    });
-    document.getElementById('open-chat-from-popup').addEventListener('click', () => { hideLoginNotificationPopup(); toggleChatWindow(); });
-    document.getElementById('close-popup').addEventListener('click', hideLoginNotificationPopup);
-    document.getElementById('cancel-offline-message').addEventListener('click', hideOfflineMessageModal);
-    document.getElementById('send-offline-message').addEventListener('click', async () => {
-        const modal = ELEMENTS.offlineMessageModal;
-        const receiverId = modal.dataset.userId;
-        const message = document.getElementById('offline-message-textarea').value.trim();
-        if (!message || !receiverId) return;
-        try {
-            await apiRequest('/api/chat/send', 'POST', { receiverId, message });
-            addToLog(`Mensagem enviada para o utilizador ${receiverId}.`);
-            hideOfflineMessageModal();
-        } catch (error) { addToLog(`Erro ao enviar mensagem: ${error.message}`, true); }
+        if (userItem) {
+            const peerId = userItem.dataset.peerId;
+            const peerEmail = userItem.dataset.peerEmail;
+            openChatWith({ id: parseInt(peerId), email: peerEmail });
+        }
     });
     </script>
 </body>
