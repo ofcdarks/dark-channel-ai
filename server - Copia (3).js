@@ -27,8 +27,7 @@ const BASE_DIR = __dirname;
 // Middlewares
 app.use(express.json());
 
-// Servir arquivos estáticos do diretório raiz do projeto.
-// O Express irá automaticamente procurar por "index.html" ao aceder a "/".
+// Servir arquivos estáticos do diretório raiz do projeto antes de qualquer outra rota
 app.use(express.static(BASE_DIR)); 
 
 // Servir uploads de imagens
@@ -771,10 +770,9 @@ app.get('/api/chat/admin-status', verifyToken, async (req, res) => {
 
 
 // 11. Rota Genérica (Catch-all)
-// Removido, pois express.static já lida com isto
-// app.get('*', (req, res) => {
-//   res.sendFile(path.join(BASE_DIR, 'index.html'));
-// });
+app.get('*', (req, res) => {
+  res.sendFile(path.join(BASE_DIR, 'index.html'));
+});
 
 // 12. Inicialização do Servidor
 app.listen(PORT, () => {
