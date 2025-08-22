@@ -133,7 +133,6 @@ app.post('/api/register', async (req, res) => {
     try {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
-        // ALTERAÇÃO: Novos utilizadores são criados como inativos
         const result = await pool.query('INSERT INTO users (email, password_hash, settings, is_active) VALUES ($1, $2, $3, false) RETURNING id, email', [email, passwordHash, {}]);
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -158,7 +157,6 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ message: 'Email ou senha inválidos.' });
         }
         
-        // ALTERAÇÃO: Mensagem específica para contas pendentes de ativação
         if (!user.is_active) {
             return res.status(403).json({ message: 'Sua conta precisa ser ativada por um administrador.' });
         }
@@ -489,7 +487,6 @@ app.get('/api/admin/history', verifyToken, requireAdmin, async (req, res) => {
     }
 });
 
-// NOVA ROTA: Estatísticas para o painel admin
 app.get('/api/admin/stats', verifyToken, requireAdmin, async (req, res) => {
     try {
         const totalUsersRes = await pool.query("SELECT COUNT(*) FROM users");
@@ -509,19 +506,20 @@ app.get('/api/admin/stats', verifyToken, requireAdmin, async (req, res) => {
     }
 });
 
-// 9. NOVAS ROTAS DE CHAT
-// Lista utilizadores para o admin
+// 9. ROTAS DE CHAT (ATUALIZADAS)
 app.get('/api/chat/users', verifyToken, requireAdmin, async (req, res) => {
     try {
-        // Seleciona todos os utilizadores que não são o próprio admin, e conta as mensagens não lidas que eles enviaram PARA o admin.
+        // CORREÇÃO: Utiliza LEFT JOIN para garantir que todos os utilizadores são retornados
+        // e COALESCE para tratar casos onde um utilizador nunca teve uma sessão.
         const result = await pool.query(`
             SELECT 
                 u.id as user_id, 
                 u.email,
-                (SELECT COUNT(*) FROM chat_messages WHERE sender_id = u.id AND receiver_id = $1 AND is_read = false) as unread_count
+                (SELECT COUNT(*) FROM chat_messages WHERE sender_id = u.id AND receiver_id = $1 AND is_read = false) as unread_count,
+                COALESCE((SELECT s.last_seen > NOW() - INTERVAL '5 minutes' FROM active_sessions s WHERE s.user_id = u.id), false) as is_online
             FROM users u
-            WHERE u.id != $1
-            ORDER BY u.email;
+            WHERE u.id != $1 AND u.role != 'admin'
+            ORDER BY is_online DESC, u.email;
         `, [req.user.id]);
         res.json(result.rows);
     } catch (error) {
@@ -530,17 +528,14 @@ app.get('/api/chat/users', verifyToken, requireAdmin, async (req, res) => {
     }
 });
 
-// Obtém o histórico de mensagens com um utilizador específico
 app.get('/api/chat/history/:peerId', verifyToken, async (req, res) => {
     const myId = req.user.id;
     const peerId = parseInt(req.params.peerId, 10);
     try {
-        // Marca as mensagens como lidas ao carregar o histórico
         await pool.query(
             "UPDATE chat_messages SET is_read = true WHERE sender_id = $1 AND receiver_id = $2",
             [peerId, myId]
         );
-        // Busca a conversa
         const result = await pool.query(`
             SELECT * FROM chat_messages 
             WHERE (sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)
@@ -553,7 +548,6 @@ app.get('/api/chat/history/:peerId', verifyToken, async (req, res) => {
     }
 });
 
-// Envia uma mensagem
 app.post('/api/chat/send', verifyToken, async (req, res) => {
     const { receiverId, message } = req.body;
     const senderId = req.user.id;
@@ -570,7 +564,6 @@ app.post('/api/chat/send', verifyToken, async (req, res) => {
     }
 });
 
-// Verifica notificações de novas mensagens
 app.get('/api/chat/notifications', verifyToken, async (req, res) => {
     try {
         const result = await pool.query(`
@@ -586,10 +579,8 @@ app.get('/api/chat/notifications', verifyToken, async (req, res) => {
     }
 });
 
-// Verifica se o admin está online
 app.get('/api/chat/admin-status', verifyToken, async (req, res) => {
     try {
-        // ID 1 é o admin por convenção da inicialização da DB
         const result = await pool.query("SELECT 1 FROM active_sessions WHERE user_id = 1 AND last_seen > NOW() - INTERVAL '5 minutes'");
         res.json({ isAdminOnline: result.rowCount > 0 });
     } catch (error) {
