@@ -506,19 +506,18 @@ app.get('/api/admin/stats', verifyToken, requireAdmin, async (req, res) => {
     }
 });
 
-// 9. ROTAS DE CHAT (ATUALIZADAS)
+// 9. ROTAS DE CHAT
+// ALTERAÇÃO: Rota agora retorna status online e ordena por ele
 app.get('/api/chat/users', verifyToken, requireAdmin, async (req, res) => {
     try {
-        // CORREÇÃO: Utiliza LEFT JOIN para garantir que todos os utilizadores são retornados
-        // e COALESCE para tratar casos onde um utilizador nunca teve uma sessão.
         const result = await pool.query(`
             SELECT 
                 u.id as user_id, 
                 u.email,
                 (SELECT COUNT(*) FROM chat_messages WHERE sender_id = u.id AND receiver_id = $1 AND is_read = false) as unread_count,
-                COALESCE((SELECT s.last_seen > NOW() - INTERVAL '5 minutes' FROM active_sessions s WHERE s.user_id = u.id), false) as is_online
+                (SELECT EXISTS (SELECT 1 FROM active_sessions WHERE user_id = u.id AND last_seen > NOW() - INTERVAL '5 minutes')) as is_online
             FROM users u
-            WHERE u.id != $1 AND u.role != 'admin'
+            WHERE u.id != $1
             ORDER BY is_online DESC, u.email;
         `, [req.user.id]);
         res.json(result.rows);
