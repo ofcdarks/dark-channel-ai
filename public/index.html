@@ -30,7 +30,7 @@
         .progress-bar-indeterminate { background-size: 200% 100%; background-image: linear-gradient(to right, #4B5563 0%, #DC2626 50%, #4B5563 100%); animation: move-bg 2s linear infinite; }
         @keyframes move-bg { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         #login-container { display: flex; }
-        #register-container, #app-container, #progress-modal { display: none; }
+        #register-container, #app-container, #progress-modal, #activation-container { display: none; }
         .prose { max-width: none; color: #374151; }
         .copy-btn.copied { background-color: #10b981; color: white; }
         
@@ -45,19 +45,28 @@
             background-blend-mode: screen;
         }
 
-        .login-form-container {
+        .form-container {
             background-color: rgba(17, 24, 39, 0.6);
             backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
-        /* Estilo para o switch de ativar/desativar utilizador */
-        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #4b5563; transition: .4s; border-radius: 20px; }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #10b981; }
-        input:checked + .slider:before { transform: translateX(20px); }
+        /* Estilos do Chat */
+        #chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 100; display: none; }
+        #chat-bubble { width: 60px; height: 60px; border-radius: 50%; background-color: #DC2626; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); transition: transform 0.2s; }
+        #chat-bubble:hover { transform: scale(1.1); }
+        #chat-notification-dot { position: absolute; top: 0; right: 0; width: 15px; height: 15px; background-color: #fde047; border-radius: 50%; border: 2px solid #DC2626; display: none; }
+        #chat-container { display: none; width: 350px; height: 500px; background-color: #1f2937; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); flex-direction: column; overflow: hidden; border: 1px solid #4b5563; }
+        .chat-header { background-color: #111827; padding: 10px; font-weight: bold; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .chat-messages { flex-grow: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column-reverse; }
+        .message-bubble { max-width: 80%; padding: 8px 12px; border-radius: 15px; margin-bottom: 8px; word-wrap: break-word; }
+        .message-sent { background-color: #DC2626; color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
+        .message-received { background-color: #4b5563; color: white; align-self: flex-start; border-bottom-left-radius: 3px; }
+        .chat-input { display: flex; padding: 10px; background-color: #111827; }
+        #chat-user-list { max-height: 400px; overflow-y: auto; }
+        .chat-user-item { cursor: pointer; padding: 10px; border-bottom: 1px solid #374151; }
+        .chat-user-item:hover { background-color: #374151; }
+        .unread-indicator { width: 10px; height: 10px; background-color: #fde047; border-radius: 50%; display: inline-block; margin-left: 8px; }
 
         @media (max-width: 768px) {
             #app-container { flex-direction: column; }
@@ -86,17 +95,32 @@
                 background-position: center 80%;
                 background-size: 160%;
             }
-            .login-form-container {
+            .form-container {
                 background-color: rgba(0,0,0,0.7);
             }
+            #chat-container { width: 90vw; height: 70vh; right: 5vw; bottom: 90px; }
         }
     </style>
 </head>
-<body class="text-slate-200" oncontextmenu="return false;">
+<body class="text-slate-200">
+
+    <!-- Tela de Solicitação de Ativação -->
+    <div id="activation-container" class="hidden items-center justify-center h-screen login-background">
+        <div class="w-full max-w-md p-8 space-y-6 text-center rounded-lg form-container">
+            <h2 class="text-3xl font-extrabold text-white font-display">Ativação Pendente</h2>
+            <p class="text-gray-300">A sua conta foi registada com sucesso, mas precisa de ser ativada por um administrador.</p>
+            <p class="text-gray-400 text-sm">Para acelerar o processo, por favor, entre em contacto connosco.</p>
+            <a href="https://wa.me/5514997022684?text=Olá!%20Acabei%20de%20me%20registar%20na%20plataforma%20La%20Casa%20Canais%20Darks%20e%20gostaria%20de%20solicitar%20a%20ativação%20da%20minha%20conta." target="_blank" class="inline-block w-full max-w-xs py-3 px-4 font-bold rounded-md text-white bg-green-600 hover:bg-green-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M10.2 3.2C5.6 3.2 2 6.8 2 11.4c0 1.5.4 2.9 1.2 4.2L2 20l4.5-1.2c1.3.7 2.7 1.1 4.2 1.1h.1c4.6 0 8.3-3.7 8.3-8.3S14.8 3.2 10.2 3.2zM10.2 18.1c-1.4 0-2.8-.4-4-1.2l-.3-.2-3  .8.8-2.9-.2-.3c-.8-1.2-1.3-2.7-1.3-4.2 0-3.7 3-6.7 6.7-6.7s6.7 3 6.7 6.7-3 6.7-6.7 6.7zm3.6-5c-.2-.1-1.2-.6-1.4-.7-.2-.1-.3-.1-.5.1s-.5.6-.7.7c-.1.1-.3.2-.5.1-.2-.1-.9-.3-1.8-1.1-.7-.6-1.1-1.4-1.3-1.6-.1-.2 0-.3.1-.4l.2-.2c.1-.1.2-.2.3-.4.1-.1.1-.2 0-.4-.1-.1-1-.2-1.3-.3s-.5-.1-.7-.1c-.2 0-.5 0-.7.2-.2.2-.8.8-.8 1.9s.8 2.2 1 2.3c.1.1 1.6 2.5 4 3.5.6.2 1 .4 1.3.5.6.2 1.1.1 1.5.1.5-.1 1.2-.5 1.4-1 .2-.5.2-1 .1-1s-.3-.2-.5-.3z"/></svg>
+                Solicitar Ativação via WhatsApp
+            </a>
+            <p class="text-center text-sm text-gray-400 pt-4"><a href="#" id="back-to-login" class="font-medium text-red-500 hover:text-red-400">Voltar para o Login</a></p>
+        </div>
+    </div>
 
     <!-- Telas de Autenticação -->
     <div id="login-container" class="flex items-center justify-center h-screen login-background">
-        <div class="w-full max-w-xs p-8 space-y-8 rounded-lg login-form-container">
+        <div class="w-full max-w-xs p-8 space-y-8 rounded-lg form-container">
             <div class="text-center">
                 <h2 class="text-4xl font-extrabold text-white font-display">LA CASA</h2>
                 <div class="inline-block bg-red-600 px-4 py-1 mt-1">
@@ -112,19 +136,20 @@
                 <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-red-600 hover:bg-red-700">Login</button>
             </form>
             <p class="text-center text-sm text-gray-400">Não tem uma conta? <a href="#" id="show-register" class="font-medium text-red-500 hover:text-red-400">Registe-se</a></p>
+            <p class="text-center text-sm text-gray-400">Problemas com o acesso? <a href="#" id="show-activation-request" class="font-medium text-yellow-500 hover:text-yellow-400">Solicitar Acesso</a></p>
         </div>
     </div>
     <div id="register-container" class="hidden items-center justify-center h-screen login-background">
-        <div class="w-full max-w-xs p-8 space-y-6 rounded-lg login-form-container">
+        <div class="w-full max-w-xs p-8 space-y-6 rounded-lg form-container">
             <div>
                 <h2 class="text-3xl font-extrabold text-center text-white font-display">Criar Conta</h2>
-                <p class="mt-2 text-center text-sm text-gray-400">Junte-se ao plano</p>
+                <p class="mt-2 text-center text-sm text-gray-400">O seu acesso será validado por um administrador.</p>
             </div>
             <form id="register-form" class="mt-8 space-y-6">
                 <div id="register-feedback" class="text-red-500 text-sm text-center min-h-[20px]"></div>
                  <div class="space-y-4">
-                    <input id="register-email" type="email" required class="appearance-none relative block w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Seu melhor e-mail">
-                    <input id="register-password" type="password" required class="appearance-none relative block w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Crie uma senha forte">
+                    <input id="register-email" type="email" required class="appearance-none relative block w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md" placeholder="Seu melhor e-mail">
+                    <input id="register-password" type="password" required class="appearance-none relative block w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md" placeholder="Crie uma senha forte">
                 </div>
                 <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-red-600 hover:bg-red-700">Criar Conta</button>
             </form>
@@ -167,6 +192,17 @@
         </div>
     </div>
 
+    <!-- Widget do Chat -->
+    <div id="chat-widget">
+        <div id="chat-bubble">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clip-rule="evenodd" /></svg>
+            <div id="chat-notification-dot"></div>
+        </div>
+        <div id="chat-container">
+            <!-- O conteúdo do chat será renderizado aqui pelo JS -->
+        </div>
+    </div>
+
     <script>
     // --- Global State Management ---
     let appState = {
@@ -178,7 +214,12 @@
         },
         userChannels: [],
         videoIdeas: [],
-        currentVideoAnalysis: null
+        currentVideoAnalysis: null,
+        chat: {
+            isOpen: false,
+            activePeer: null, // {id, email}
+            pollInterval: null
+        }
     };
     let heartbeatInterval = null;
 
@@ -186,6 +227,7 @@
     const ELEMENTS = {
         loginContainer: document.getElementById('login-container'),
         registerContainer: document.getElementById('register-container'),
+        activationContainer: document.getElementById('activation-container'),
         appContainer: document.getElementById('app-container'),
         loginForm: document.getElementById('login-form'),
         registerForm: document.getElementById('register-form'),
@@ -254,27 +296,33 @@
     // --- Authentication ---
     function showLoginScreen() {
         ELEMENTS.registerContainer.style.display = 'none';
+        ELEMENTS.activationContainer.style.display = 'none';
         ELEMENTS.loginContainer.style.display = 'flex';
     }
 
     function showRegisterScreen() {
         ELEMENTS.loginContainer.style.display = 'none';
+        ELEMENTS.activationContainer.style.display = 'none';
         ELEMENTS.registerContainer.style.display = 'flex';
     }
-
+    
     async function handleLogin(e) {
         e.preventDefault();
         ELEMENTS.loginFeedback.textContent = '';
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
         try {
-            // A rota de login agora retorna o token e os dados do utilizador
             const response = await apiRequest('/api/login', 'POST', { email, password });
-            localStorage.setItem('authToken', response.token); // Armazena o token
+            localStorage.setItem('authToken', response.token);
             appState.currentUser = response.user;
             await initializeApp();
         } catch (error) {
-            ELEMENTS.loginFeedback.textContent = error.message;
+            if (error.message.includes('ativada')) {
+                ELEMENTS.loginContainer.style.display = 'none';
+                ELEMENTS.activationContainer.style.display = 'flex';
+            } else {
+                ELEMENTS.loginFeedback.textContent = error.message;
+            }
         }
     }
 
@@ -285,11 +333,8 @@
         const password = document.getElementById('register-password').value;
         try {
             await apiRequest('/api/register', 'POST', { email, password });
-            // Após o registo, faz o login para obter o token
-            const response = await apiRequest('/api/login', 'POST', { email, password });
-            localStorage.setItem('authToken', response.token);
-            appState.currentUser = response.user;
-            await initializeApp();
+            ELEMENTS.registerContainer.style.display = 'none';
+            ELEMENTS.activationContainer.style.display = 'flex';
         } catch (error) {
             ELEMENTS.registerFeedback.textContent = error.message;
         }
@@ -297,9 +342,11 @@
     
     function handleLogout() {
         localStorage.removeItem('authToken'); // Limpa o token
-        if (heartbeatInterval) clearInterval(heartbeatInterval); // Para o heartbeat
-        appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "" }, userChannels: [], videoIdeas: [] };
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
+        if (appState.chat.pollInterval) clearInterval(appState.chat.pollInterval);
+        appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null } };
         ELEMENTS.appContainer.style.display = 'none';
+        document.getElementById('chat-widget').style.display = 'none';
         showLoginScreen();
         document.getElementById('login-form').reset();
     }
@@ -309,7 +356,6 @@
         if (!appState.currentUser) return;
         
         try {
-            // As rotas agora são protegidas e usam o token
             const settings = await apiRequest(`/api/settings`, 'GET');
             if (settings && Object.keys(settings).length > 0) {
                 appState.apiKeys.gemini = Array.isArray(settings.gemini) && settings.gemini.length === 3 ? settings.gemini : [settings.gemini || "", "", ""];
@@ -330,14 +376,19 @@
         ELEMENTS.userEmailDisplay.textContent = appState.currentUser.email;
         ELEMENTS.loginContainer.style.display = 'none';
         ELEMENTS.registerContainer.style.display = 'none';
+        ELEMENTS.activationContainer.style.display = 'none';
         ELEMENTS.appContainer.style.display = 'flex';
         
         buildSidebar();
         renderTabContent('dashboard');
 
-        // Inicia o heartbeat para manter a sessão ativa
         if (heartbeatInterval) clearInterval(heartbeatInterval);
-        heartbeatInterval = setInterval(() => apiRequest('/api/heartbeat', 'POST'), 3 * 60 * 1000); // A cada 3 minutos
+        heartbeatInterval = setInterval(() => apiRequest('/api/heartbeat', 'POST'), 3 * 60 * 1000);
+
+        // Inicia o polling de notificações de chat
+        if (appState.chat.pollInterval) clearInterval(appState.chat.pollInterval);
+        appState.chat.pollInterval = setInterval(pollForNotifications, 5000); // A cada 5 segundos
+        document.getElementById('chat-widget').style.display = 'block';
     }
 
     // --- UI Building ---
@@ -1308,7 +1359,7 @@
                 if(trendsChart) trendsChart.style.display = 'none';
             });
         }
-        if (tabId === 'admin') initializeAdminPanel(); // Nova função
+        if (tabId === 'admin') initializeAdminPanel();
 
         const legendContainer = document.getElementById('legend-container');
         if (legendContainer) {
@@ -1755,58 +1806,185 @@
         await apiRequest(`/api/settings`, 'POST', { settings: settingsToSave });
     }
 
-    // --- Nova Função: Inicializador do Painel de Admin ---
+    // --- Lógica do Chat ---
+    const chatWidget = document.getElementById('chat-widget');
+    const chatBubble = document.getElementById('chat-bubble');
+    const chatContainer = document.getElementById('chat-container');
+    const chatNotificationDot = document.getElementById('chat-notification-dot');
+
+    function toggleChatWindow() {
+        appState.chat.isOpen = !appState.chat.isOpen;
+        if (appState.chat.isOpen) {
+            chatContainer.style.display = 'flex';
+            if (appState.currentUser.role === 'admin') {
+                renderChatUserList();
+            } else {
+                // Utilizador normal fala diretamente com o admin (ID 1 por convenção)
+                openChatWith({ id: 1, email: 'Admin' });
+            }
+        } else {
+            chatContainer.style.display = 'none';
+        }
+    }
+
+    async function renderChatUserList() {
+        chatContainer.innerHTML = `<div class="chat-header"><span>Utilizadores Online</span><button id="chat-close-btn" class="text-white">&times;</button></div><div id="chat-user-list" class="p-2">A carregar...</div>`;
+        document.getElementById('chat-close-btn').addEventListener('click', toggleChatWindow);
+        try {
+            const users = await apiRequest('/api/chat/users', 'GET');
+            const userListEl = document.getElementById('chat-user-list');
+            if (users.length > 0) {
+                userListEl.innerHTML = users.map(user => `
+                    <div class="chat-user-item flex justify-between items-center" data-peer-id="${user.user_id}" data-peer-email="${user.email}">
+                        <span>${user.email}</span>
+                        ${user.unread_count > 0 ? `<span class="unread-indicator" title="${user.unread_count} novas mensagens"></span>` : ''}
+                    </div>
+                `).join('');
+            } else {
+                userListEl.innerHTML = '<p class="text-center text-sm text-gray-400 p-4">Nenhum utilizador online.</p>';
+            }
+        } catch (error) {
+            document.getElementById('chat-user-list').innerHTML = `<p class="text-red-400 text-sm p-2">${error.message}</p>`;
+        }
+    }
+
+    async function openChatWith(peer) {
+        appState.chat.activePeer = peer;
+        chatContainer.innerHTML = `
+            <div class="chat-header">
+                <button id="chat-back-btn" class="text-white">${appState.currentUser.role === 'admin' ? '&larr; Voltar' : ''}</button>
+                <span>${peer.email}</span>
+                <button id="chat-close-btn" class="text-white">&times;</button>
+            </div>
+            <div class="chat-messages" id="chat-messages-area"></div>
+            <div class="chat-input">
+                <input type="text" id="chat-message-input" class="w-full bg-gray-800 text-white rounded-l-md px-3 py-2" placeholder="Digite uma mensagem...">
+                <button id="chat-send-btn" class="bg-red-600 text-white px-4 rounded-r-md">Enviar</button>
+            </div>
+        `;
+        
+        document.getElementById('chat-close-btn').addEventListener('click', toggleChatWindow);
+        if (appState.currentUser.role === 'admin') {
+            document.getElementById('chat-back-btn').addEventListener('click', renderChatUserList);
+        }
+        document.getElementById('chat-send-btn').addEventListener('click', sendMessage);
+        document.getElementById('chat-message-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        await loadMessageHistory();
+    }
+
+    async function loadMessageHistory() {
+        const messagesArea = document.getElementById('chat-messages-area');
+        if (!appState.chat.activePeer || !messagesArea) return;
+        const history = await apiRequest(`/api/chat/history/${appState.chat.activePeer.id}`, 'GET');
+        messagesArea.innerHTML = history.map(msg => `
+            <div class="message-bubble ${msg.sender_id === appState.currentUser.id ? 'message-sent' : 'message-received'}">
+                ${msg.message}
+            </div>
+        `).join('');
+        // Scroll to the bottom (actually top because of flex-direction: column-reverse)
+        messagesArea.scrollTop = 0;
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('chat-message-input');
+        const message = input.value.trim();
+        if (!message || !appState.chat.activePeer) return;
+
+        await apiRequest('/api/chat/send', 'POST', {
+            receiverId: appState.chat.activePeer.id,
+            message: message
+        });
+        input.value = '';
+        await loadMessageHistory(); // Recarrega para mostrar a nova mensagem
+    }
+
+    async function pollForNotifications() {
+        if (!appState.currentUser) return;
+        try {
+            const notifications = await apiRequest('/api/chat/notifications', 'GET');
+            const totalUnread = notifications.reduce((sum, notif) => sum + parseInt(notif.unread_count, 10), 0);
+            
+            if (totalUnread > 0) {
+                chatNotificationDot.style.display = 'block';
+                if (appState.chat.isOpen && appState.currentUser.role === 'admin' && !appState.chat.activePeer) {
+                    renderChatUserList();
+                }
+                if (appState.chat.isOpen && appState.chat.activePeer) {
+                    const isFromActivePeer = notifications.some(n => n.sender_id === appState.chat.activePeer.id);
+                    if (isFromActivePeer) {
+                        loadMessageHistory();
+                    }
+                }
+            } else {
+                chatNotificationDot.style.display = 'none';
+            }
+        } catch (error) {
+            console.error("Erro ao buscar notificações:", error);
+        }
+    }
+    
+    // --- Painel de Admin Atualizado ---
     async function initializeAdminPanel() {
         const container = document.getElementById('admin-container');
         container.innerHTML = `<p class="text-white">A carregar dados do painel...</p>`;
 
         try {
-            // Carrega todos os dados em paralelo
             const [users, sessions, history] = await Promise.all([
                 apiRequest('/api/admin/users', 'GET'),
                 apiRequest('/api/admin/sessions', 'GET'),
                 apiRequest('/api/admin/history', 'GET')
             ]);
+            
+            const pendingActivationUsers = users.filter(u => !u.is_active);
+            const activeUsers = users.filter(u => u.is_active);
 
-            // Renderiza o painel
             container.innerHTML = `
-                <!-- Sessões Ativas -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border">
-                    <h3 class="text-lg font-semibold mb-4 font-display">Utilizadores Online (${sessions.length})</h3>
-                    <div id="active-sessions-list" class="space-y-2">
-                        ${sessions.length > 0 ? sessions.map(s => `
-                            <div class="flex justify-between items-center bg-slate-50 p-2 rounded-md">
-                                <span class="text-sm font-medium text-slate-700">${s.email}</span>
-                                <span class="text-xs text-slate-500">Visto por último: ${s.last_seen}</span>
-                            </div>
-                        `).join('') : '<p class="text-sm text-slate-500">Nenhum utilizador ativo neste momento.</p>'}
+                <!-- Ativações Pendentes -->
+                <div class="bg-yellow-900/30 p-6 rounded-xl shadow-sm border border-yellow-700">
+                    <h3 class="text-lg font-semibold mb-4 font-display text-yellow-400">Ativações Pendentes (${pendingActivationUsers.length})</h3>
+                    ${pendingActivationUsers.length > 0 ? `
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-300">
+                            <thead class="text-xs text-yellow-400 uppercase">
+                                <tr><th scope="col" class="px-6 py-3">Email</th><th scope="col" class="px-6 py-3 text-center">Ação</th></tr>
+                            </thead>
+                            <tbody>
+                                ${pendingActivationUsers.map(u => `
+                                    <tr class="border-b border-yellow-800">
+                                        <td class="px-6 py-4">${u.email}</td>
+                                        <td class="px-6 py-4 text-center">
+                                            <button class="user-status-toggle bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="true">Ativar</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
                     </div>
+                    ` : '<p class="text-sm text-yellow-200">Nenhum utilizador a aguardar ativação.</p>'}
                 </div>
 
-                <!-- Gestão de Utilizadores -->
+                <!-- Gestão de Utilizadores Ativos -->
                 <div class="bg-white p-6 rounded-xl shadow-sm border">
-                    <h3 class="text-lg font-semibold mb-4 font-display">Gestão de Utilizadores</h3>
+                    <h3 class="text-lg font-semibold mb-4 font-display">Gestão de Utilizadores Ativos</h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm text-left text-gray-500">
                             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                                 <tr>
                                     <th scope="col" class="px-6 py-3">Email</th>
-                                    <th scope="col" class="px-6 py-3">Cargo</th>
                                     <th scope="col" class="px-6 py-3">Último Login</th>
-                                    <th scope="col" class="px-6 py-3 text-center">Ativo</th>
+                                    <th scope="col" class="px-6 py-3 text-center">Desativar</th>
                                 </tr>
                             </thead>
-                            <tbody id="users-table-body">
-                                ${users.map(u => `
+                            <tbody>
+                                ${activeUsers.map(u => `
                                     <tr class="bg-white border-b">
                                         <td class="px-6 py-4 font-medium text-gray-900">${u.email}</td>
-                                        <td class="px-6 py-4">${u.role}</td>
                                         <td class="px-6 py-4">${u.last_login || 'Nunca'}</td>
                                         <td class="px-6 py-4 text-center">
-                                            <label class="switch">
-                                                <input type="checkbox" class="user-status-toggle" data-userid="${u.id}" ${u.is_active ? 'checked' : ''} ${appState.currentUser.id === u.id ? 'disabled' : ''}>
-                                                <span class="slider"></span>
-                                            </label>
+                                             <button class="user-status-toggle bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="false" ${appState.currentUser.id === u.id ? 'disabled' : ''}>Desativar</button>
                                         </td>
                                     </tr>
                                 `).join('')}
@@ -1815,10 +1993,23 @@
                     </div>
                 </div>
 
+                 <!-- Sessões Ativas -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border">
+                    <h3 class="text-lg font-semibold mb-4 font-display">Utilizadores Online (${sessions.length})</h3>
+                    <div class="overflow-x-auto max-h-72">
+                        <table class="w-full text-sm text-left text-gray-500">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0"><tr><th class="px-6 py-3">Email</th><th class="px-6 py-3">Visto por último</th></tr></thead>
+                            <tbody>
+                            ${sessions.length > 0 ? sessions.map(s => `<tr class="bg-white border-b"><td class="px-6 py-4">${s.email}</td><td class="px-6 py-4">${s.last_seen}</td></tr>`).join('') : '<tr><td colspan="2" class="px-6 py-4 text-center">Nenhum utilizador ativo.</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
                 <!-- Histórico de Logins -->
                 <div class="bg-white p-6 rounded-xl shadow-sm border">
                     <h3 class="text-lg font-semibold mb-4 font-display">Histórico de Acessos Recentes</h3>
-                    <div class="overflow-x-auto max-h-96">
+                     <div class="overflow-x-auto max-h-96">
                         <table class="w-full text-sm text-left text-gray-500">
                              <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
                                 <tr>
@@ -1841,31 +2032,33 @@
                 </div>
             `;
 
-            // Adiciona event listeners para os toggles de status
-            document.querySelectorAll('.user-status-toggle').forEach(toggle => {
-                toggle.addEventListener('change', async (e) => {
+            // Adiciona event listeners para os botões de ativar/desativar
+            document.querySelectorAll('.user-status-toggle').forEach(button => {
+                button.addEventListener('click', async (e) => {
                     const userId = e.target.dataset.userid;
-                    const isActive = e.target.checked;
+                    const isActive = e.target.dataset.isActive === 'true';
                     try {
                         await apiRequest(`/api/admin/user/${userId}/status`, 'PUT', { isActive });
                         addToLog(`Status do utilizador ${userId} atualizado.`);
+                        initializeAdminPanel(); // Recarrega o painel para refletir a mudança
                     } catch (error) {
                         addToLog(`Erro ao atualizar status: ${error.message}`, true);
-                        e.target.checked = !isActive; // Reverte a alteração visual em caso de erro
                     }
                 });
             });
 
         } catch (error) {
-            container.innerHTML = `<p class="text-red-500">Erro ao carregar o painel de administração: ${error.message}</p>`;
+            container.innerHTML = `<p class="text-red-500">Erro ao carregar o painel: ${error.message}</p>`;
         }
     }
-
+    
     // --- Event Listeners ---
     ELEMENTS.loginForm.addEventListener('submit', handleLogin);
     ELEMENTS.registerForm.addEventListener('submit', handleRegister);
     ELEMENTS.showRegister.addEventListener('click', (e) => { e.preventDefault(); showRegisterScreen(); });
     ELEMENTS.showLogin.addEventListener('click', (e) => { e.preventDefault(); showLoginScreen(); });
+    document.getElementById('show-activation-request').addEventListener('click', (e) => { e.preventDefault(); ELEMENTS.loginContainer.style.display = 'none'; ELEMENTS.activationContainer.style.display = 'flex'; });
+    document.getElementById('back-to-login').addEventListener('click', (e) => { e.preventDefault(); showLoginScreen(); });
     ELEMENTS.logoutBtn.addEventListener('click', handleLogout);
     
     ELEMENTS.sidebarNav.addEventListener('click', (event) => {
@@ -1894,9 +2087,7 @@
                     button.textContent = 'Copiar';
                     button.classList.remove('copied');
                 }, 2000);
-            } catch (err) {
-                console.error('Falha ao copiar', err);
-            }
+            } catch (err) { console.error('Falha ao copiar', err); }
             document.body.removeChild(textArea);
         }
     });
@@ -1907,22 +2098,19 @@
         ELEMENTS.menuOverlay.style.display = 'block';
     });
     
-    const closeBtn = document.getElementById('close-menu-btn');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            ELEMENTS.sidebar.classList.remove('open');
-            ELEMENTS.menuOverlay.style.display = 'none';
-        });
-    }
     ELEMENTS.menuOverlay.addEventListener('click', () => {
         ELEMENTS.sidebar.classList.remove('open');
         ELEMENTS.menuOverlay.style.display = 'none';
     });
 
-    // Basic Security: Disable Dev Tools
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
-            e.preventDefault();
+    // Chat Listeners
+    chatBubble.addEventListener('click', toggleChatWindow);
+    document.body.addEventListener('click', (e) => {
+        const userItem = e.target.closest('.chat-user-item');
+        if (userItem) {
+            const peerId = userItem.dataset.peerId;
+            const peerEmail = userItem.dataset.peerEmail;
+            openChatWith({ id: parseInt(peerId), email: peerEmail });
         }
     });
     </script>
