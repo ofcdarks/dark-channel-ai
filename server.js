@@ -18,8 +18,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-secreto-padrao';
 
 // Middlewares
 app.use(express.json());
-// Servir ficheiros estáticos da raiz do projeto (onde o index.html estará)
-app.use(express.static(__dirname));
+// CORREÇÃO: Servir ficheiros estáticos da pasta 'public'
+app.use(express.static(path.join(__dirname, 'public')));
 
 
 // 3. Conexão com o Banco de Dados PostgreSQL
@@ -501,7 +501,7 @@ app.get('/api/admin/history', verifyToken, requireAdmin, async (req, res) => {
 
 // 9. Rota Genérica (Catch-all) para servir o index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // 10. Inicialização do Servidor
