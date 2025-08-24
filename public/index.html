@@ -188,6 +188,7 @@
             <p class="text-center text-sm text-gray-400 pt-4"><a href="#" id="back-to-login" class="font-medium text-red-500 hover:text-red-400">Voltar para o Login</a></p>
         </div>
     </div>
+
     <!-- Telas de Autenticação -->
     <div id="login-container" class="flex items-center justify-center h-screen login-background">
         <div class="w-full max-w-xs p-8 space-y-8 rounded-lg form-container">
@@ -321,6 +322,7 @@
             </div>
         </div>
     </div>
+
     <script>
     // --- Global State Management ---
     let appState = {
@@ -329,7 +331,6 @@
             gemini: ["", "", ""],
             openai: "", 
             google_api: "" 
-            // Removido: deepai_api. Pollinations.ai não requer API Key para geração básica.
         },
         userChannels: [],
         videoIdeas: [],
@@ -576,7 +577,6 @@
                 appState.apiKeys.gemini = Array.isArray(settings.gemini) && settings.gemini.length === 3 ? settings.gemini : [settings.gemini || "", "", ""];
                 appState.apiKeys.openai = settings.openai || "";
                 appState.apiKeys.google_api = settings.google_api || "";
-                // Removido: appState.apiKeys.deepai_api = settings.deepai_api || "";
                 appState.userChannels = settings.userChannels || [];
                 appState.videoIdeas = settings.videoIdeas || [];
             }
@@ -630,7 +630,6 @@
             { id: 'title-structures', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h12v10h-4a2 2 0 00-2 2H4a2 2 0 00-2-2v-2a2 2 0 002 2h4a2 2 0 002-2V6a2 2 0 00-2-2H4zm10 0a2 2 0 00-2 2v.99l2-.002V6a2 2 0 00-2-2zM6 14a2 2 0 00-2 2v2h12v-2a2 2 0 00-2-2H6z" clip-rule="evenodd" /></svg>', label: 'Estruturas de Títulos' },
             { id: 'script-writer', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>', label: 'Criador de Roteiros' },
             { id: 'thumbnail-prompts', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>', label: 'Prompts de Thumbnail' },
-            { id: 'free-image-generator', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>', label: 'Gerador de Imagens Gratuito (Pollinations.ai)' }, <!-- ATUALIZADO PARA POLLINATIONS.AI -->
             { type: 'divider', label: 'OTIMIZAÇÃO E GESTÃO' },
             { id: 'description-optimizer', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" /></svg>', label: 'Otimizador de Descrição' },
             { id: 'tag-generator', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5a.997.997 0 01.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>', label: 'Gerador de Tags' },
@@ -712,29 +711,6 @@
             hideProgressModal();
         }
     }
-
-    // NOVO: Função para chamar a API de Geração de Imagens (Pollinations.ai)
-    async function callFreeImageAPI(prompt) {
-        showProgressModal();
-        try {
-            addToLog("Gerando imagem com IA gratuita (Pollinations.ai)...");
-            
-            // Pollinations.ai permite gerar imagens via URL sem API Key para uso básico
-            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
-            
-            // Para Pollinations.ai, não precisamos de um fetch POST complexo, a URL já é a imagem.
-            // Apenas retornamos a URL para ser exibida.
-            addToLog("Imagem gerada com sucesso via Pollinations.ai.");
-            return imageUrl;
-
-        } catch (error) {
-            console.error("Erro ao gerar imagem com IA gratuita (Pollinations.ai):", error);
-            addToLog(`Erro ao gerar imagem: ${error.message}`, true);
-            throw error;
-        } finally {
-            hideProgressModal();
-        }
-    }
     
     // --- Tools and Handlers ---
     let trendsChartInstance = null;
@@ -752,24 +728,6 @@
         "title-structures": { title: "Estruturas de Títulos Virais", desc: "Gere estruturas de títulos com alto potencial de clique.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="structure-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico. Ex: Produtividade"><select id="structure-lang" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português</option><option value="en-US">Inglês</option><option value="es-ES">Espanhol</option></select></div><button id="generate-structures" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🏗️ Gerar Estruturas</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6 space-y-4"></div><button id="generate-more-structures" class="hidden w-full mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Gerar Mais</button></div>` },
         "script-writer": { title: "Criador de Roteiros", desc: "Gere roteiros com foco em alta retenção.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="space-y-4"><input type="text" id="script-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico do Vídeo"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="number" id="script-duration" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Duração (minutos)"><input type="number" id="script-parts" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nº de Partes"></div><div class="flex items-center"><input id="script-narration-only" type="checkbox" class="h-4 w-4 text-red-600 border-gray-300 rounded"><label for="script-narration-only" class="ml-2 block text-sm text-gray-900">Apenas Narração (sem diálogos)</label></div><button id="generate-script" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">📜 Gerar Roteiro</button></div><div id="output" class="mt-6"></div></div>` },
         "thumbnail-prompts": { title: "Prompts de Thumbnail", desc: "Gere prompts otimizados para IAs de imagem.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="space-y-4"><input type="text" id="thumb-title" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Título do Vídeo"><select id="thumb-platform" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="Midjourney">Midjourney</option><option value="Leonardo.AI">Leonardo.AI</option><option value="DALL-E 3">DALL-E 3</option><option value="Freepik">Freepik</option></select></div><button id="generate-prompts" class="w-full mt-4 bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🎨 Gerar Prompts</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6 space-y-4"></div><button id="generate-more-prompts" class="hidden w-full mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Gerar Mais</button></div>` },
-        "free-image-generator": { // FERRAMENTA ATUALIZADA PARA POLLINATIONS.AI
-            title: "Gerador de Imagens Gratuito (Pollinations.ai)",
-            desc: "Crie imagens a partir de descrições de texto usando a API Pollinations.ai (não requer chave de API).",
-            content: `
-                <div class="bg-white p-6 rounded-xl shadow-sm border">
-                    <div class="space-y-4">
-                        <textarea id="free-image-prompt" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" rows="4" placeholder="Descreva a imagem que deseja criar..."></textarea>
-                        <button id="generate-free-image" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center">
-                            🎨 Gerar Imagem
-                            <div id="free-image-loading-spinner" class="hidden animate-spin rounded-full h-5 w-5 border-b-2 border-white ml-2"></div>
-                        </button>
-                    </div>
-                    <div id="free-image-output" class="mt-6 text-center">
-                        <!-- Imagem gerada será exibida aqui -->
-                    </div>
-                </div>
-            `
-        },
         "description-optimizer": { title: "Otimizador de Descrição", desc: "Crie descrições com SEO e CTAs eficazes.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="text" id="desc-title" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="Título do Vídeo"><textarea id="desc-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" rows="4" placeholder="Resumo do vídeo e palavras-chave..."></textarea><button id="generate-description" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">📄 Gerar Descrição</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
         "tag-generator": { title: "Gerador de Tags", desc: "Gere tags relevantes para maximizar o alcance.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="tag-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico do Vídeo"><select id="tag-lang" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português</option><option value="en-US">Inglês</option><option value="es-ES">Espanhol</option></select></div><button id="generate-tags" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🏷️ Gerar Tags</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
         "srt-converter": { title: "Conversor de Texto para SRT", desc: "Cole um texto e converta-o para o formato de legenda .SRT com tempo otimizado.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><textarea id="srt-input-text" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" rows="10" placeholder="Cole o texto completo aqui..."></textarea><button id="convert-to-srt" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🔄 Converter para SRT</button><div id="output" class="mt-6"></div></div>` },
@@ -820,7 +778,7 @@
                                     <!-- Gemini -->
                                     <div>
                                         <label class="block text-sm font-medium text-slate-700">
-                                            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="hover:text-red-600 hover:underline">Gemini API Key (Texto/Chat - Principal / Backup)</a>
+                                            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="hover:text-red-600 hover:underline">Gemini API Key (Principal / Backup)</a>
                                         </label>
                                         <div class="flex items-center gap-2 mt-1">
                                             <input type="password" id="gemini-key-1" class="block w-full px-3 py-2 border rounded-md">
@@ -829,7 +787,7 @@
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-700">Gemini API Key (Texto/Chat - Reserva 1)</label>
+                                        <label class="block text-sm font-medium text-slate-700">Gemini API Key (Reserva 1)</label>
                                         <div class="flex items-center gap-2 mt-1">
                                             <input type="password" id="gemini-key-2" class="block w-full px-3 py-2 border rounded-md">
                                             <button id="validate-gemini-key-2" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
@@ -837,18 +795,12 @@
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-700">Gemini API Key (Texto/Chat - Reserva 2)</label>
+                                        <label class="block text-sm font-medium text-slate-700">Gemini API Key (Reserva 2)</label>
                                         <div class="flex items-center gap-2 mt-1">
                                             <input type="password" id="gemini-key-3" class="block w-full px-3 py-2 border rounded-md">
                                             <button id="validate-gemini-key-3" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
                                             <span id="gemini-key-3-status" class="text-2xl"></span>
                                         </div>
-                                    </div>
-                                    <hr/>
-                                    <!-- Pollinations.ai (NÃO REQUER API KEY) -->
-                                    <div class="bg-blue-50 p-3 rounded-md border border-blue-200 text-blue-800">
-                                        <p class="text-sm font-medium">✨ Pollinations.ai não requer uma chave de API para a geração básica de imagens.</p>
-                                        <p class="text-xs mt-1">Basta usar o prompt diretamente na ferramenta!</p>
                                     </div>
                                     <hr/>
                                     <!-- Google API -->
@@ -1347,7 +1299,7 @@
             try {
                 const result = await callAIModel(prompt, schema);
                 const filteredResult = result.filter(item => item.viral_score > 80);
-                let html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold font-display">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
+                let html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold font-display">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
                 if (append) {
                     const moreButton = document.getElementById('generate-more-structures');
                     if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
@@ -1415,31 +1367,6 @@
                  output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
             }
         },
-        // NOVO HANDLER PARA O GERADOR DE IMAGENS GRATUITO (Pollinations.ai)
-        'generate-free-image': async () => {
-            const promptInput = document.getElementById('free-image-prompt');
-            const imageOutput = document.getElementById('free-image-output');
-            const loadingSpinner = document.getElementById('free-image-loading-spinner');
-            const promptText = promptInput.value.trim();
-
-            if (!promptText) {
-                imageOutput.innerHTML = `<p class="text-red-500">Por favor, descreva a imagem que deseja gerar.</p>`;
-                return;
-            }
-
-            loadingSpinner.classList.remove('hidden');
-            imageOutput.innerHTML = ''; // Limpa a saída anterior
-            
-            try {
-                const imageUrl = await callFreeImageAPI(promptText);
-                imageOutput.innerHTML = `<img src="${imageUrl}" alt="Imagem gerada pela IA" class="max-w-full h-auto rounded-lg shadow-lg mx-auto">
-                                         <p class="text-xs text-slate-500 mt-2">Pronta para uso!</p>`;
-            } catch (error) {
-                imageOutput.innerHTML = `<p class="text-red-500">Erro: ${error.message}</p>`;
-            } finally {
-                loadingSpinner.classList.add('hidden');
-            }
-        },
         'generate-description': async (output) => {
             const title = document.getElementById('desc-title').value.trim();
             const topic = document.getElementById('desc-topic').value.trim();
@@ -1469,7 +1396,7 @@
                                     <span>Hashtags</span>
                                     ${createCopyButton(result.hashtags)}
                                 </h5>
-                                <p class="text-sm text-slate-700 p-2 bg-white rounded border mt-1">${result.hashtrags}</p>
+                                <p class="text-sm text-slate-700 p-2 bg-white rounded border mt-1">${result.hashtags}</p>
                             </div>
                         </div>
                         ${renderScoreCard('Otimização', result.score, { 'SEO': result.score, 'Engajamento': result.score > 10 ? result.score - 4 : result.score }, result.suggestion)}
@@ -1605,8 +1532,7 @@
         if (tabId === 'planner') initializePlanner();
         if (tabId === 'text-divider') initializeTextDivider();
         if (tabId === 'admin') initializeAdminPanel();
-        if (tabId === 'free-image-generator') initializeFreeImageGenerator(); // NOVO: Inicializador
-        
+
         const legendContainer = document.getElementById('legend-container');
         if (legendContainer) {
             const legendHtml = getLegendForTool(tabId);
@@ -1682,8 +1608,6 @@
         }
     }
 
-    // Removido: validateDeepAIAPIKey, pois Pollinations.ai não usa API Key para geração básica.
-
     async function validateGoogleApiKey(key, statusEl) {
         if (!key) {
             statusEl.innerHTML = '<span title="Chave não informada">⚪</span>';
@@ -1704,46 +1628,36 @@
         const ids = {
             openai: 'openai-key', gemini1: 'gemini-key-1', gemini2: 'gemini-key-2',
             gemini3: 'gemini-key-3', google: 'google-api-key'
-            // Removido: deepai: 'deepai-api-key'
         };
         const inputs = {
             openai: document.getElementById(ids.openai), gemini1: document.getElementById(ids.gemini1),
             gemini2: document.getElementById(ids.gemini2), gemini3: document.getElementById(ids.gemini3),
             google: document.getElementById(ids.google)
-            // Removido: deepai: document.getElementById(ids.deepai)
         };
 
         inputs.openai.value = appState.apiKeys.openai || '';
         inputs.gemini1.value = appState.apiKeys.gemini[0] || '';
         inputs.gemini2.value = appState.apiKeys.gemini[1] || '';
         inputs.gemini3.value = appState.apiKeys.gemini[2] || '';
-        // Removido: inputs.deepai.value = appState.apiKeys.deepai_api || '';
         inputs.google.value = appState.apiKeys.google_api || '';
 
         document.getElementById('validate-openai-key').addEventListener('click', () => validateOpenAIKey(inputs.openai.value, document.getElementById('openai-key-status')));
         document.getElementById('validate-gemini-key-1').addEventListener('click', () => validateGeminiKey(inputs.gemini1.value, document.getElementById('gemini-key-1-status')));
         document.getElementById('validate-gemini-key-2').addEventListener('click', () => validateGeminiKey(inputs.gemini2.value, document.getElementById('gemini-key-2-status')));
         document.getElementById('validate-gemini-key-3').addEventListener('click', () => validateGeminiKey(inputs.gemini3.value, document.getElementById('gemini-key-3-status')));
-        // Removido: document.getElementById('validate-deepai-api-key').addEventListener('click', ...);
         document.getElementById('validate-google-api-key').addEventListener('click', () => validateGoogleApiKey(inputs.google.value, document.getElementById('google-api-key-status')));
 
         document.getElementById('save-settings').addEventListener('click', async () => {
             const newSettings = {
                 openai: inputs.openai.value.trim(),
                 gemini: [ inputs.gemini1.value.trim(), inputs.gemini2.value.trim(), inputs.gemini3.value.trim() ],
-                // Removido: deepai_api: inputs.deepai.value.trim(),
                 google_api: inputs.google.value.trim(),
                 userChannels: appState.userChannels, videoIdeas: appState.videoIdeas
             };
             const feedbackEl = document.getElementById('settings-feedback');
             try {
                 await apiRequest(`/api/settings`, 'POST', { settings: newSettings });
-                appState.apiKeys = { 
-                    openai: newSettings.openai, 
-                    gemini: newSettings.gemini, 
-                    google_api: newSettings.google_api
-                    // Removido: deepai_api: newSettings.deepai_api
-                };
+                appState.apiKeys = { openai: newSettings.openai, gemini: newSettings.gemini, google_api: newSettings.google_api };
                 feedbackEl.textContent = 'Configurações salvas com sucesso!';
                 feedbackEl.className = 'text-green-600 text-sm mt-4';
             } catch (error) {
@@ -1976,20 +1890,11 @@
         renderPlanner();
     }
 
-    function initializeFreeImageGenerator() { // NOVO: Inicializador para o Gerador de Imagens Gratuito
-        const generateButton = document.getElementById('generate-free-image');
-        if (generateButton) {
-            generateButton.addEventListener('click', () => handlers['generate-free-image']());
-        }
-    }
-
     async function saveSettings() {
         if (!appState.currentUser) return;
         const settingsToSave = { 
             gemini: appState.apiKeys.gemini, openai: appState.apiKeys.openai,
-            google_api: appState.apiKeys.google_api
-            // Removido: deepai_api: appState.apiKeys.deepai_api,
-            userChannels: appState.userChannels, 
+            google_api: appState.apiKeys.google_api, userChannels: appState.userChannels, 
             videoIdeas: appState.videoIdeas 
         };
         await apiRequest(`/api/settings`, 'POST', { settings: settingsToSave });
@@ -2177,11 +2082,7 @@
             ]);
             
             const maintenanceStatus = appStatus.maintenance;
-            const announcement = appStatus.announcement; // Usar 'announcement'
-            
-            // Tratamento do 'announcement'
-            const announcementMessage = announcement ? (announcement.message || '') : '';
-
+            const announcement = appStatus.announcement;
 
             const pendingActivationUsers = users.filter(u => !u.is_active);
             const activeUsers = users.filter(u => u.is_active);
@@ -2264,7 +2165,7 @@
                     <div>
                         <h3 class="text-lg font-semibold font-display">Anúncio Global</h3>
                         <p class="text-sm text-slate-500 mb-2">Envie uma mensagem pop-up para todos os utilizadores online.</p>
-                        <textarea id="announcement-message-input" class="w-full px-3 py-2 border rounded-md mb-2" rows="3" placeholder="Digite a sua mensagem...">${escapeHTML(announcementMessage)}</textarea>
+                        <textarea id="announcement-message-input" class="w-full px-3 py-2 border rounded-md mb-2" rows="3" placeholder="Digite a sua mensagem...">${escapeHTML(announcement?.message)}</textarea>
                         <div class="flex justify-end gap-2">
                             <button id="clear-announcement-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Limpar Anúncio</button>
                             <button id="send-announcement-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Enviar Anúncio</button>
@@ -2443,3 +2344,10 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
