@@ -321,7 +321,7 @@
             </div>
         </div>
     </div>
-     <script>
+        <script>
     // --- Global State Management ---
     let appState = {
         currentUser: null,
@@ -329,7 +329,7 @@
             gemini: ["", "", ""],
             openai: "", 
             google_api: "" ,
-            huggingface_api: "" // NOVO: Chave específica para geração de imagens via Hugging Face
+            deepai_api: "" // NOVO: Chave específica para geração de imagens via DeepAI
         },
         userChannels: [],
         videoIdeas: [],
@@ -532,7 +532,7 @@
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         if (appState.chat.pollInterval) clearInterval(appState.chat.pollInterval);
         if (appState.statusPollInterval) clearInterval(appState.statusPollInterval);
-        appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "", huggingface_api: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null, lastUnreadCount: 0 }, statusPollInterval: null, lastAnnouncement: null };
+        appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "", deepai_api: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null, lastUnreadCount: 0 }, statusPollInterval: null, lastAnnouncement: null };
         document.getElementById('chat-widget').style.display = 'none';
         hideOfflineMessageModal();
         showScreen('login-container');
@@ -576,7 +576,7 @@
                 appState.apiKeys.gemini = Array.isArray(settings.gemini) && settings.gemini.length === 3 ? settings.gemini : [settings.gemini || "", "", ""];
                 appState.apiKeys.openai = settings.openai || "";
                 appState.apiKeys.google_api = settings.google_api || "";
-                appState.apiKeys.huggingface_api = settings.huggingface_api || ""; // Carregar a nova chave
+                appState.apiKeys.deepai_api = settings.deepai_api || ""; // Carregar a nova chave
                 appState.userChannels = settings.userChannels || [];
                 appState.videoIdeas = settings.videoIdeas || [];
             }
@@ -630,7 +630,7 @@
             { id: 'title-structures', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h12v10h-4a2 2 0 00-2 2H4a2 2 0 00-2-2v-2a2 2 0 002 2h4a2 2 0 002-2V6a2 2 0 00-2-2H4zm10 0a2 2 0 00-2 2v.99l2-.002V6a2 2 0 00-2-2zM6 14a2 2 0 00-2 2v2h12v-2a2 2 0 00-2-2H6z" clip-rule="evenodd" /></svg>', label: 'Estruturas de Títulos' },
             { id: 'script-writer', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>', label: 'Criador de Roteiros' },
             { id: 'thumbnail-prompts', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>', label: 'Prompts de Thumbnail' },
-            { id: 'free-image-generator', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>', label: 'Gerador de Imagens Gratuito' }, <!-- NOVO ITEM (ATUALIZADO) -->
+            { id: 'free-image-generator', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>', label: 'Gerador de Imagens Gratuito (DeepAI)' }, <!-- NOVO ITEM (ATUALIZADO PARA DEEPAI) -->
             { type: 'divider', label: 'OTIMIZAÇÃO E GESTÃO' },
             { id: 'description-optimizer', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" /></svg>', label: 'Otimizador de Descrição' },
             { id: 'tag-generator', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5a.997.997 0 01.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>', label: 'Gerador de Tags' },
@@ -713,48 +713,47 @@
         }
     }
 
-    // NOVO: Função para chamar a API de Geração de Imagens (Hugging Face)
+    // NOVO: Função para chamar a API de Geração de Imagens (DeepAI)
     async function callFreeImageAPI(prompt) {
         showProgressModal();
         let retries = 0;
-        const maxRetries = 5;
+        const maxRetries = 3; // Reduzindo retries para DeepAI
         const baseDelay = 1000; // 1 second
 
         while (retries < maxRetries) {
             try {
-                addToLog("Gerando imagem com IA gratuita (Hugging Face)...");
-                const apiKey = appState.apiKeys.huggingface_api;
+                addToLog("Gerando imagem com IA gratuita (DeepAI)...");
+                const apiKey = appState.apiKeys.deepai_api;
                 if (!apiKey) {
-                    throw new Error("Chave da API Hugging Face não configurada nas Configurações.");
+                    throw new Error("Chave da API DeepAI não configurada nas Configurações.");
                 }
 
-                // Exemplo de endpoint para Stable Diffusion XL
-                // Você pode encontrar outros modelos em https://huggingface.co/models?pipeline_tag=text-to-image&sort=downloads
-                const apiUrl = `https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0`;
+                // Endpoint para o modelo de texto para imagem da DeepAI (pode variar, verificar docs)
+                // Usaremos o "text2img" como exemplo, mas outros modelos podem ser explorados.
+                const apiUrl = `https://api.deepai.org/api/text2img`;
                 
+                const formData = new FormData();
+                formData.append('text', prompt);
+
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
+                        'api-key': apiKey // DeepAI usa 'api-key' no header
                     },
-                    body: JSON.stringify({ inputs: prompt })
+                    body: formData
                 });
 
                 if (response.ok) {
-                    const imageBlob = await response.blob();
-                    const imageUrl = URL.createObjectURL(imageBlob);
-                    addToLog("Imagem gerada com sucesso via Hugging Face API.");
-                    return imageUrl;
-                } else if (response.status === 503) { // Model is loading
-                    const data = await response.json();
-                    const estimatedTime = data.estimated_time;
-                    addToLog(`Modelo carregando. Tentando novamente em ${estimatedTime ? Math.round(estimatedTime) : 10} segundos...`);
-                    await new Promise(resolve => setTimeout(resolve, (estimatedTime || 10) * 1000));
-                    retries++;
+                    const result = await response.json();
+                    if (result.output_url) {
+                        addToLog("Imagem gerada com sucesso via DeepAI API.");
+                        return result.output_url;
+                    } else {
+                        throw new Error("Resposta da DeepAI não contém 'output_url'.");
+                    }
                 } else {
                     const errorText = await response.text();
-                    throw new Error(`Falha na API Hugging Face: ${response.status} - ${errorText}`);
+                    throw new Error(`Falha na API DeepAI: ${response.status} - ${errorText}`);
                 }
             } catch (error) {
                 console.error("Erro ao gerar imagem com IA gratuita:", error);
@@ -788,9 +787,9 @@
         "title-structures": { title: "Estruturas de Títulos Virais", desc: "Gere estruturas de títulos com alto potencial de clique.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="structure-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico. Ex: Produtividade"><select id="structure-lang" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português</option><option value="en-US">Inglês</option><option value="es-ES">Espanhol</option></select></div><button id="generate-structures" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🏗️ Gerar Estruturas</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6 space-y-4"></div><button id="generate-more-structures" class="hidden w-full mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Gerar Mais</button></div>` },
         "script-writer": { title: "Criador de Roteiros", desc: "Gere roteiros com foco em alta retenção.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="space-y-4"><input type="text" id="script-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico do Vídeo"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="number" id="script-duration" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Duração (minutos)"><input type="number" id="script-parts" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nº de Partes"></div><div class="flex items-center"><input id="script-narration-only" type="checkbox" class="h-4 w-4 text-red-600 border-gray-300 rounded"><label for="script-narration-only" class="ml-2 block text-sm text-gray-900">Apenas Narração (sem diálogos)</label></div><button id="generate-script" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">📜 Gerar Roteiro</button></div><div id="output" class="mt-6"></div></div>` },
         "thumbnail-prompts": { title: "Prompts de Thumbnail", desc: "Gere prompts otimizados para IAs de imagem.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="space-y-4"><input type="text" id="thumb-title" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Título do Vídeo"><select id="thumb-platform" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="Midjourney">Midjourney</option><option value="Leonardo.AI">Leonardo.AI</option><option value="DALL-E 3">DALL-E 3</option><option value="Freepik">Freepik</option></select></div><button id="generate-prompts" class="w-full mt-4 bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🎨 Gerar Prompts</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6 space-y-4"></div><button id="generate-more-prompts" class="hidden w-full mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Gerar Mais</button></div>` },
-        "free-image-generator": { // FERRAMENTA ATUALIZADA
-            title: "Gerador de Imagens Gratuito",
-            desc: "Crie imagens a partir de descrições de texto usando a API Hugging Face Stable Diffusion.",
+        "free-image-generator": { // FERRAMENTA ATUALIZADA PARA DEEPAI
+            title: "Gerador de Imagens Gratuito (DeepAI)",
+            desc: "Crie imagens a partir de descrições de texto usando a API DeepAI.",
             content: `
                 <div class="bg-white p-6 rounded-xl shadow-sm border">
                     <div class="space-y-4">
@@ -881,17 +880,17 @@
                                         </div>
                                     </div>
                                     <hr/>
-                                    <!-- Hugging Face API Key (NOVO) -->
+                                    <!-- DeepAI API Key (NOVO) -->
                                     <div>
                                         <label class="block text-sm font-medium text-slate-700">
-                                            <a href="https://huggingface.co/settings/tokens" target="_blank" class="hover:text-red-600 hover:underline">Hugging Face API Key (Geração de Imagens)</a>
+                                            <a href="https://deepai.org/dashboard/api-keys" target="_blank" class="hover:text-red-600 hover:underline">DeepAI API Key (Geração de Imagens)</a>
                                         </label>
                                         <div class="flex items-center gap-2 mt-1">
-                                            <input type="password" id="huggingface-api-key" class="block w-full px-3 py-2 border rounded-md">
-                                            <button id="validate-huggingface-api-key" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
-                                            <span id="huggingface-api-key-status" class="text-2xl"></span>
+                                            <input type="password" id="deepai-api-key" class="block w-full px-3 py-2 border rounded-md">
+                                            <button id="validate-deepai-api-key" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
+                                            <span id="deepai-api-key-status" class="text-2xl"></span>
                                         </div>
-                                        <p class="text-xs text-slate-500 mt-1">Usada para gerar imagens usando modelos como Stable Diffusion.</p>
+                                        <p class="text-xs text-slate-500 mt-1">Usada para gerar imagens usando modelos da DeepAI.</p>
                                     </div>
                                     <hr/>
                                     <!-- Google API -->
@@ -1329,7 +1328,7 @@
                         </div>
                     </div>
                     <div class="mt-6 bg-white p-4 rounded-lg border">
-                        <h3 class="text-xl font-bold mb-3 font-display">� Oportunidades de Conteúdo</h3>
+                        <h3 class="text-xl font-bold mb-3 font-display">💡 Oportunidades de Conteúdo</h3>
                         <div class="space-y-4">
                             ${video_ideas.map(idea => `
                                 <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg flex justify-between items-start">
@@ -1458,7 +1457,7 @@
                  output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
             }
         },
-        // NOVO HANDLER PARA O GERADOR DE IMAGENS GRATUITO
+        // NOVO HANDLER PARA O GERADOR DE IMAGENS GRATUITO (DeepAI)
         'generate-free-image': async () => {
             const promptInput = document.getElementById('free-image-prompt');
             const imageOutput = document.getElementById('free-image-output');
@@ -1725,26 +1724,26 @@
         }
     }
 
-    async function validateHuggingFaceAPIKey(key, statusEl) { // NOVO: Validação para chave Hugging Face
+    async function validateDeepAIAPIKey(key, statusEl) { // NOVO: Validação para chave DeepAI
         if (!key) {
             statusEl.innerHTML = '<span title="Chave não informada">⚪</span>';
             return;
         }
         statusEl.innerHTML = '<span class="animate-spin">⏳</span>';
-        // Endpoint de teste para verificar a chave Hugging Face
-        const testApiUrl = `https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0`;
+        // Endpoint de teste para verificar a chave DeepAI
+        const testApiUrl = `https://api.deepai.org/api/text2img`;
         try {
+            const formData = new FormData();
+            formData.append('text', 'test prompt'); // Um prompt de teste
             const response = await fetch(testApiUrl, {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${key}`
+                    'api-key': key // DeepAI usa 'api-key' no header
                 },
-                body: JSON.stringify({ inputs: "a test image" })
+                body: formData
             });
-            // A API Hugging Face pode retornar 503 se o modelo estiver carregando,
-            // mas um 200 ou 400+ é suficiente para validar a chave.
-            statusEl.innerHTML = response.status === 200 || response.status === 503 || response.status === 422 ? '<span title="Chave Válida">✅</span>' : '<span title="Chave Inválida ou sem permissão">❌</span>';
+            // DeepAI retorna 200 para sucesso, 400 para erros de prompt/parâmetros, 401 para chave inválida
+            statusEl.innerHTML = response.ok || response.status === 400 ? '<span title="Chave Válida">✅</span>' : '<span title="Chave Inválida ou sem permissão">❌</span>';
         } catch (error) {
             statusEl.innerHTML = '<span title="Erro de rede ao validar">❌</span>';
         }
@@ -1769,33 +1768,33 @@
     function initializeSettings() {
         const ids = {
             openai: 'openai-key', gemini1: 'gemini-key-1', gemini2: 'gemini-key-2',
-            gemini3: 'gemini-key-3', google: 'google-api-key', huggingface: 'huggingface-api-key' // NOVO ID
+            gemini3: 'gemini-key-3', google: 'google-api-key', deepai: 'deepai-api-key' // NOVO ID
         };
         const inputs = {
             openai: document.getElementById(ids.openai), gemini1: document.getElementById(ids.gemini1),
             gemini2: document.getElementById(ids.gemini2), gemini3: document.getElementById(ids.gemini3),
-            google: document.getElementById(ids.google), huggingface: document.getElementById(ids.huggingface) // NOVO INPUT
+            google: document.getElementById(ids.google), deepai: document.getElementById(ids.deepai) // NOVO INPUT
         };
 
         inputs.openai.value = appState.apiKeys.openai || '';
         inputs.gemini1.value = appState.apiKeys.gemini[0] || '';
         inputs.gemini2.value = appState.apiKeys.gemini[1] || '';
         inputs.gemini3.value = appState.apiKeys.gemini[2] || '';
-        inputs.huggingface.value = appState.apiKeys.huggingface_api || ''; // Carregar valor da chave Hugging Face
+        inputs.deepai.value = appState.apiKeys.deepai_api || ''; // Carregar valor da chave DeepAI
         inputs.google.value = appState.apiKeys.google_api || '';
 
         document.getElementById('validate-openai-key').addEventListener('click', () => validateOpenAIKey(inputs.openai.value, document.getElementById('openai-key-status')));
         document.getElementById('validate-gemini-key-1').addEventListener('click', () => validateGeminiKey(inputs.gemini1.value, document.getElementById('gemini-key-1-status')));
         document.getElementById('validate-gemini-key-2').addEventListener('click', () => validateGeminiKey(inputs.gemini2.value, document.getElementById('gemini-key-2-status')));
         document.getElementById('validate-gemini-key-3').addEventListener('click', () => validateGeminiKey(inputs.gemini3.value, document.getElementById('gemini-key-3-status')));
-        document.getElementById('validate-huggingface-api-key').addEventListener('click', () => validateHuggingFaceAPIKey(inputs.huggingface.value, document.getElementById('huggingface-api-key-status'))); // NOVO: Listener de validação
+        document.getElementById('validate-deepai-api-key').addEventListener('click', () => validateDeepAIAPIKey(inputs.deepai.value, document.getElementById('deepai-api-key-status'))); // NOVO: Listener de validação
         document.getElementById('validate-google-api-key').addEventListener('click', () => validateGoogleApiKey(inputs.google.value, document.getElementById('google-api-key-status')));
 
         document.getElementById('save-settings').addEventListener('click', async () => {
             const newSettings = {
                 openai: inputs.openai.value.trim(),
                 gemini: [ inputs.gemini1.value.trim(), inputs.gemini2.value.trim(), inputs.gemini3.value.trim() ],
-                huggingface_api: inputs.huggingface.value.trim(), // Salvar a nova chave
+                deepai_api: inputs.deepai.value.trim(), // Salvar a nova chave
                 google_api: inputs.google.value.trim(),
                 userChannels: appState.userChannels, videoIdeas: appState.videoIdeas
             };
@@ -1806,7 +1805,7 @@
                     openai: newSettings.openai, 
                     gemini: newSettings.gemini, 
                     google_api: newSettings.google_api,
-                    huggingface_api: newSettings.huggingface_api // Atualizar appState
+                    deepai_api: newSettings.deepai_api // Atualizar appState
                 };
                 feedbackEl.textContent = 'Configurações salvas com sucesso!';
                 feedbackEl.className = 'text-green-600 text-sm mt-4';
@@ -2051,7 +2050,7 @@
         if (!appState.currentUser) return;
         const settingsToSave = { 
             gemini: appState.apiKeys.gemini, openai: appState.apiKeys.openai,
-            google_api: appState.apiKeys.google_api, huggingface_api: appState.apiKeys.huggingface_api, // Salvar a nova chave
+            google_api: appState.apiKeys.google_api, deepai_api: appState.apiKeys.deepai_api, // Salvar a nova chave
             userChannels: appState.userChannels, 
             videoIdeas: appState.videoIdeas 
         };
@@ -2506,4 +2505,3 @@
     </script>
 </body>
 </html>
-�
