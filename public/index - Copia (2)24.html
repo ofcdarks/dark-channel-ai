@@ -188,6 +188,7 @@
             <p class="text-center text-sm text-gray-400 pt-4"><a href="#" id="back-to-login" class="font-medium text-red-500 hover:text-red-400">Voltar para o Login</a></p>
         </div>
     </div>
+
     <!-- Telas de Autenticação -->
     <div id="login-container" class="flex items-center justify-center h-screen login-background">
         <div class="w-full max-w-xs p-8 space-y-8 rounded-lg form-container">
@@ -321,6 +322,7 @@
             </div>
         </div>
     </div>
+
     <script>
     // --- Global State Management ---
     let appState = {
@@ -328,8 +330,7 @@
         apiKeys: { 
             gemini: ["", "", ""],
             openai: "", 
-            google_api: "" ,
-            gemini_image: "" // NOVO: Chave específica para geração de imagens Gemini
+            google_api: "" 
         },
         userChannels: [],
         videoIdeas: [],
@@ -532,7 +533,7 @@
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         if (appState.chat.pollInterval) clearInterval(appState.chat.pollInterval);
         if (appState.statusPollInterval) clearInterval(appState.statusPollInterval);
-        appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "", gemini_image: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null, lastUnreadCount: 0 }, statusPollInterval: null, lastAnnouncement: null };
+        appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null, lastUnreadCount: 0 }, statusPollInterval: null, lastAnnouncement: null };
         document.getElementById('chat-widget').style.display = 'none';
         hideOfflineMessageModal();
         showScreen('login-container');
@@ -576,7 +577,6 @@
                 appState.apiKeys.gemini = Array.isArray(settings.gemini) && settings.gemini.length === 3 ? settings.gemini : [settings.gemini || "", "", ""];
                 appState.apiKeys.openai = settings.openai || "";
                 appState.apiKeys.google_api = settings.google_api || "";
-                appState.apiKeys.gemini_image = settings.gemini_image || ""; // Carregar a nova chave
                 appState.userChannels = settings.userChannels || [];
                 appState.videoIdeas = settings.videoIdeas || [];
             }
@@ -630,7 +630,6 @@
             { id: 'title-structures', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h12v10h-4a2 2 0 00-2 2H4a2 2 0 00-2-2v-2a2 2 0 002 2h4a2 2 0 002-2V6a2 2 0 00-2-2H4zm10 0a2 2 0 00-2 2v.99l2-.002V6a2 2 0 00-2-2zM6 14a2 2 0 00-2 2v2h12v-2a2 2 0 00-2-2H6z" clip-rule="evenodd" /></svg>', label: 'Estruturas de Títulos' },
             { id: 'script-writer', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>', label: 'Criador de Roteiros' },
             { id: 'thumbnail-prompts', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>', label: 'Prompts de Thumbnail' },
-            { id: 'whisk-image-generator', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>', label: 'Gerador de Imagens Whisk' }, <!-- NOVO ITEM -->
             { type: 'divider', label: 'OTIMIZAÇÃO E GESTÃO' },
             { id: 'description-optimizer', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" /></svg>', label: 'Otimizador de Descrição' },
             { id: 'tag-generator', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5a.997.997 0 01.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>', label: 'Gerador de Tags' },
@@ -712,43 +711,6 @@
             hideProgressModal();
         }
     }
-
-    // NOVO: Função para chamar a API de Geração de Imagens
-    async function callGeminiImageAPI(prompt) {
-        showProgressModal();
-        try {
-            addToLog("Gerando imagem com Whisk...");
-            const apiKey = appState.apiKeys.gemini_image;
-            if (!apiKey) {
-                throw new Error("Chave da API Gemini Image não configurada nas Configurações.");
-            }
-
-            const payload = { instances: { prompt: prompt }, parameters: { "sampleCount": 1} };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-            
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const result = await response.json();
-
-            if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-                addToLog("Imagem gerada com sucesso via Gemini Image API.");
-                return imageUrl;
-            } else {
-                const errorMessage = result?.error?.message || "Estrutura de resposta da API de imagem inesperada ou conteúdo ausente.";
-                throw new Error(errorMessage);
-            }
-        } catch (error) {
-            console.error("Erro ao gerar imagem com Whisk:", error);
-            addToLog(`Erro ao gerar imagem: ${error.message}`, true);
-            throw error;
-        } finally {
-            hideProgressModal();
-        }
-    }
     
     // --- Tools and Handlers ---
     let trendsChartInstance = null;
@@ -766,24 +728,6 @@
         "title-structures": { title: "Estruturas de Títulos Virais", desc: "Gere estruturas de títulos com alto potencial de clique.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="structure-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico. Ex: Produtividade"><select id="structure-lang" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português</option><option value="en-US">Inglês</option><option value="es-ES">Espanhol</option></select></div><button id="generate-structures" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🏗️ Gerar Estruturas</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6 space-y-4"></div><button id="generate-more-structures" class="hidden w-full mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Gerar Mais</button></div>` },
         "script-writer": { title: "Criador de Roteiros", desc: "Gere roteiros com foco em alta retenção.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="space-y-4"><input type="text" id="script-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico do Vídeo"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="number" id="script-duration" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Duração (minutos)"><input type="number" id="script-parts" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nº de Partes"></div><div class="flex items-center"><input id="script-narration-only" type="checkbox" class="h-4 w-4 text-red-600 border-gray-300 rounded"><label for="script-narration-only" class="ml-2 block text-sm text-gray-900">Apenas Narração (sem diálogos)</label></div><button id="generate-script" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">📜 Gerar Roteiro</button></div><div id="output" class="mt-6"></div></div>` },
         "thumbnail-prompts": { title: "Prompts de Thumbnail", desc: "Gere prompts otimizados para IAs de imagem.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="space-y-4"><input type="text" id="thumb-title" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Título do Vídeo"><select id="thumb-platform" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="Midjourney">Midjourney</option><option value="Leonardo.AI">Leonardo.AI</option><option value="DALL-E 3">DALL-E 3</option><option value="Freepik">Freepik</option></select></div><button id="generate-prompts" class="w-full mt-4 bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🎨 Gerar Prompts</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6 space-y-4"></div><button id="generate-more-prompts" class="hidden w-full mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Gerar Mais</button></div>` },
-        "whisk-image-generator": { // NOVA FERRAMENTA
-            title: "Gerador de Imagens Whisk",
-            desc: "Crie imagens vibrantes e impactantes a partir de descrições de texto usando a IA Gemini.",
-            content: `
-                <div class="bg-white p-6 rounded-xl shadow-sm border">
-                    <div class="space-y-4">
-                        <textarea id="whisk-prompt" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" rows="4" placeholder="Descreva a imagem que deseja criar..."></textarea>
-                        <button id="generate-whisk-image" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center">
-                            🎨 Gerar Imagem
-                            <div id="whisk-loading-spinner" class="hidden animate-spin rounded-full h-5 w-5 border-b-2 border-white ml-2"></div>
-                        </button>
-                    </div>
-                    <div id="whisk-image-output" class="mt-6 text-center">
-                        <!-- Imagem gerada será exibida aqui -->
-                    </div>
-                </div>
-            `
-        },
         "description-optimizer": { title: "Otimizador de Descrição", desc: "Crie descrições com SEO e CTAs eficazes.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="text" id="desc-title" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="Título do Vídeo"><textarea id="desc-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" rows="4" placeholder="Resumo do vídeo e palavras-chave..."></textarea><button id="generate-description" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">📄 Gerar Descrição</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
         "tag-generator": { title: "Gerador de Tags", desc: "Gere tags relevantes para maximizar o alcance.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="tag-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico do Vídeo"><select id="tag-lang" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português</option><option value="en-US">Inglês</option><option value="es-ES">Espanhol</option></select></div><button id="generate-tags" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🏷️ Gerar Tags</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
         "srt-converter": { title: "Conversor de Texto para SRT", desc: "Cole um texto e converta-o para o formato de legenda .SRT com tempo otimizado.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><textarea id="srt-input-text" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" rows="10" placeholder="Cole o texto completo aqui..."></textarea><button id="convert-to-srt" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🔄 Converter para SRT</button><div id="output" class="mt-6"></div></div>` },
@@ -834,7 +778,7 @@
                                     <!-- Gemini -->
                                     <div>
                                         <label class="block text-sm font-medium text-slate-700">
-                                            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="hover:text-red-600 hover:underline">Gemini API Key (Texto/Chat - Principal / Backup)</a>
+                                            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="hover:text-red-600 hover:underline">Gemini API Key (Principal / Backup)</a>
                                         </label>
                                         <div class="flex items-center gap-2 mt-1">
                                             <input type="password" id="gemini-key-1" class="block w-full px-3 py-2 border rounded-md">
@@ -843,7 +787,7 @@
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-700">Gemini API Key (Texto/Chat - Reserva 1)</label>
+                                        <label class="block text-sm font-medium text-slate-700">Gemini API Key (Reserva 1)</label>
                                         <div class="flex items-center gap-2 mt-1">
                                             <input type="password" id="gemini-key-2" class="block w-full px-3 py-2 border rounded-md">
                                             <button id="validate-gemini-key-2" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
@@ -851,25 +795,12 @@
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-700">Gemini API Key (Texto/Chat - Reserva 2)</label>
+                                        <label class="block text-sm font-medium text-slate-700">Gemini API Key (Reserva 2)</label>
                                         <div class="flex items-center gap-2 mt-1">
                                             <input type="password" id="gemini-key-3" class="block w-full px-3 py-2 border rounded-md">
                                             <button id="validate-gemini-key-3" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
                                             <span id="gemini-key-3-status" class="text-2xl"></span>
                                         </div>
-                                    </div>
-                                    <hr/>
-                                    <!-- Gemini Image (NOVO) -->
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700">
-                                            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="hover:text-red-600 hover:underline">Gemini API Key (Geração de Imagens)</a>
-                                        </label>
-                                        <div class="flex items-center gap-2 mt-1">
-                                            <input type="password" id="gemini-image-key" class="block w-full px-3 py-2 border rounded-md">
-                                            <button id="validate-gemini-image-key" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
-                                            <span id="gemini-image-key-status" class="text-2xl"></span>
-                                        </div>
-                                        <p class="text-xs text-slate-500 mt-1">Usada para gerar imagens usando o modelo Imagen.</p>
                                     </div>
                                     <hr/>
                                     <!-- Google API -->
@@ -1436,31 +1367,6 @@
                  output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
             }
         },
-        // NOVO HANDLER PARA O GERADOR DE IMAGENS WHISK
-        'generate-whisk-image': async () => {
-            const promptInput = document.getElementById('whisk-prompt');
-            const imageOutput = document.getElementById('whisk-image-output');
-            const loadingSpinner = document.getElementById('whisk-loading-spinner');
-            const promptText = promptInput.value.trim();
-
-            if (!promptText) {
-                imageOutput.innerHTML = `<p class="text-red-500">Por favor, descreva a imagem que deseja gerar.</p>`;
-                return;
-            }
-
-            loadingSpinner.classList.remove('hidden');
-            imageOutput.innerHTML = ''; // Limpa a saída anterior
-            
-            try {
-                const imageUrl = await callGeminiImageAPI(promptText);
-                imageOutput.innerHTML = `<img src="${imageUrl}" alt="Imagem gerada pela Whisk" class="max-w-full h-auto rounded-lg shadow-lg mx-auto">
-                                         <p class="text-xs text-slate-500 mt-2">Pronta para uso!</p>`;
-            } catch (error) {
-                imageOutput.innerHTML = `<p class="text-red-500">Erro: ${error.message}</p>`;
-            } finally {
-                loadingSpinner.classList.add('hidden');
-            }
-        },
         'generate-description': async (output) => {
             const title = document.getElementById('desc-title').value.trim();
             const topic = document.getElementById('desc-topic').value.trim();
@@ -1626,8 +1532,7 @@
         if (tabId === 'planner') initializePlanner();
         if (tabId === 'text-divider') initializeTextDivider();
         if (tabId === 'admin') initializeAdminPanel();
-        if (tabId === 'whisk-image-generator') initializeWhiskerImageGenerator(); // NOVO: Inicializador
-        
+
         const legendContainer = document.getElementById('legend-container');
         if (legendContainer) {
             const legendHtml = getLegendForTool(tabId);
@@ -1703,25 +1608,6 @@
         }
     }
 
-    async function validateGeminiImageKey(key, statusEl) { // NOVO: Validação para chave de imagem Gemini
-        if (!key) {
-            statusEl.innerHTML = '<span title="Chave não informada">⚪</span>';
-            return;
-        }
-        statusEl.innerHTML = '<span class="animate-spin">⏳</span>';
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${key}`;
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ instances: { prompt: "a test image" }, parameters: { "sampleCount": 1} })
-            });
-            statusEl.innerHTML = response.ok ? '<span title="Chave Válida">✅</span>' : '<span title="Chave Inválida ou sem permissão para Imagen API">❌</span>';
-        } catch (error) {
-            statusEl.innerHTML = '<span title="Erro de rede ao validar">❌</span>';
-        }
-    }
-
     async function validateGoogleApiKey(key, statusEl) {
         if (!key) {
             statusEl.innerHTML = '<span title="Chave não informada">⚪</span>';
@@ -1741,45 +1627,37 @@
     function initializeSettings() {
         const ids = {
             openai: 'openai-key', gemini1: 'gemini-key-1', gemini2: 'gemini-key-2',
-            gemini3: 'gemini-key-3', google: 'google-api-key', geminiImage: 'gemini-image-key' // NOVO ID
+            gemini3: 'gemini-key-3', google: 'google-api-key'
         };
         const inputs = {
             openai: document.getElementById(ids.openai), gemini1: document.getElementById(ids.gemini1),
             gemini2: document.getElementById(ids.gemini2), gemini3: document.getElementById(ids.gemini3),
-            google: document.getElementById(ids.google), geminiImage: document.getElementById(ids.geminiImage) // NOVO INPUT
+            google: document.getElementById(ids.google)
         };
 
         inputs.openai.value = appState.apiKeys.openai || '';
         inputs.gemini1.value = appState.apiKeys.gemini[0] || '';
         inputs.gemini2.value = appState.apiKeys.gemini[1] || '';
         inputs.gemini3.value = appState.apiKeys.gemini[2] || '';
-        inputs.geminiImage.value = appState.apiKeys.gemini_image || ''; // Carregar valor da chave de imagem
         inputs.google.value = appState.apiKeys.google_api || '';
 
         document.getElementById('validate-openai-key').addEventListener('click', () => validateOpenAIKey(inputs.openai.value, document.getElementById('openai-key-status')));
         document.getElementById('validate-gemini-key-1').addEventListener('click', () => validateGeminiKey(inputs.gemini1.value, document.getElementById('gemini-key-1-status')));
         document.getElementById('validate-gemini-key-2').addEventListener('click', () => validateGeminiKey(inputs.gemini2.value, document.getElementById('gemini-key-2-status')));
         document.getElementById('validate-gemini-key-3').addEventListener('click', () => validateGeminiKey(inputs.gemini3.value, document.getElementById('gemini-key-3-status')));
-        document.getElementById('validate-gemini-image-key').addEventListener('click', () => validateGeminiImageKey(inputs.geminiImage.value, document.getElementById('gemini-image-key-status'))); // NOVO: Listener de validação
         document.getElementById('validate-google-api-key').addEventListener('click', () => validateGoogleApiKey(inputs.google.value, document.getElementById('google-api-key-status')));
 
         document.getElementById('save-settings').addEventListener('click', async () => {
             const newSettings = {
                 openai: inputs.openai.value.trim(),
                 gemini: [ inputs.gemini1.value.trim(), inputs.gemini2.value.trim(), inputs.gemini3.value.trim() ],
-                gemini_image: inputs.geminiImage.value.trim(), // Salvar a nova chave
                 google_api: inputs.google.value.trim(),
                 userChannels: appState.userChannels, videoIdeas: appState.videoIdeas
             };
             const feedbackEl = document.getElementById('settings-feedback');
             try {
                 await apiRequest(`/api/settings`, 'POST', { settings: newSettings });
-                appState.apiKeys = { 
-                    openai: newSettings.openai, 
-                    gemini: newSettings.gemini, 
-                    google_api: newSettings.google_api,
-                    gemini_image: newSettings.gemini_image // Atualizar appState
-                };
+                appState.apiKeys = { openai: newSettings.openai, gemini: newSettings.gemini, google_api: newSettings.google_api };
                 feedbackEl.textContent = 'Configurações salvas com sucesso!';
                 feedbackEl.className = 'text-green-600 text-sm mt-4';
             } catch (error) {
@@ -2012,19 +1890,11 @@
         renderPlanner();
     }
 
-    function initializeWhiskerImageGenerator() { // NOVO: Inicializador para o Gerador de Imagens Whisk
-        const generateButton = document.getElementById('generate-whisk-image');
-        if (generateButton) {
-            generateButton.addEventListener('click', () => handlers['generate-whisk-image']());
-        }
-    }
-
     async function saveSettings() {
         if (!appState.currentUser) return;
         const settingsToSave = { 
             gemini: appState.apiKeys.gemini, openai: appState.apiKeys.openai,
-            google_api: appState.apiKeys.google_api, gemini_image: appState.apiKeys.gemini_image, // Salvar a nova chave
-            userChannels: appState.userChannels, 
+            google_api: appState.apiKeys.google_api, userChannels: appState.userChannels, 
             videoIdeas: appState.videoIdeas 
         };
         await apiRequest(`/api/settings`, 'POST', { settings: settingsToSave });
@@ -2212,11 +2082,7 @@
             ]);
             
             const maintenanceStatus = appStatus.maintenance;
-            const announcement = appStatus.status; // Usar 'status' para anúncio se essa for a chave
-            
-            // Tratamento do 'announcement'
-            const announcementMessage = announcement ? (announcement.message || '') : '';
-
+            const announcement = appStatus.announcement;
 
             const pendingActivationUsers = users.filter(u => !u.is_active);
             const activeUsers = users.filter(u => u.is_active);
@@ -2299,7 +2165,7 @@
                     <div>
                         <h3 class="text-lg font-semibold font-display">Anúncio Global</h3>
                         <p class="text-sm text-slate-500 mb-2">Envie uma mensagem pop-up para todos os utilizadores online.</p>
-                        <textarea id="announcement-message-input" class="w-full px-3 py-2 border rounded-md mb-2" rows="3" placeholder="Digite a sua mensagem...">${escapeHTML(announcementMessage)}</textarea>
+                        <textarea id="announcement-message-input" class="w-full px-3 py-2 border rounded-md mb-2" rows="3" placeholder="Digite a sua mensagem...">${escapeHTML(announcement?.message)}</textarea>
                         <div class="flex justify-end gap-2">
                             <button id="clear-announcement-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Limpar Anúncio</button>
                             <button id="send-announcement-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Enviar Anúncio</button>
@@ -2478,3 +2344,10 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
