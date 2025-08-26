@@ -120,15 +120,15 @@
             background-color: #fca5a5;
          }
         
-        /* INÍCIO: NOVOS ESTILOS PARA DIVISOR DE TEXTO */
-        .text-part-copied {
+        /* INÍCIO: CORREÇÃO ESTILOS PARA DIVISOR DE TEXTO */
+        .text-part-container.text-part-copied {
             position: relative;
             background-color: #166534 !important; /* bg-green-800 */
             border-color: #16a34a; /* border-green-500 */
             color: #dcfce7; /* text-green-100 */
-            transition: background-color 0.3s ease-in-out;
+            transition: background-color 0.3s ease;
         }
-        .text-part-copied::after {
+        .text-part-container.text-part-copied::after {
             content: 'COPIADO';
             position: absolute;
             top: 50%;
@@ -136,11 +136,11 @@
             transform: translate(-50%, -50%) rotate(-15deg);
             font-size: 4rem;
             font-weight: 900;
-            color: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.15); /* Opacidade aumentada */
             pointer-events: none;
             z-index: 10;
         }
-        /* FIM: NOVOS ESTILOS PARA DIVISOR DE TEXTO */
+        /* FIM: CORREÇÃO ESTILOS PARA DIVISOR DE TEXTO */
 
         @media (max-width: 768px) {
             #app-container { flex-direction: column; }
@@ -426,7 +426,6 @@
         
         if (response.status === 503) {
             const data = await response.json().catch(() => ({ message: 'Serviço indisponível.' }));
-            // A lógica de manutenção agora é tratada após o login, mas mantemos o throw para outros casos
             throw new Error(data.message);
         }
 
@@ -462,7 +461,6 @@
             localStorage.setItem('authToken', response.token);
             appState.currentUser = response.user;
 
-            // CORRIGIDO: Verificar status da aplicação APÓS o login
             const appStatus = await apiRequest('/api/status', 'GET');
 
             if (appStatus.maintenance && appStatus.maintenance.is_on && appState.currentUser.role !== 'admin') {
@@ -570,7 +568,6 @@
         try {
             const status = await apiRequest('/api/status', 'GET');
             if (status.announcement) showAnnouncement(status.announcement);
-            // CORRIGIDO: Verificação de manutenção em tempo real
             if (status.maintenance && status.maintenance.is_on && appState.currentUser.role !== 'admin') {
                 showMaintenanceMode(status.maintenance.message);
             }
@@ -615,28 +612,22 @@
         document.getElementById('chat-widget').style.display = 'block';
 
         const initialNotifications = await apiRequest('/api/chat/notifications', 'GET');
-        
-        // INÍCIO: ALTERAÇÃO NA NOTIFICAÇÃO DE CHAT (LÓGICA OTIMIZADA)
         if (initialNotifications && initialNotifications.length > 0) {
-            // Usa o sender_email que já vem da API, sem nova requisição
-            const senderNames = initialNotifications.map(notif => notif.sender_email.split('@')[0]);
-            // Remove nomes duplicados
-            const uniqueSenderNames = [...new Set(senderNames)];
-            
-            let notificationMessage;
-            if (uniqueSenderNames.length > 2) {
-                notificationMessage = `Você tem novas mensagens de ${uniqueSenderNames.length} pessoas.`;
-            } else {
-                notificationMessage = `Você tem mensagens de: ${uniqueSenderNames.join(', ')}.`;
+            const usersWithMessages = await apiRequest('/api/chat/users', 'GET');
+            const senderEmails = initialNotifications.map(notif => {
+                const senderUser = usersWithMessages.find(u => u.user_id === notif.sender_id);
+                return senderUser ? senderUser.email.split('@')[0] : 'Alguém';
+            });
+            let notificationMessage = `Você tem mensagens de: ${[...new Set(senderEmails)].join(', ')}.`;
+            if (notificationMessage.length > 100) {
+                 notificationMessage = `Você tem novas mensagens de ${[...new Set(senderEmails)].length} pessoas.`
             }
             showLoginNotificationPopup(notificationMessage);
         }
-        // FIM: ALTERAÇÃO NA NOTIFICAÇÃO DE CHAT
 
         if (appState.statusPollInterval) clearInterval(appState.statusPollInterval);
         appState.statusPollInterval = setInterval(pollForStatus, 30000);
         
-        // Exibe o anúncio inicial se houver um
         if(initialAnnouncement) {
             showAnnouncement(initialAnnouncement);
         }
@@ -1956,12 +1947,13 @@
         }
     }
 
+    // INÍCIO: CORREÇÃO NO CARREGAMENTO DA LISTA DE USUÁRIOS DO CHAT
     async function renderChatUserList() {
         chatContainer.innerHTML = `<div class="chat-header"><span>Utilizadores</span><button id="chat-close-btn" class="text-white">&times;</button></div><div id="chat-user-list" class="p-2">A carregar...</div>`;
         document.getElementById('chat-close-btn').addEventListener('click', toggleChatWindow);
+        const userListEl = document.getElementById('chat-user-list');
         try {
             const users = await apiRequest('/api/chat/users', 'GET');
-            const userListEl = document.getElementById('chat-user-list');
             const onlineUsers = users.filter(u => u.is_online);
             const offlineUsers = users.filter(u => !u.is_online);
             let html = '<div class="px-2 text-xs font-semibold text-green-400">ONLINE</div>';
@@ -1969,8 +1961,11 @@
             html += '<div class="mt-4 px-2 text-xs font-semibold text-gray-500">OFFLINE</div>';
             if (offlineUsers.length > 0) html += offlineUsers.map(user => `<div class="chat-user-item" data-peer-id="${user.user_id}" data-peer-email="${user.email}"><span>${user.email}</span>${user.unread_count > 0 ? `<span class="unread-indicator"></span>` : ''}</div>`).join('');
             userListEl.innerHTML = html;
-        } catch (error) { userListEl.innerHTML = `<p class="text-red-400 text-sm p-2">${error.message}</p>`; }
+        } catch (error) { 
+            userListEl.innerHTML = `<p class="text-red-400 text-sm p-2">${error.message}</p>`; 
+        }
     }
+    // FIM: CORREÇÃO NO CARREGAMENTO DA LISTA DE USUÁRIOS DO CHAT
 
     async function openChatWith(peer) {
         appState.chat.activePeer = peer;
@@ -2084,7 +2079,6 @@
         document.getElementById('notification-sender-list').textContent = message || 'Você tem mensagens não lidas.';
         ELEMENTS.loginNotificationPopup.style.display = 'block'; 
     }
-
     function hideLoginNotificationPopup() { ELEMENTS.loginNotificationPopup.style.display = 'none'; }
     function showOfflineMessageModal(userId, userEmail) {
         document.getElementById('offline-user-email').textContent = userEmail;
@@ -2104,7 +2098,7 @@
             const [users, stats, appStatus] = await Promise.all([ 
                 apiRequest('/api/admin/users', 'GET'), 
                 apiRequest('/api/admin/stats', 'GET'),
-                apiRequest('/api/status', 'GET') // Usamos a rota de status geral
+                apiRequest('/api/status', 'GET')
             ]);
             
             const maintenanceStatus = appStatus.maintenance;
@@ -2178,8 +2172,7 @@
                                 <div class="relative">
                                     <input type="checkbox" id="maintenance-toggle" class="sr-only" ${maintenanceStatus.is_on ? 'checked' : ''}>
                                     <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
-                                    <div class="dot absolute left-1 top-1 bg-white w-6
-									                                <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                                    <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
                                 </div>
                                 <div class="ml-3 text-gray-700 font-medium" id="maintenance-label">
                                     ${maintenanceStatus.is_on ? 'Ativo' : 'Inativo'}
@@ -2315,7 +2308,7 @@
         }
     });
     
-    // INÍCIO: ALTERAÇÃO NO EVENTO DE CLIQUE PARA COPIAR
+    // INÍCIO: CORREÇÃO NO EVENTO DE CLIQUE PARA COPIAR (MARCAÇÃO PERMANENTE)
     ELEMENTS.tabContent.addEventListener('click', (e) => {
         const copyBtn = e.target.closest('.copy-btn');
         if (copyBtn) {
@@ -2327,9 +2320,6 @@
                 const parentContainer = copyBtn.closest('.text-part-container');
                 if (parentContainer) {
                     parentContainer.classList.add('text-part-copied');
-                    setTimeout(() => {
-                        parentContainer.classList.remove('text-part-copied');
-                    }, 2000); // Remove o efeito após 2 segundos
                 }
 
                 setTimeout(() => {
@@ -2339,8 +2329,32 @@
             });
         }
     });
-    // FIM: ALTERAÇÃO NO EVENTO DE CLIQUE PARA COPIAR
+    // FIM: CORREÇÃO NO EVENTO DE CLIQUE PARA COPIAR
 
+   ELEMENTS.tabContent.addEventListener('click', (e) => {
+        const copyBtn = e.target.closest('.copy-btn');
+        if (copyBtn) {
+            const textToCopy = decodeURIComponent(copyBtn.dataset.copyText);
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                copyBtn.textContent = 'Copiado!';
+                copyBtn.classList.add('copied');
+                
+                // INÍCIO: CORREÇÃO PARA MARCAÇÃO PERMANENTE
+                const parentContainer = copyBtn.closest('.text-part-container');
+                if (parentContainer) {
+                    // Adiciona a classe para o efeito visual e não a remove mais
+                    parentContainer.classList.add('text-part-copied');
+                }
+                // FIM: CORREÇÃO PARA MARCAÇÃO PERMANENTE
+
+                setTimeout(() => {
+                    copyBtn.textContent = 'Copiar';
+                    copyBtn.classList.remove('copied');
+                }, 1500);
+            });
+        }
+    });
+    
     ELEMENTS.openMenuBtn.addEventListener('click', () => {
         ELEMENTS.sidebar.classList.add('open');
         ELEMENTS.menuOverlay.style.display = 'block';
