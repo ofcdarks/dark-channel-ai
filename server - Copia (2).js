@@ -9,16 +9,42 @@ const jwt = require('jsonwebtoken');
 const { google } = require('googleapis');
 const googleTrends = require('google-trends-api');
 const axios = require('axios');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const multer =require('multer');
+const fs = require('fs');
 
 // 2. Configuração Inicial
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-secreto-padrao';
 
+// Obter o diretório base do projeto de forma segura
+const BASE_DIR = __dirname;
+
 // Middlewares
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
+// Servir arquivos estáticos da pasta 'public'.
+app.use(express.static(path.join(BASE_DIR, 'public')));
+
+// Servir uploads de imagens
+app.use('/uploads', express.static(path.join(BASE_DIR, 'uploads')));
+
+// Configuração do Multer para Upload de Imagens no Chat
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const dir = path.join(BASE_DIR, 'uploads/');
+    if (!fs.existsSync(dir)){
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname)); // Nome do arquivo único
+  }
+});
+const upload = multer({ storage: storage });
 
 // 3. Conexão com o Banco de Dados PostgreSQL
 const pool = new Pool({
@@ -28,7 +54,7 @@ const pool = new Pool({
   }
 });
 
-// Função de inicialização da base de dados atualizada
+// Função de inicialização da base de dados
 const initializeDb = async () => {
   const client = await pool.connect();
   try {
@@ -44,8 +70,7 @@ const initializeDb = async () => {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    console.log("Tabela 'users' verificada/criada com sucesso.");
-
+    
     // Tabela de Histórico de Login
     await client.query(`
       CREATE TABLE IF NOT EXISTS login_history (
@@ -55,7 +80,6 @@ const initializeDb = async () => {
         ip_address VARCHAR(50)
       );
     `);
-    console.log('Tabela "login_history" verificada/criada com sucesso.');
     
     // Tabela de Sessões Ativas
     await client.query(`
@@ -65,7 +89,6 @@ const initializeDb = async () => {
             last_seen TIMESTAMPTZ NOT NULL
         );
     `);
-    console.log('Tabela "active_sessions" verificada/criada com sucesso.');
 
     // Tabela de Mensagens do Chat
     await client.query(`
@@ -78,8 +101,26 @@ const initializeDb = async () => {
             is_read BOOLEAN DEFAULT false
         );
     `);
-    console.log('Tabela "chat_messages" verificada/criada com sucesso.');
 
+    // Tabela de Recuperação de Senha
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS password_resets (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token VARCHAR(255) NOT NULL,
+            expires_at TIMESTAMPTZ NOT NULL
+        );
+    `);
+
+    // Tabela de Status da Aplicação (Manutenção/Anúncios)
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS app_status (
+            key VARCHAR(50) PRIMARY KEY,
+            value JSONB
+        );
+    `);
+    
+    console.log("Tabelas verificadas/criadas com sucesso.");
 
     // Lógica de Administração Reforçada
     const adminEmail = 'rudysilvaads@gmail.com';
@@ -108,7 +149,7 @@ const initializeDb = async () => {
   }
 };
 
-// 4. Middleware de Segurança
+// 4. Middlewares de Segurança
 const verifyToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -125,16 +166,53 @@ const requireAdmin = (req, res, next) => {
     next();
 };
 
+// 5. Configuração do Nodemailer
+// CORRIGIDO: Validação das variáveis de ambiente para o Nodemailer
+let transporter;
+if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST,
+        port: process.env.EMAIL_PORT || 587,
+        secure: (process.env.EMAIL_PORT || 587) == 465,
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    });
+    console.log("Nodemailer configurado com sucesso.");
+} else {
+    console.error("ERRO CRÍTICO: As variáveis de ambiente para envio de e-mail (EMAIL_HOST, EMAIL_USER, EMAIL_PASS) não estão definidas. As funcionalidades de e-mail estarão desativadas.");
+    transporter = null;
+}
 
-// 5. Rotas da API (Autenticação e Configurações)
+
+// 6. Rotas da API
 app.post('/api/register', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
     try {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
-        // ALTERAÇÃO: Novos utilizadores são criados como inativos
         const result = await pool.query('INSERT INTO users (email, password_hash, settings, is_active) VALUES ($1, $2, $3, false) RETURNING id, email', [email, passwordHash, {}]);
+        
+        // NOVO: Envio de e-mail de boas-vindas
+        if (transporter) {
+            const mailOptions = {
+                from: `"La Casa Canais Darks" <${process.env.EMAIL_USER}>`,
+                to: email,
+                subject: 'Bem-vindo à La Casa Canais Darks!',
+                html: `
+                    <div style="font-family: Arial, sans-serif; background-color: #111827; color: #e5e7eb; padding: 20px; text-align: center;">
+                        <h1 style="color: #DC2626; font-family: Oswald, sans-serif;">BEM-VINDO!</h1>
+                        <p style="font-size: 16px;">O seu registo na plataforma La Casa Canais Darks foi concluído com sucesso.</p>
+                        <p style="font-size: 16px;">A sua conta está pendente de ativação por um administrador. Entraremos em contacto assim que o seu acesso for liberado.</p>
+                        <p style="font-size: 14px;">Para acelerar o processo, pode entrar em contacto via WhatsApp.</p>
+                    </div>
+                `,
+            };
+            transporter.sendMail(mailOptions).catch(err => console.error("Falha ao enviar e-mail de boas-vindas:", err));
+        }
+
         res.status(201).json(result.rows[0]);
     } catch (err) {
         if (err.code === '23505') return res.status(409).json({ message: 'Este e-mail já está em uso.' });
@@ -144,13 +222,9 @@ app.post('/api/register', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
-    const { email, password } = req.body;
-    const adminEmail = 'rudysilvaads@gmail.com';
+    const { email, password, rememberMe } = req.body;
     if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
     try {
-        if (email === adminEmail) {
-            await pool.query("UPDATE users SET is_active = true WHERE email = $1", [adminEmail]);
-        }
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = result.rows[0];
 
@@ -158,12 +232,13 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ message: 'Email ou senha inválidos.' });
         }
         
-        // ALTERAÇÃO: Mensagem específica para contas pendentes de ativação
         if (!user.is_active) {
             return res.status(403).json({ message: 'Sua conta precisa ser ativada por um administrador.' });
         }
 
-        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
+        const expiresIn = rememberMe ? '30d' : '24h';
+        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn });
+        
         const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
         await pool.query('INSERT INTO login_history (user_id, ip_address) VALUES ($1, $2)', [user.id, ip]);
         await pool.query(
@@ -178,6 +253,83 @@ app.post('/api/login', async (req, res) => {
     } catch (err) {
         console.error("ERRO DETALHADO NO LOGIN:", err);
         res.status(500).json({ message: `Erro interno: ${err.message}` });
+    }
+});
+
+app.post('/api/forgot-password', async (req, res) => {
+    // CORRIGIDO: Lógica de recuperação de senha
+    if (!transporter) {
+        return res.status(500).json({ message: 'Serviço de e-mail não configurado no servidor.' });
+    }
+    const { email } = req.body;
+    try {
+        const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+        if (userResult.rows.length === 0) {
+            // Resposta genérica por segurança, para não confirmar se um e-mail existe ou não
+            return res.status(200).json({ message: 'Se este e-mail estiver registado, um link de recuperação foi enviado.' });
+        }
+        const user = userResult.rows[0];
+        const token = crypto.randomBytes(32).toString('hex');
+        const expires = new Date(Date.now() + 3600000); // 1 hora
+
+        await pool.query('INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)', [user.id, token, expires]);
+
+        // ATENÇÃO: Certifique-se que o frontend está na mesma URL base ou ajuste esta linha
+        const resetLink = `http://${req.headers.host}/?reset_token=${token}`;
+        
+        const mailOptions = {
+            from: `"La Casa Canais Darks" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: 'Recuperação de Senha - La Casa Canais Darks',
+            html: `
+                <div style="font-family: Arial, sans-serif; background-color: #111827; color: #e5e7eb; padding: 20px; text-align: center;">
+                    <h1 style="color: #DC2626; font-family: Oswald, sans-serif;">LA CASA CANAIS DARKS</h1>
+                    <p style="font-size: 16px;">Recebemos um pedido para redefinir a sua senha.</p>
+                    <p style="font-size: 16px;">Clique no botão abaixo para criar uma nova senha:</p>
+                    <a href="${resetLink}" style="background-color: #DC2626; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; margin: 20px 0;">REDEFINIR SENHA</a>
+                    <p style="font-size: 14px;">Se você não solicitou isso, por favor, ignore este e-mail.</p>
+                </div>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.json({ message: 'Se este e-mail estiver registado, um link de recuperação foi enviado.' });
+
+    } catch (error) {
+        console.error("Erro em forgot-password:", error);
+        res.status(500).json({ message: 'Erro interno do servidor ao tentar enviar o e-mail.' });
+    }
+});
+
+app.post('/api/reset-password', async (req, res) => {
+    const { token, password } = req.body;
+    try {
+        const resetResult = await pool.query('SELECT * FROM password_resets WHERE token = $1 AND expires_at > NOW()', [token]);
+        if (resetResult.rows.length === 0) {
+            return res.status(400).json({ message: 'Token inválido ou expirado.' });
+        }
+        const resetRequest = resetResult.rows[0];
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+        await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, resetRequest.user_id]);
+        await pool.query('DELETE FROM password_resets WHERE id = $1', [resetRequest.id]);
+        res.json({ message: 'Senha redefinida com sucesso.' });
+    } catch (error) {
+        console.error("Erro em reset-password:", error);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+app.get('/api/verify-session', verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id, email, role FROM users WHERE id = $1', [req.user.id]);
+        if (result.rows.length > 0) {
+            res.json({ user: result.rows[0] });
+        } else {
+            res.status(404).json({ message: 'Utilizador não encontrado.' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 });
 
@@ -198,7 +350,6 @@ app.post('/api/heartbeat', verifyToken, async (req, res) => {
         res.sendStatus(500);
     }
 });
-
 
 app.get('/api/settings', verifyToken, async (req, res) => {
     try {
@@ -221,7 +372,23 @@ app.post('/api/settings', verifyToken, async (req, res) => {
     }
 });
 
-// 6. Rota Segura para Geração de Conteúdo com IA
+// NOVO: Rota unificada para verificar status de manutenção e anúncios
+app.get('/api/status', verifyToken, async (req, res) => {
+    try {
+        const statusResult = await pool.query("SELECT key, value FROM app_status WHERE key IN ('maintenance', 'announcement')");
+        const status = {
+            maintenance: statusResult.rows.find(r => r.key === 'maintenance')?.value || { is_on: false, message: '' },
+            announcement: statusResult.rows.find(r => r.key === 'announcement')?.value || null
+        };
+        res.json(status);
+    } catch (error) {
+        console.error("Erro ao buscar status da aplicação:", error);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+
+// 7. Rota Segura para Geração de Conteúdo com IA
 app.post('/api/generate', verifyToken, async (req, res) => {
     const userId = req.user.id;
     const { prompt, schema } = req.body;
@@ -302,7 +469,7 @@ app.post('/api/generate', verifyToken, async (req, res) => {
 });
 
 
-// 7. Rotas da API (YouTube Data & Google Trends)
+// 8. Rotas da API (YouTube Data & Google Trends)
 const getGoogleApiKey = async (userId) => {
     const result = await pool.query('SELECT settings FROM users WHERE id = $1', [userId]);
     return result.rows.length > 0 && result.rows[0].settings ? result.rows[0].settings.google_api : null;
@@ -434,7 +601,7 @@ app.get('/api/google-trends/:keyword/:country', verifyToken, async (req, res) =>
     }
 });
 
-// 8. Rotas de Administração
+// 9. Rotas de Administração
 app.get('/api/admin/users', verifyToken, requireAdmin, async (req, res) => {
     try {
         const result = await pool.query(`
@@ -463,33 +630,6 @@ app.put('/api/admin/user/:userId/status', verifyToken, requireAdmin, async (req,
     }
 });
 
-app.get('/api/admin/sessions', verifyToken, requireAdmin, async (req, res) => {
-    try {
-        const result = await pool.query("SELECT user_id, email, TO_CHAR(last_seen, 'DD/MM/YYYY HH24:MI:SS') as last_seen FROM active_sessions WHERE last_seen > NOW() - INTERVAL '5 minutes' ORDER BY last_seen DESC");
-        res.json(result.rows);
-    } catch (error) {
-        console.error("Erro ao buscar sessões ativas:", error);
-        res.status(500).json({ message: "Erro interno do servidor." });
-    }
-});
-
-app.get('/api/admin/history', verifyToken, requireAdmin, async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT lh.id, u.email, TO_CHAR(lh.login_timestamp, 'DD/MM/YYYY HH24:MI:SS') as login_time, lh.ip_address
-            FROM login_history lh
-            JOIN users u ON lh.user_id = u.id
-            ORDER BY lh.login_timestamp DESC
-            LIMIT 50
-        `);
-        res.json(result.rows);
-    } catch (error) {
-        console.error("Erro ao buscar histórico de logins:", error);
-        res.status(500).json({ message: "Erro interno do servidor." });
-    }
-});
-
-// NOVA ROTA: Estatísticas para o painel admin
 app.get('/api/admin/stats', verifyToken, requireAdmin, async (req, res) => {
     try {
         const totalUsersRes = await pool.query("SELECT COUNT(*) FROM users");
@@ -509,19 +649,59 @@ app.get('/api/admin/stats', verifyToken, requireAdmin, async (req, res) => {
     }
 });
 
-// 9. NOVAS ROTAS DE CHAT
-// Lista utilizadores para o admin
+app.post('/api/admin/maintenance', verifyToken, requireAdmin, async (req, res) => {
+    const { isOn, message } = req.body; // Corrigido de is_on para isOn
+    try {
+        const value = { is_on: isOn, message };
+        await pool.query(
+            "INSERT INTO app_status (key, value) VALUES ('maintenance', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+            [value]
+        );
+        res.json({ message: 'Status de manutenção atualizado.' });
+    } catch (error) {
+        console.error("Erro ao atualizar status de manutenção:", error);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+app.post('/api/admin/announcement', verifyToken, requireAdmin, async (req, res) => {
+    const { message } = req.body;
+    try {
+        const value = { message, timestamp: new Date() };
+        await pool.query(
+            "INSERT INTO app_status (key, value) VALUES ('announcement', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+            [value]
+        );
+        res.json({ message: 'Anúncio global publicado.' });
+    } catch (error) {
+        console.error("Erro ao publicar anúncio:", error);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+// CORRIGIDO: Rota para limpar o anúncio
+app.delete('/api/admin/announcement', verifyToken, requireAdmin, async (req, res) => {
+    try {
+        await pool.query("DELETE FROM app_status WHERE key = 'announcement'");
+        res.json({ message: 'Anúncio limpo com sucesso.' });
+    } catch (error) {
+        console.error("Erro ao limpar anúncio:", error);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+// 10. ROTAS DE CHAT
 app.get('/api/chat/users', verifyToken, requireAdmin, async (req, res) => {
     try {
-        // Seleciona todos os utilizadores que não são o próprio admin, e conta as mensagens não lidas que eles enviaram PARA o admin.
         const result = await pool.query(`
             SELECT 
                 u.id as user_id, 
                 u.email,
-                (SELECT COUNT(*) FROM chat_messages WHERE sender_id = u.id AND receiver_id = $1 AND is_read = false) as unread_count
+                (SELECT COUNT(*) FROM chat_messages WHERE sender_id = u.id AND receiver_id = $1 AND is_read = false) as unread_count,
+                (SELECT EXISTS (SELECT 1 FROM active_sessions WHERE user_id = u.id AND last_seen > NOW() - INTERVAL '5 minutes')) as is_online
             FROM users u
             WHERE u.id != $1
-            ORDER BY u.email;
+            ORDER BY is_online DESC, u.email;
         `, [req.user.id]);
         res.json(result.rows);
     } catch (error) {
@@ -530,17 +710,14 @@ app.get('/api/chat/users', verifyToken, requireAdmin, async (req, res) => {
     }
 });
 
-// Obtém o histórico de mensagens com um utilizador específico
 app.get('/api/chat/history/:peerId', verifyToken, async (req, res) => {
     const myId = req.user.id;
     const peerId = parseInt(req.params.peerId, 10);
     try {
-        // Marca as mensagens como lidas ao carregar o histórico
         await pool.query(
             "UPDATE chat_messages SET is_read = true WHERE sender_id = $1 AND receiver_id = $2",
             [peerId, myId]
         );
-        // Busca a conversa
         const result = await pool.query(`
             SELECT * FROM chat_messages 
             WHERE (sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)
@@ -553,7 +730,6 @@ app.get('/api/chat/history/:peerId', verifyToken, async (req, res) => {
     }
 });
 
-// Envia uma mensagem
 app.post('/api/chat/send', verifyToken, async (req, res) => {
     const { receiverId, message } = req.body;
     const senderId = req.user.id;
@@ -570,7 +746,15 @@ app.post('/api/chat/send', verifyToken, async (req, res) => {
     }
 });
 
-// Verifica notificações de novas mensagens
+app.post('/api/chat/upload', verifyToken, upload.single('image'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).send('Nenhum ficheiro enviado.');
+    }
+    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    res.json({ imageUrl });
+});
+
+
 app.get('/api/chat/notifications', verifyToken, async (req, res) => {
     try {
         const result = await pool.query(`
@@ -586,10 +770,8 @@ app.get('/api/chat/notifications', verifyToken, async (req, res) => {
     }
 });
 
-// Verifica se o admin está online
 app.get('/api/chat/admin-status', verifyToken, async (req, res) => {
     try {
-        // ID 1 é o admin por convenção da inicialização da DB
         const result = await pool.query("SELECT 1 FROM active_sessions WHERE user_id = 1 AND last_seen > NOW() - INTERVAL '5 minutes'");
         res.json({ isAdminOnline: result.rowCount > 0 });
     } catch (error) {
@@ -599,12 +781,12 @@ app.get('/api/chat/admin-status', verifyToken, async (req, res) => {
 });
 
 
-// 10. Rota Genérica (Catch-all)
+// 11. Rota Genérica (Catch-all) para SPA
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(BASE_DIR, 'public', 'index.html'));
 });
 
-// 11. Inicialização do Servidor
+// 12. Inicialização do Servidor
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
   initializeDb();

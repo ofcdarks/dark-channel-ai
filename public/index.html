@@ -119,6 +119,27 @@
          #maintenance-toggle:checked ~ .block {
             background-color: #fca5a5;
          }
+        
+        /* INÍCIO: NOVOS ESTILOS PARA DIVISOR DE TEXTO */
+        .text-part-copied {
+            position: relative;
+            background-color: #166534 !important; /* bg-green-800 */
+            border-color: #16a34a; /* border-green-500 */
+            color: #dcfce7; /* text-green-100 */
+        }
+        .text-part-copied::after {
+            content: 'COPIADO';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            font-size: 4rem;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+            z-index: 10;
+        }
+        /* FIM: NOVOS ESTILOS PARA DIVISOR DE TEXTO */
 
         @media (max-width: 768px) {
             #app-container { flex-direction: column; }
@@ -156,17 +177,14 @@
 </head>
 <body class="text-slate-200">
 
-    <!-- Overlay de Manutenção -->
     <div id="maintenance-overlay" class="full-screen-overlay">
         <div class="max-w-2xl">
             <h2 class="text-4xl font-extrabold text-red-500 font-display mb-4">EM MANUTENÇÃO</h2>
             <p id="maintenance-message" class="text-lg text-gray-300">Estamos a realizar algumas melhorias na plataforma. Voltaremos em breve!</p>
-            <!-- NOVO: Botão de logout para utilizadores presos na manutenção -->
             <button id="logout-from-maintenance" class="mt-6 bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700">Sair</button>
         </div>
     </div>
 
-    <!-- Overlay de Anúncio Global -->
     <div id="announcement-overlay" class="full-screen-overlay">
         <div class="max-w-2xl relative bg-gray-800 p-8 rounded-lg border border-red-500 shadow-lg">
              <button id="close-announcement-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl">&times;</button>
@@ -175,7 +193,6 @@
         </div>
     </div>
 
-    <!-- Tela de Solicitação de Ativação -->
     <div id="activation-container" class="hidden items-center justify-center h-screen login-background">
         <div class="w-full max-w-md p-8 space-y-6 text-center rounded-lg form-container">
             <h2 class="text-3xl font-extrabold text-white font-display">Ativação Pendente</h2>
@@ -189,7 +206,6 @@
         </div>
     </div>
 
-    <!-- Telas de Autenticação -->
     <div id="login-container" class="flex items-center justify-center h-screen login-background">
         <div class="w-full max-w-xs p-8 space-y-8 rounded-lg form-container">
             <div class="text-center">
@@ -257,7 +273,6 @@
         </div>
     </div>
 
-    <!-- Modal de Progresso -->
     <div id="progress-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
         <div class="bg-gray-800 p-8 rounded-lg shadow-xl text-center w-full max-w-sm border border-gray-700">
             <h3 class="text-lg font-semibold text-white mb-2">Processando...</h3>
@@ -266,7 +281,6 @@
         </div>
     </div>
     
-    <!-- Conteúdo da Aplicação -->
     <div id="app-container" class="hidden h-screen bg-gray-900">
         <div id="menu-overlay" class="hidden md:hidden"></div>
         <aside id="sidebar" class="w-72 bg-black flex-shrink-0 flex flex-col">
@@ -292,7 +306,6 @@
         </div>
     </div>
 
-    <!-- Widget do Chat -->
     <div id="chat-widget">
         <div id="chat-bubble">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clip-rule="evenodd" /></svg>
@@ -301,17 +314,15 @@
         <div id="chat-container"></div>
     </div>
 
-    <!-- Popup de Notificação de Mensagem ao Login -->
     <div id="login-notification-popup">
         <p class="font-semibold mb-2">📬 Novas Mensagens!</p>
-        <p class="text-sm text-gray-300 mb-4">Você tem mensagens não lidas. Abra o chat para vê-las.</p>
+        <p id="notification-sender-list" class="text-sm text-gray-300 mb-4">Você tem mensagens não lidas.</p>
         <div class="flex gap-2">
             <button id="open-chat-from-popup" class="flex-1 bg-red-600 text-white px-3 py-1 rounded text-sm">Abrir Chat</button>
             <button id="close-popup" class="flex-1 bg-gray-600 text-white px-3 py-1 rounded text-sm">Fechar</button>
         </div>
     </div>
 
-    <!-- Modal de Mensagem Offline -->
     <div id="offline-message-modal">
         <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm border border-gray-700 space-y-4">
             <h3 class="text-lg font-semibold text-white">Enviar Mensagem para <span id="offline-user-email"></span></h3>
@@ -603,9 +614,20 @@
         document.getElementById('chat-widget').style.display = 'block';
 
         const initialNotifications = await apiRequest('/api/chat/notifications', 'GET');
+        // INÍCIO: ALTERAÇÃO NA NOTIFICAÇÃO DE CHAT
         if (initialNotifications && initialNotifications.length > 0) {
-            showLoginNotificationPopup();
+            const usersWithMessages = await apiRequest('/api/chat/users', 'GET');
+            const senderEmails = initialNotifications.map(notif => {
+                const senderUser = usersWithMessages.find(u => u.user_id === notif.sender_id);
+                return senderUser ? senderUser.email.split('@')[0] : 'Alguém';
+            });
+            let notificationMessage = `Você tem mensagens de: ${senderEmails.join(', ')}.`;
+            if (notificationMessage.length > 100) {
+                 notificationMessage = `Você tem novas mensagens de ${senderEmails.length} pessoas.`
+            }
+            showLoginNotificationPopup(notificationMessage);
         }
+        // FIM: ALTERAÇÃO NA NOTIFICAÇÃO DE CHAT
 
         if (appState.statusPollInterval) clearInterval(appState.statusPollInterval);
         appState.statusPollInterval = setInterval(pollForStatus, 30000);
@@ -762,7 +784,6 @@
                             <div>
                                 <h3 class="text-lg font-semibold font-display">Chaves de API</h3>
                                 <div class="space-y-4 mt-2">
-                                    <!-- OpenAI -->
                                     <div>
                                         <label class="block text-sm font-medium text-slate-700">
                                             <a href="https://platform.openai.com/api-keys" target="_blank" class="hover:text-red-600 hover:underline">OpenAI API Key (Preferencial)</a>
@@ -775,7 +796,6 @@
                                         <p class="text-xs text-slate-500 mt-1">Se preenchida e válida, esta chave será usada como principal.</p>
                                     </div>
                                     <hr/>
-                                    <!-- Gemini -->
                                     <div>
                                         <label class="block text-sm font-medium text-slate-700">
                                             <a href="https://aistudio.google.com/app/apikey" target="_blank" class="hover:text-red-600 hover:underline">Gemini API Key (Principal / Backup)</a>
@@ -803,7 +823,6 @@
                                         </div>
                                     </div>
                                     <hr/>
-                                    <!-- Google API -->
                                     <div>
                                         <label class="block text-sm font-medium text-slate-700">
                                             <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="hover:text-red-600 hover:underline">Google API Key (YouTube Data)</a>
@@ -999,7 +1018,6 @@
                 output.innerHTML = `
                     <div class="mb-6"><h3 class="text-xl font-bold mb-2 text-white font-display">Vídeo Analisado</h3><div class="flex flex-col md:flex-row gap-4 bg-gray-800 p-4 rounded-lg"><img src="${thumbnailUrl}" onerror="this.style.display='none'" class="rounded-md w-full md:w-48 h-auto object-cover"/><div class="flex-1"><h4 class="font-semibold text-white">${title}</h4><p class="text-xs text-gray-400 mt-1">Idioma Detectado: ${lang}</p></div></div></div>
                     
-                    <!-- PAINEL DE VISÃO GERAL -->
                     <div class="mb-6 bg-white p-4 rounded-xl shadow-sm border">
                         <h3 class="text-lg font-semibold mb-4 text-slate-800 font-display">Visão Geral</h3>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -1708,14 +1726,16 @@
                     parts.push(text.substring(i, i + chunkSize));
                 }
             }
+             // INÍCIO: ALTERAÇÃO NO DIVISOR DE TEXTO
             outputEl.innerHTML = parts.map((part, index) => `
-                <div class="bg-slate-100 p-4 rounded-lg">
+                <div class="text-part-container bg-slate-100 p-4 rounded-lg">
                     <div class="flex justify-between items-center mb-2">
                         <h4 class="font-semibold text-slate-800 font-display">Parte ${index + 1}</h4>
                         ${createCopyButton(part)}
                     </div>
                     <p class="text-sm bg-white p-3 rounded border whitespace-pre-wrap">${part}</p>
                 </div>`).join('');
+            // FIM: ALTERAÇÃO NO DIVISOR DE TEXTO
         };
 
         textInput.addEventListener('input', updateAnalytics);
@@ -2057,8 +2077,12 @@
             }
         } catch (error) { console.error("Erro ao buscar notificações:", error); }
     }
-
-    function showLoginNotificationPopup() { ELEMENTS.loginNotificationPopup.style.display = 'block'; }
+    // INÍCIO: ALTERAÇÃO NA NOTIFICAÇÃO DE CHAT
+    function showLoginNotificationPopup(message) { 
+        document.getElementById('notification-sender-list').textContent = message || 'Você tem mensagens não lidas.';
+        ELEMENTS.loginNotificationPopup.style.display = 'block'; 
+    }
+    // FIM: ALTERAÇÃO NA NOTIFICAÇÃO DE CHAT
     function hideLoginNotificationPopup() { ELEMENTS.loginNotificationPopup.style.display = 'none'; }
     function showOfflineMessageModal(userId, userEmail) {
         document.getElementById('offline-user-email').textContent = userEmail;
@@ -2296,6 +2320,12 @@
             navigator.clipboard.writeText(textToCopy).then(() => {
                 copyBtn.textContent = 'Copiado!';
                 copyBtn.classList.add('copied');
+                // INÍCIO: ALTERAÇÃO NO DIVISOR DE TEXTO
+                const parentContainer = copyBtn.closest('.text-part-container');
+                if (parentContainer) {
+                    parentContainer.classList.add('text-part-copied');
+                }
+                // FIM: ALTERAÇÃO NO DIVISOR DE TEXTO
                 setTimeout(() => {
                     copyBtn.textContent = 'Copiar';
                     copyBtn.classList.remove('copied');
@@ -2344,10 +2374,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
