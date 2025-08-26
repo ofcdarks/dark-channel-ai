@@ -167,7 +167,6 @@ const requireAdmin = (req, res, next) => {
 };
 
 // 5. Configuração do Nodemailer
-// CORRIGIDO: Validação das variáveis de ambiente para o Nodemailer
 let transporter;
 if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
     transporter = nodemailer.createTransport({
@@ -194,7 +193,6 @@ app.post('/api/register', async (req, res) => {
         const passwordHash = await bcrypt.hash(password, salt);
         const result = await pool.query('INSERT INTO users (email, password_hash, settings, is_active) VALUES ($1, $2, $3, false) RETURNING id, email', [email, passwordHash, {}]);
         
-        // NOVO: Envio de e-mail de boas-vindas
         if (transporter) {
             const mailOptions = {
                 from: `"La Casa Canais Darks" <${process.env.EMAIL_USER}>`,
@@ -256,7 +254,6 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.post('/api/forgot-password', async (req, res) => {
-    // CORRIGIDO: Lógica de recuperação de senha
     if (!transporter) {
         return res.status(500).json({ message: 'Serviço de e-mail não configurado no servidor.' });
     }
@@ -264,7 +261,6 @@ app.post('/api/forgot-password', async (req, res) => {
     try {
         const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
         if (userResult.rows.length === 0) {
-            // Resposta genérica por segurança, para não confirmar se um e-mail existe ou não
             return res.status(200).json({ message: 'Se este e-mail estiver registado, um link de recuperação foi enviado.' });
         }
         const user = userResult.rows[0];
@@ -273,7 +269,6 @@ app.post('/api/forgot-password', async (req, res) => {
 
         await pool.query('INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)', [user.id, token, expires]);
 
-        // ATENÇÃO: Certifique-se que o frontend está na mesma URL base ou ajuste esta linha
         const resetLink = `http://${req.headers.host}/?reset_token=${token}`;
         
         const mailOptions = {
@@ -371,7 +366,6 @@ app.post('/api/settings', verifyToken, async (req, res) => {
     }
 });
 
-// NOVO: Rota unificada para verificar status de manutenção e anúncios
 app.get('/api/status', verifyToken, async (req, res) => {
     try {
         const statusResult = await pool.query("SELECT key, value FROM app_status WHERE key IN ('maintenance', 'announcement')");
@@ -627,6 +621,31 @@ app.put('/api/admin/user/:userId/status', verifyToken, requireAdmin, async (req,
     }
 });
 
+// INÍCIO: NOVA ROTA PARA EXCLUIR USUÁRIO
+app.delete('/api/admin/user/:userId', verifyToken, requireAdmin, async (req, res) => {
+    const { userId } = req.params;
+    const adminId = req.user.id; 
+
+    if (parseInt(userId, 10) === 1) {
+        return res.status(403).json({ message: "Não é possível excluir o administrador principal." });
+    }
+    if (parseInt(userId, 10) === adminId) {
+        return res.status(403).json({ message: "Não é possível excluir a si mesmo." });
+    }
+
+    try {
+        const deleteResult = await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+        if (deleteResult.rowCount === 0) {
+            return res.status(404).json({ message: "Utilizador não encontrado." });
+        }
+        res.json({ message: 'Utilizador excluído com sucesso.' });
+    } catch (error) {
+        console.error("Erro ao excluir utilizador:", error);
+        res.status(500).json({ message: "Erro interno do servidor." });
+    }
+});
+// FIM: NOVA ROTA PARA EXCLUIR USUÁRIO
+
 app.get('/api/admin/stats', verifyToken, requireAdmin, async (req, res) => {
     try {
         const totalUsersRes = await pool.query("SELECT COUNT(*) FROM users");
@@ -647,7 +666,7 @@ app.get('/api/admin/stats', verifyToken, requireAdmin, async (req, res) => {
 });
 
 app.post('/api/admin/maintenance', verifyToken, requireAdmin, async (req, res) => {
-    const { isOn, message } = req.body; // Corrigido de is_on para isOn
+    const { isOn, message } = req.body;
     try {
         const value = { is_on: isOn, message };
         await pool.query(
@@ -676,7 +695,6 @@ app.post('/api/admin/announcement', verifyToken, requireAdmin, async (req, res) 
     }
 });
 
-// CORRIGIDO: Rota para limpar o anúncio
 app.delete('/api/admin/announcement', verifyToken, requireAdmin, async (req, res) => {
     try {
         await pool.query("DELETE FROM app_status WHERE key = 'announcement'");
@@ -753,7 +771,6 @@ app.post('/api/chat/upload', verifyToken, upload.single('image'), (req, res) => 
 
 app.get('/api/chat/notifications', verifyToken, async (req, res) => {
     try {
-        // ATUALIZADO: Adicionado JOIN para buscar o email do remetente
         const result = await pool.query(`
             SELECT
                 cm.sender_id,
@@ -790,6 +807,4 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
   initializeDb();
-
 });
-

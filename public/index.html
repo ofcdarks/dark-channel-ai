@@ -334,6 +334,19 @@
             </div>
         </div>
     </div>
+	
+	<!-- INÍCIO: NOVO MODAL DE CONFIRMAÇÃO -->
+    <div id="confirmation-modal" class="modal-overlay">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm border border-yellow-500 space-y-4">
+            <h3 id="confirmation-title" class="text-lg font-semibold text-yellow-400">Confirmar Ação</h3>
+            <p id="confirmation-message" class="text-sm text-gray-300">Tem a certeza?</p>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-confirmation-btn" class="bg-gray-600 text-white px-4 py-2 rounded">Cancelar</button>
+                <button id="confirm-action-btn" class="bg-yellow-600 text-white px-4 py-2 rounded">Confirmar</button>
+            </div>
+        </div>
+    </div>
+    <!-- FIM: NOVO MODAL DE CONFIRMAÇÃO -->
 
     <script>
     // --- Global State Management ---
@@ -1345,7 +1358,7 @@
                  output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
             }
         },
-        'generate-prompts': async (output, append = false) => {
+       'generate-prompts': async (output, append = false) => {
             const title = document.getElementById('thumb-title').value.trim();
             const platform = document.getElementById('thumb-platform').value;
             if (!title) { output.innerHTML = `<p class="text-red-500">Insira um título.</p>`; return; }
@@ -1355,7 +1368,8 @@
                 'DALL-E 3': 'Seja conversacional e extremamente descritivo. "Crie uma imagem fotorrealista de um astronauta olhando para uma galáxia neon, com um sentimento de admiração. O estilo deve ser cinematográfico e escuro."',
                 'Freepik': 'Use termos comerciais e diretos. "Homem surpreso apontando para um gráfico de ações subindo, fundo de escritório, estilo de foto de banco de imagem, cores vibrantes."'
             };
-            const prompt = `Gere 2 prompts AVANÇADOS em INGLÊS para a IA '${platform}' para uma thumbnail sobre "${title}". Siga esta diretriz para o prompt: ${platformConfigs[platform]}. Forneça uma sugestão que seja uma "virada de chave".`;
+            // PROMPT CORRIGIDO PARA EXIGIR OS CAMPOS
+            const prompt = `Gere 2 prompts AVANÇADOS em INGLÊS para a IA '${platform}' para uma thumbnail sobre "${title}". Siga esta diretriz para o prompt: ${platformConfigs[platform]}. Para cada um, FORNEÇA OBRIGATORIAMENTE os campos: 'prompt', 'score' (um número de 70 a 95), 'suggestion' e 'ab_test_suggestion'.`;
             const schema = {
                 type: "ARRAY",
                 items: {
@@ -1370,7 +1384,18 @@
             };
             try {
                 const result = await callAIModel(prompt, schema);
-                let html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="font-mono text-sm bg-slate-200 p-2 rounded relative group">${item.prompt}<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(item.prompt)}</div></div><p class="text-xs mt-2 text-slate-600"><strong>Teste A/B:</strong> ${item.ab_test_suggestion}</p></div>${renderScoreCard('Potencial de CTR', item.score, { 'Impacto Visual': item.score + 4, 'Clareza': item.score - 3 }, item.suggestion)}</div>`).join('');
+                // RENDERIZAÇÃO CORRIGIDA PARA LIDAR COM DADOS FALTANTES
+                let html = result.map(item => {
+                    const score = item.score || 0;
+                    const abTest = item.ab_test_suggestion || 'N/A';
+                    return `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start">
+                                <div class="flex-1">
+                                    <div class="font-mono text-sm bg-slate-200 p-2 rounded relative group">${item.prompt}<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(item.prompt)}</div></div>
+                                    <p class="text-xs mt-2 text-slate-600"><strong>Teste A/B:</strong> ${abTest}</p>
+                                </div>
+                                ${renderScoreCard('Potencial de CTR', score, { 'Impacto Visual': score > 0 ? score + 4 : 0, 'Clareza': score > 0 ? score - 3 : 0 }, item.suggestion)}
+                            </div>`;
+                }).join('');
                 if (append) {
                     const moreButton = document.getElementById('generate-more-prompts');
                     if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
@@ -2103,6 +2128,32 @@
     async function initializeAdminPanel() {
         const container = document.getElementById('admin-container');
         container.innerHTML = `<p class="text-white">A carregar...</p>`;
+
+        // INÍCIO: Lógica do Modal de Confirmação
+        const confirmationModal = document.getElementById('confirmation-modal');
+        let confirmCallback = null;
+
+        const showConfirmationModal = (title, message, onConfirm) => {
+            document.getElementById('confirmation-title').textContent = title;
+            document.getElementById('confirmation-message').textContent = message;
+            confirmCallback = onConfirm;
+            confirmationModal.style.display = 'flex';
+        };
+
+        const hideConfirmationModal = () => {
+            confirmationModal.style.display = 'none';
+            confirmCallback = null;
+        };
+
+        document.getElementById('cancel-confirmation-btn').onclick = hideConfirmationModal;
+        document.getElementById('confirm-action-btn').onclick = () => {
+            if (typeof confirmCallback === 'function') {
+                confirmCallback();
+            }
+            hideConfirmationModal();
+        };
+        // FIM: Lógica do Modal de Confirmação
+
         try {
             const [users, stats, appStatus] = await Promise.all([ 
                 apiRequest('/api/admin/users', 'GET'), 
@@ -2144,7 +2195,8 @@
                                         <td class="px-6 py-4">${u.last_login || 'Nunca'}</td>
                                         <td class="px-6 py-4 text-center space-x-2">
                                             <button class="offline-message-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-email="${u.email}">Mensagem</button>
-                                            <button class="user-status-toggle bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="false" ${appState.currentUser.id === u.id ? 'disabled' : ''}>Desativar</button>
+                                            <button class="user-status-toggle bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="false" ${appState.currentUser.id === u.id ? 'disabled' : ''}>Desativar</button>
+                                            <button class="delete-user-btn bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-email="${u.email}" ${appState.currentUser.id === u.id ? 'disabled' : ''}>Excluir</button>
                                         </td>
                                     </tr>`).join('')}
                             </tbody>
@@ -2165,8 +2217,9 @@
                                 ${pendingActivationUsers.map(u => `
                                     <tr class="border-b border-yellow-800">
                                         <td class="px-6 py-4">${u.email}</td>
-                                        <td class="px-6 py-4 text-center">
+                                        <td class="px-6 py-4 text-center space-x-2">
                                             <button class="user-status-toggle bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="true">Ativar</button>
+                                            <button class="delete-user-btn bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-email="${u.email}">Excluir</button>
                                         </td>
                                     </tr>`).join('')}
                             </tbody>
@@ -2212,6 +2265,27 @@
                     await apiRequest(`/api/admin/user/${userId}/status`, 'PUT', { isActive });
                     initializeAdminPanel();
                 }));
+                
+                // INÍCIO: Lógica do botão de exclusão
+                document.querySelectorAll('.delete-user-btn').forEach(button => button.addEventListener('click', (e) => {
+                    const userId = e.target.dataset.userid;
+                    const userEmail = e.target.dataset.email;
+                    showConfirmationModal(
+                        'Excluir Utilizador',
+                        `Tem a certeza que deseja excluir permanentemente o utilizador ${userEmail}? Esta ação não pode ser desfeita.`,
+                        async () => {
+                            try {
+                                await apiRequest(`/api/admin/user/${userId}`, 'DELETE');
+                                addToLog(`Utilizador ${userEmail} excluído com sucesso.`);
+                                initializeAdminPanel();
+                            } catch (error) {
+                                addToLog(`Erro ao excluir utilizador: ${error.message}`, true);
+                            }
+                        }
+                    );
+                }));
+                // FIM: Lógica do botão de exclusão
+
                 document.querySelectorAll('.offline-message-btn').forEach(button => button.addEventListener('click', (e) => showOfflineMessageModal(e.target.dataset.userid, e.target.dataset.email)));
 
                 const maintenanceToggle = document.getElementById('maintenance-toggle');
@@ -2256,39 +2330,6 @@
             setupAdminActions();
         } catch (error) {
             container.innerHTML = `<p class="text-red-500">Erro: ${error.message}</p>`;
-        }
-    }
-    
-    // --- Session Persistence ---
-    async function checkSession() {
-        const token = localStorage.getItem('authToken');
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        if (urlParams.has('reset_token')) {
-            showScreen('reset-password-container');
-            return;
-        }
-
-        if (token) {
-            try {
-                const response = await apiRequest('/api/verify-session', 'GET');
-                if (response && response.user) {
-                    appState.currentUser = response.user;
-                    const appStatus = await apiRequest('/api/status', 'GET');
-                    if (appStatus.maintenance && appStatus.maintenance.is_on && appState.currentUser.role !== 'admin') {
-                        showMaintenanceMode(appStatus.maintenance.message);
-                    } else {
-                        await initializeApp(appStatus.announcement);
-                    }
-                } else {
-                    handleLogout();
-                }
-            } catch (error) {
-                console.error("Falha na verificação da sessão:", error);
-                handleLogout();
-            }
-        } else {
-            showScreen('login-container');
         }
     }
 
