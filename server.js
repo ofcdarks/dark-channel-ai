@@ -621,7 +621,6 @@ app.put('/api/admin/user/:userId/status', verifyToken, requireAdmin, async (req,
     }
 });
 
-// INÍCIO: NOVA ROTA PARA EXCLUIR USUÁRIO
 app.delete('/api/admin/user/:userId', verifyToken, requireAdmin, async (req, res) => {
     const { userId } = req.params;
     const adminId = req.user.id; 
@@ -644,7 +643,6 @@ app.delete('/api/admin/user/:userId', verifyToken, requireAdmin, async (req, res
         res.status(500).json({ message: "Erro interno do servidor." });
     }
 });
-// FIM: NOVA ROTA PARA EXCLUIR USUÁRIO
 
 app.get('/api/admin/stats', verifyToken, requireAdmin, async (req, res) => {
     try {
@@ -807,4 +805,3 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
   initializeDb();
-});
