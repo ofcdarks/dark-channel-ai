@@ -615,19 +615,24 @@
         if (initialNotifications && initialNotifications.length > 0) {
             const senderEmails = initialNotifications.map(notif => notif.sender_email.split('@')[0]);
             const uniqueSenders = [...new Set(senderEmails)];
-            let notificationMessage = `Você tem mensagens de: ${uniqueSenders.join(', ')}.`;
-            if (notificationMessage.length > 100) {
-                 notificationMessage = `Você tem novas mensagens de ${uniqueSenders.length} pessoas.`
+            let notificationMessage;
+            if (uniqueSenders.length > 2) {
+                notificationMessage = `Você tem mensagens de: ${uniqueSenders.slice(0, 2).join(', ')} e mais ${uniqueSenders.length - 2} ${uniqueSenders.length - 2 > 1 ? 'outros' : 'outro'}.`;
+            } else if (uniqueSenders.length > 0) {
+                notificationMessage = `Você tem mensagens de: ${uniqueSenders.join(', ')}.`;
+            } else {
+                notificationMessage = 'Você tem novas mensagens.'; // Fallback
             }
             showLoginNotificationPopup(notificationMessage);
         }
 
-        if (appState.statusPollInterval) clearInterval(appState.statusPollInterval);
+         if (appState.statusPollInterval) clearInterval(appState.statusPollInterval);
         appState.statusPollInterval = setInterval(pollForStatus, 30000);
         
         if(initialAnnouncement) {
             showAnnouncement(initialAnnouncement);
         }
+    
     }
 
     // --- UI Building ---
@@ -1951,23 +1956,22 @@
     async function renderChatUserList() {
         chatContainer.innerHTML = `<div class="chat-header"><span>Utilizadores</span><button id="chat-close-btn" class="text-white">&times;</button></div><div id="chat-user-list" class="p-2">A carregar...</div>`;
         document.getElementById('chat-close-btn').addEventListener('click', toggleChatWindow);
-        const userListEl = document.getElementById('chat-user-list'); // Definido fora do try/catch
+        const userListEl = document.getElementById('chat-user-list');
         try {
             const users = await apiRequest('/api/chat/users', 'GET');
             const onlineUsers = users.filter(u => u.is_online);
             const offlineUsers = users.filter(u => !u.is_online);
             
             let html = '<div class="px-2 text-xs font-semibold text-green-400">ONLINE</div>';
-            html += onlineUsers.length > 0 ? onlineUsers.map(user => `<div class="chat-user-item" data-peer-id="${user.user_id}" data-peer-email="${user.email}"><span><span class="online-status-dot"></span>${user.email}</span>${user.unread_count > 0 ? `<span class="unread-indicator"></span>` : ''}</div>`).join('') : '<p class="text-center text-xs text-gray-400 p-2">Ninguém online.</p>';
+            html += onlineUsers.length > 0 ? onlineUsers.map(user => `<div class="chat-user-item" data-peer-id="${user.user_id}" data-peer-email="${user.email}"><span><span class="online-status-dot"></span>${user.email}</span>${parseInt(user.unread_count) > 0 ? `<span class="unread-indicator"></span>` : ''}</div>`).join('') : '<p class="text-center text-xs text-gray-400 p-2">Ninguém online.</p>';
             
             html += '<div class="mt-4 px-2 text-xs font-semibold text-gray-500">OFFLINE</div>';
             if (offlineUsers.length > 0) {
-                html += offlineUsers.map(user => `<div class="chat-user-item" data-peer-id="${user.user_id}" data-peer-email="${user.email}"><span>${user.email}</span>${user.unread_count > 0 ? `<span class="unread-indicator"></span>` : ''}</div>`).join('');
+                html += offlineUsers.map(user => `<div class="chat-user-item" data-peer-id="${user.user_id}" data-peer-email="${user.email}"><span>${user.email}</span>${parseInt(user.unread_count) > 0 ? `<span class="unread-indicator"></span>` : ''}</div>`).join('');
             }
             
             userListEl.innerHTML = html;
         } catch (error) { 
-            // Agora 'userListEl' está acessível aqui para mostrar a mensagem de erro
             userListEl.innerHTML = `<p class="text-red-400 text-sm p-2">${error.message}</p>`; 
         }
     }
