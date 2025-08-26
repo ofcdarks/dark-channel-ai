@@ -731,7 +731,7 @@
             content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="niche-keyword" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Palavra-chave (opcional)"><select id="niche-country" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="BR">Brasil</option><option value="US">EUA</option><option value="PT">Portugal</option><option value="ES">Espanha</option><option value="DE">Alemanha</option><option value="FR">França</option><option value="GB">Reino Unido</option><option value="JP">Japão</option></select></div><button id="generate-niches" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🔎 Encontrar Nichos</button><div id="output" class="mt-6"></div><button id="generate-more-niches" class="hidden w-full mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Gerar Mais</button></div>` 
         },
         "niche-analysis": { title: "Análise de Nicho (RPM/Hype)", desc: "Analise o potencial de um nicho específico.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="analysis-niche" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nicho a ser analisado"><select id="analysis-country" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="BR">Brasil</option><option value="US">EUA</option><option value="PT">Portugal</option><option value="ES">Espanha</option><option value="DE">Alemanha</option><option value="FR">França</option></select></div><button id="analyze-niche" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">📊 Analisar Nicho</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
-        "video-optimizer": { title: "Analisador de Vídeo (URL)", desc: "Otimize títulos, descrições e tags a partir de uma URL do YouTube.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="url" id="video-url" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="https://www.youtube.com/watch?v=..."><button id="analyze-video" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">� Otimizar Vídeo</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
+        "video-optimizer": { title: "Analisador de Vídeo (URL)", desc: "Otimize títulos, descrições e tags a partir de uma URL do YouTube.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="url" id="video-url" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="https://www.youtube.com/watch?v=..."><button id="analyze-video" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🚀 Otimizar Vídeo</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
         "competitor-analysis": { title: "Análise de Concorrência", desc: "Analise a estratégia de canais concorrentes para encontrar oportunidades.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="text" id="competitor-channel-id" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="ID do Canal concorrente (Ex: UC_x5XG1OV2P6uZZ5FSM9Ttw)"><button id="analyze-competitor" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🕵️ Analisar Concorrente</button><div id="output" class="mt-6"></div></div>` },
         "comment-analyzer": { title: "Análise de Comentários", desc: "Entenda o sentimento do público e extraia ideias dos comentários de um vídeo.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="url" id="comment-video-url" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="URL do vídeo para analisar os comentários"><button id="analyze-comments" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">💬 Analisar Comentários</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
         "title-structures": { title: "Estruturas de Títulos Virais", desc: "Gere estruturas de títulos com alto potencial de clique.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="structure-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico. Ex: Produtividade"><select id="structure-lang" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português</option><option value="en-US">Inglês</option><option value="es-ES">Espanhol</option></select></div><button id="generate-structures" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🏗️ Gerar Estruturas</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6 space-y-4"></div><button id="generate-more-structures" class="hidden w-full mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Gerar Mais</button></div>` },
@@ -2305,10 +2305,13 @@
             navigator.clipboard.writeText(textToCopy).then(() => {
                 copyBtn.textContent = 'Copiado!';
                 copyBtn.classList.add('copied');
-                setTimeout(() => {
-                    copyBtn.textContent = 'Copiar';
-                    copyBtn.classList.remove('copied');
-                }, 1500);
+                
+                // ALTERADO: Lógica para marcação permanente
+                const textPartContainer = copyBtn.closest('.text-part');
+                if (textPartContainer) {
+                    textPartContainer.classList.add('copied-part');
+                }
+                // O setTimeout que revertia o estilo foi removido.
             });
         }
     });
@@ -2353,10 +2356,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
