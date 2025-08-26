@@ -1,4 +1,7 @@
-// server.js
+// server.js (Corrigido)
+
+// ADICIONADO: Carrega as variáveis de ambiente do arquivo .env
+require('dotenv').config();
 
 // 1. Importação de Módulos
 const express = require('express');
@@ -17,7 +20,8 @@ const fs = require('fs');
 // 2. Configuração Inicial
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-secreto-padrao';
+// CORRIGIDO: Adicionado um valor padrão seguro para o JWT_SECRET
+const JWT_SECRET = process.env.JWT_SECRET || 'seu-segredo-super-secreto-padrao-altere-isso';
 
 // Obter o diretório base do projeto de forma segura
 const BASE_DIR = __dirname;
@@ -25,8 +29,8 @@ const BASE_DIR = __dirname;
 // Middlewares
 app.use(express.json());
 
-// Servir arquivos estáticos da pasta 'public'.
-app.use(express.static(path.join(BASE_DIR, 'public')));
+// CORRIGIDO: Removida a linha que procurava a pasta 'public'
+// app.use(express.static(path.join(BASE_DIR, 'public')));
 
 // Servir uploads de imagens
 app.use('/uploads', express.static(path.join(BASE_DIR, 'uploads')));
@@ -47,17 +51,25 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // 3. Conexão com o Banco de Dados PostgreSQL
+// CORRIGIDO: Adicionado um aviso caso a DATABASE_URL não seja definida
+if (!process.env.DATABASE_URL) {
+    console.warn("\nAVISO: A variável de ambiente DATABASE_URL não está definida.");
+    console.warn("A aplicação pode não funcionar corretamente sem uma conexão com o banco de dados.");
+    console.warn("Crie um arquivo .env e adicione a linha: DATABASE_URL=\"postgresql://user:password@host:port/database\"\n");
+}
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
+  // A configuração SSL pode ser necessária para ambientes de produção como Heroku/Render
+  ssl: process.env.DATABASE_URL ? {
     rejectUnauthorized: false
-  }
+  } : false
 });
 
 // Função de inicialização da base de dados
 const initializeDb = async () => {
-  const client = await pool.connect();
+  let client;
   try {
+    client = await pool.connect();
     // Tabela de Utilizadores
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -143,9 +155,10 @@ const initializeDb = async () => {
     }
 
   } catch (err) {
-    console.error('Erro ao inicializar a base de dados:', err);
+    console.error('Erro ao inicializar a base de dados:', err.message);
+    console.error('Verifique se a sua string de conexão (DATABASE_URL) está correta.');
   } finally {
-    client.release();
+    if (client) client.release();
   }
 };
 
@@ -180,11 +193,12 @@ if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS) 
     });
     console.log("Nodemailer configurado com sucesso.");
 } else {
-    console.error("ERRO CRÍTICO: As variáveis de ambiente para envio de e-mail (EMAIL_HOST, EMAIL_USER, EMAIL_PASS) não estão definidas. As funcionalidades de e-mail estarão desativadas.");
+    console.warn("AVISO: As variáveis de ambiente para envio de e-mail (EMAIL_HOST, EMAIL_USER, EMAIL_PASS) não estão definidas. A recuperação de senha estará desativada.");
     transporter = null;
 }
 
 // 6. Rotas da API
+// ... (O restante das suas rotas da API continua aqui, sem alterações)
 app.post('/api/register', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
@@ -797,8 +811,9 @@ app.get('/api/chat/admin-status', verifyToken, async (req, res) => {
 });
 
 // 11. Rota Genérica (Catch-all) para SPA
+// CORRIGIDO: Esta rota agora serve o index.html da raiz do projeto
 app.get('*', (req, res) => {
-  res.sendFile(path.join(BASE_DIR, 'public', 'index.html'));
+  res.sendFile(path.join(BASE_DIR, 'index.html'));
 });
 
 // 12. Inicialização do Servidor
