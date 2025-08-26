@@ -1,0 +1,2353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Casa Canais Darks</title>
+    <link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👺</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background-color: #111827; /* bg-gray-900 */
+        }
+        h1, h2, h3, h4, h5, .sidebar-btn, button, .font-display {
+            font-family: 'Oswald', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .sidebar-btn { transition: all 0.2s ease-in-out; }
+        .sidebar-btn:hover { background-color: #374151; /* bg-gray-700 */ }
+        .sidebar-btn-active { background-color: #DC2626; /* bg-red-600 */ color: white; font-weight: 600; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .progress-bar-container { background-color: #4B5563; border-radius: 9999px; height: 8px; overflow: hidden; }
+        .progress-bar-inner { height: 100%; border-radius: 9999px; transition: width 0.5s ease-in-out; }
+        .progress-bar-indeterminate { background-size: 200% 100%; background-image: linear-gradient(to right, #4B5563 0%, #DC2626 50%, #4B5563 100%); animation: move-bg 2s linear infinite; }
+        @keyframes move-bg { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        #login-container { display: flex; }
+        #register-container, #app-container, #progress-modal, #activation-container, #forgot-password-container, #reset-password-container { display: none; }
+        .prose { max-width: none; color: #374151; }
+        .copy-btn.copied { background-color: #10b981; color: white; }
+        
+        .login-background {
+            background-color: #000000;
+            background-image: 
+                radial-gradient(circle at 80% 40%, rgba(220, 38, 38, 0.25), transparent 40%),
+                url('https://i.ibb.co/qMZz37Sr/logo-nostagia.png');
+            background-repeat: no-repeat;
+            background-position: calc(50% + 200px) 45%; 
+            background-size: contain;
+            background-blend-mode: screen;
+        }
+
+        .form-container {
+            background-color: rgba(17, 24, 39, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* --- Estilos do Chat e Notificações --- */
+        #chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 100; display: none; }
+        #chat-bubble { 
+            width: 60px; height: 60px; border-radius: 50%; background-color: #DC2626; 
+            cursor: pointer; display: flex; align-items: center; justify-content: center; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4); transition: transform 0.2s; 
+        }
+        #chat-bubble:hover { transform: scale(1.1); }
+        #chat-bubble.pulsate { animation: pulsate 1.5s infinite; }
+        @keyframes pulsate { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+        
+        #chat-notification-badge {
+            position: absolute; top: -5px; right: -5px; min-width: 24px; height: 24px;
+            background-color: #fde047; color: #111827; border-radius: 50%;
+            display: none; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: bold; border: 2px solid #DC2626;
+        }
+
+        #chat-container { display: none; width: 350px; height: 500px; background-color: #1f2937; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); flex-direction: column; overflow: hidden; border: 1px solid #4b5563; }
+        .chat-header { background-color: #111827; padding: 10px; font-weight: bold; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .chat-messages { flex-grow: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; }
+        .message-bubble { max-width: 80%; padding: 8px 12px; border-radius: 15px; margin-bottom: 8px; word-wrap: break-word; }
+        .message-sent { background-color: #DC2626; color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
+        .message-received { background-color: #4b5563; color: white; align-self: flex-start; border-bottom-left-radius: 3px; }
+        .chat-input { display: flex; padding: 10px; background-color: #111827; align-items: center; }
+        .message-bubble a { color: #fde047; text-decoration: underline; }
+        .message-bubble img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; }
+        #chat-user-list { max-height: 400px; overflow-y: auto; }
+        .chat-user-item { cursor: pointer; padding: 10px; border-bottom: 1px solid #374151; display: flex; justify-content: space-between; align-items: center; }
+        .chat-user-item:hover { background-color: #374151; }
+        .unread-indicator { width: 10px; height: 10px; background-color: #fde047; border-radius: 50%; }
+        .online-status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; background-color: #22c55e; }
+        .admin-status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .admin-status-dot.online { background-color: #22c55e; }
+        .admin-status-dot.offline { background-color: #6b7280; }
+
+        /* --- Popup de Notificação de Mensagem --- */
+        #login-notification-popup {
+            display: none; position: fixed; top: 20px; right: 20px; z-index: 1000;
+            background-color: #1f2937; color: white; padding: 16px; border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #4b5563;
+            animation: slideIn 0.5s ease-in-out;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        
+        #offline-message-modal {
+            display: none; 
+            position: fixed; inset: 0; background-color: rgba(0,0,0,0.75);
+            z-index: 500; align-items: center; justify-content: center;
+        }
+
+        /* --- Overlay de Manutenção e Anúncios --- */
+        .full-screen-overlay {
+            display: none; position: fixed; inset: 0;
+            background-color: rgba(0,0,0,0.9); backdrop-filter: blur(10px);
+            z-index: 9999; align-items: center; justify-content: center;
+            text-align: center; color: white; padding: 2rem;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        /* --- Estilos para o Toggle de Manutenção --- */
+        #maintenance-toggle:checked ~ .dot {
+            transform: translateX(100%);
+            background-color: #DC2626;
+        }
+         #maintenance-toggle:checked ~ .block {
+            background-color: #fca5a5;
+         }
+
+        @media (max-width: 768px) {
+            #app-container { flex-direction: column; }
+            #sidebar { 
+                position: fixed;
+                left: -100%;
+                top: 0;
+                height: 100%;
+                z-index: 40;
+                transition: left 0.3s ease-in-out;
+                width: 288px;
+            }
+            #sidebar.open { left: 0; }
+            #main-content { margin-left: 0; padding-bottom: 80px; }
+            #log-bar { font-size: 0.75rem; }
+            #menu-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0,0,0,0.7);
+                z-index: 30;
+            }
+            .login-background {
+                background-position: center 80%;
+                background-size: 160%;
+            }
+            .form-container {
+                background-color: rgba(0,0,0,0.7);
+            }
+            #chat-container { width: 90vw; height: 70vh; right: 5vw; bottom: 90px; }
+        }
+    </style>
+</head>
+<body class="text-slate-200">
+
+    <!-- Overlay de Manutenção -->
+    <div id="maintenance-overlay" class="full-screen-overlay">
+        <div class="max-w-2xl">
+            <h2 class="text-4xl font-extrabold text-red-500 font-display mb-4">EM MANUTENÇÃO</h2>
+            <p id="maintenance-message" class="text-lg text-gray-300">Estamos a realizar algumas melhorias na plataforma. Voltaremos em breve!</p>
+            <!-- NOVO: Botão de logout para utilizadores presos na manutenção -->
+            <button id="logout-from-maintenance" class="mt-6 bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700">Sair</button>
+        </div>
+    </div>
+
+    <!-- Overlay de Anúncio Global -->
+    <div id="announcement-overlay" class="full-screen-overlay">
+        <div class="max-w-2xl relative bg-gray-800 p-8 rounded-lg border border-red-500 shadow-lg">
+             <button id="close-announcement-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl">&times;</button>
+            <h2 class="text-3xl font-extrabold text-red-500 font-display mb-4">AVISO IMPORTANTE</h2>
+            <p id="announcement-message" class="text-lg text-gray-300 whitespace-pre-wrap"></p>
+        </div>
+    </div>
+
+    <!-- Tela de Solicitação de Ativação -->
+    <div id="activation-container" class="hidden items-center justify-center h-screen login-background">
+        <div class="w-full max-w-md p-8 space-y-6 text-center rounded-lg form-container">
+            <h2 class="text-3xl font-extrabold text-white font-display">Ativação Pendente</h2>
+            <p class="text-gray-300">A sua conta foi registada com sucesso, mas precisa de ser ativada por um administrador.</p>
+            <p class="text-gray-400 text-sm">Para acelerar o processo, por favor, entre em contacto connosco.</p>
+            <a href="https://wa.me/5514997022684?text=Olá!%20Acabei%20de%20me%20registar%20na%20plataforma%20La%20Casa%20Canais%20Darks%20e%20gostaria%20de%20solicitar%20a%20ativação%20da%20minha%20conta." target="_blank" class="inline-block w-full max-w-xs py-3 px-4 font-bold rounded-md text-white bg-green-600 hover:bg-green-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M10.2 3.2C5.6 3.2 2 6.8 2 11.4c0 1.5.4 2.9 1.2 4.2L2 20l4.5-1.2c1.3.7 2.7 1.1 4.2 1.1h.1c4.6 0 8.3-3.7 8.3-8.3S14.8 3.2 10.2 3.2zM10.2 18.1c-1.4 0-2.8-.4-4-1.2l-.3-.2-3  .8.8-2.9-.2-.3c-.8-1.2-1.3-2.7-1.3-4.2 0-3.7 3-6.7 6.7-6.7s6.7 3 6.7 6.7-3 6.7-6.7 6.7zm3.6-5c-.2-.1-1.2-.6-1.4-.7-.2-.1-.3-.1-.5.1s-.5.6-.7.7c-.1.1-.3.2-.5.1-.2-.1-.9-.3-1.8-1.1-.7-.6-1.1-1.4-1.3-1.6-.1-.2 0-.3.1-.4l.2-.2c.1-.1.2-.2.3-.4.1-.1.1-.2 0-.4-.1-.1-1-.2-1.3-.3s-.5-.1-.7-.1c-.2 0-.5 0-.7.2-.2.2-.8.8-.8 1.9s.8 2.2 1 2.3c.1.1 1.6 2.5 4 3.5.6.2 1 .4 1.3.5.6.2 1.1.1 1.5.1.5-.1 1.2-.5 1.4-1 .2-.5.2-1 .1-1s-.3-.2-.5-.3z"/></svg>
+                Solicitar Ativação via WhatsApp
+            </a>
+            <p class="text-center text-sm text-gray-400 pt-4"><a href="#" id="back-to-login" class="font-medium text-red-500 hover:text-red-400">Voltar para o Login</a></p>
+        </div>
+    </div>
+
+    <!-- Telas de Autenticação -->
+    <div id="login-container" class="flex items-center justify-center h-screen login-background">
+        <div class="w-full max-w-xs p-8 space-y-8 rounded-lg form-container">
+            <div class="text-center">
+                <h2 class="text-4xl font-extrabold text-white font-display">LA CASA</h2>
+                <div class="inline-block bg-red-600 px-4 py-1 mt-1">
+                    <h2 class="text-4xl font-extrabold text-white font-display" style="text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;">CANAIS DARKS</h2>
+                </div>
+            </div>
+            <form id="login-form" class="mt-8 space-y-6">
+                <div id="login-feedback" class="text-red-500 text-sm text-center min-h-[20px]"></div>
+                <div class="space-y-4">
+                    <input id="login-email" type="email" autocomplete="email" required class="appearance-none relative block w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Email">
+                    <input id="login-password" type="password" autocomplete="current-password" required class="appearance-none relative block w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm" placeholder="Senha">
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center">
+                        <input id="remember-me" type="checkbox" class="h-4 w-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500">
+                        <label for="remember-me" class="ml-2 text-gray-400">Lembrar-me</label>
+                    </div>
+                    <a href="#" id="show-forgot-password" class="font-medium text-red-500 hover:text-red-400">Esqueceu a senha?</a>
+                </div>
+                <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-red-600 hover:bg-red-700">Login</button>
+            </form>
+            <p class="text-center text-sm text-gray-400">Não tem uma conta? <a href="#" id="show-register" class="font-medium text-red-500 hover:text-red-400">Registe-se</a></p>
+        </div>
+    </div>
+    <div id="register-container" class="hidden items-center justify-center h-screen login-background">
+        <div class="w-full max-w-xs p-8 space-y-6 rounded-lg form-container">
+            <div>
+                <h2 class="text-3xl font-extrabold text-center text-white font-display">Criar Conta</h2>
+                <p class="mt-2 text-center text-sm text-gray-400">O seu acesso será validado por um administrador.</p>
+            </div>
+            <form id="register-form" class="mt-8 space-y-6">
+                <div id="register-feedback" class="text-red-500 text-sm text-center min-h-[20px]"></div>
+                 <div class="space-y-4">
+                    <input id="register-email" type="email" required class="appearance-none relative block w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md" placeholder="Seu melhor e-mail">
+                    <input id="register-password" type="password" required class="appearance-none relative block w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md" placeholder="Crie uma senha forte">
+                </div>
+                <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-red-600 hover:bg-red-700">Criar Conta</button>
+            </form>
+            <p class="text-center text-sm text-gray-400">Já tem uma conta? <a href="#" id="show-login" class="font-medium text-red-500 hover:text-red-400">Faça login</a></p>
+        </div>
+    </div>
+    <div id="forgot-password-container" class="hidden items-center justify-center h-screen login-background">
+        <div class="w-full max-w-xs p-8 space-y-6 rounded-lg form-container">
+             <h2 class="text-3xl font-extrabold text-center text-white font-display">Recuperar Senha</h2>
+             <p class="text-center text-sm text-gray-400">Insira o seu e-mail para receber um link de recuperação.</p>
+            <form id="forgot-password-form" class="mt-8 space-y-6">
+                <div id="forgot-feedback" class="text-center min-h-[20px]"></div>
+                <input id="forgot-email" type="email" required class="w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md" placeholder="Email de registo">
+                <button type="submit" class="w-full flex justify-center py-3 px-4 text-sm font-bold rounded-md text-white bg-red-600 hover:bg-red-700">Enviar Link</button>
+            </form>
+            <p class="text-center text-sm text-gray-400"><a href="#" id="show-login-from-forgot" class="font-medium text-red-500 hover:text-red-400">Voltar para o Login</a></p>
+        </div>
+    </div>
+     <div id="reset-password-container" class="hidden items-center justify-center h-screen login-background">
+        <div class="w-full max-w-xs p-8 space-y-6 rounded-lg form-container">
+             <h2 class="text-3xl font-extrabold text-center text-white font-display">Redefinir Senha</h2>
+            <form id="reset-password-form" class="mt-8 space-y-6">
+                <div id="reset-feedback" class="text-center min-h-[20px]"></div>
+                <input id="reset-password" type="password" required class="w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md" placeholder="Nova senha">
+                <input id="reset-password-confirm" type="password" required class="w-full px-3 py-3 bg-transparent border border-gray-600 placeholder-gray-400 text-white rounded-md" placeholder="Confirme a nova senha">
+                <button type="submit" class="w-full flex justify-center py-3 px-4 text-sm font-bold rounded-md text-white bg-red-600 hover:bg-red-700">Redefinir Senha</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Progresso -->
+    <div id="progress-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-xl text-center w-full max-w-sm border border-gray-700">
+            <h3 class="text-lg font-semibold text-white mb-2">Processando...</h3>
+            <p id="progress-phrase" class="text-sm text-gray-300 mb-4">Analisando os alvos...</p>
+            <div class="w-full bg-gray-700 rounded-full h-2.5"><div class="h-2.5 rounded-full progress-bar-indeterminate"></div></div>
+        </div>
+    </div>
+    
+    <!-- Conteúdo da Aplicação -->
+    <div id="app-container" class="hidden h-screen bg-gray-900">
+        <div id="menu-overlay" class="hidden md:hidden"></div>
+        <aside id="sidebar" class="w-72 bg-black flex-shrink-0 flex flex-col">
+            <div id="app-logo" class="p-6 border-b border-gray-800 flex justify-between items-center h-20"></div>
+            <div class="p-4 text-sm text-gray-400" id="user-email-display"></div>
+            <nav id="sidebar-nav" class="p-4 space-y-1 flex-1 overflow-y-auto"></nav>
+            <div class="p-4 border-t border-gray-800">
+                <button id="logout-btn" class="w-full text-left flex items-center gap-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-red-900/50 hover:text-red-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V5h10a1 1 0 100-2H3zm12.293 4.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L16.586 13H9a1 1 0 110-2h7.586l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </aside>
+        <div id="main-content" class="flex-1 flex flex-col overflow-hidden">
+            <header class="p-4 md:hidden bg-gray-900 border-b border-gray-800 flex items-center">
+                <button id="open-menu-btn" class="text-2xl text-white">☰</button>
+                <h2 id="mobile-header-title" class="ml-4 font-semibold text-lg text-white">Dashboard</h2>
+            </header>
+            <main id="tab-content" class="flex-1 p-6 md:p-10 overflow-y-auto text-gray-800"></main>
+            <footer id="log-bar" class="bg-black text-white p-2 text-xs text-center flex items-center justify-center h-8">
+                <span id="log-message">Bem-vindo ao plano!</span>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Widget do Chat -->
+    <div id="chat-widget">
+        <div id="chat-bubble">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clip-rule="evenodd" /></svg>
+            <div id="chat-notification-badge"></div>
+        </div>
+        <div id="chat-container"></div>
+    </div>
+
+    <!-- Popup de Notificação de Mensagem ao Login -->
+    <div id="login-notification-popup">
+        <p class="font-semibold mb-2">📬 Novas Mensagens!</p>
+        <p class="text-sm text-gray-300 mb-4">Você tem mensagens não lidas. Abra o chat para vê-las.</p>
+        <div class="flex gap-2">
+            <button id="open-chat-from-popup" class="flex-1 bg-red-600 text-white px-3 py-1 rounded text-sm">Abrir Chat</button>
+            <button id="close-popup" class="flex-1 bg-gray-600 text-white px-3 py-1 rounded text-sm">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Mensagem Offline -->
+    <div id="offline-message-modal">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm border border-gray-700 space-y-4">
+            <h3 class="text-lg font-semibold text-white">Enviar Mensagem para <span id="offline-user-email"></span></h3>
+            <textarea id="offline-message-textarea" class="w-full bg-gray-700 text-white rounded-md p-2" rows="4" placeholder="Digite sua mensagem..."></textarea>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-offline-message" class="bg-gray-600 text-white px-4 py-2 rounded">Cancelar</button>
+                <button id="send-offline-message" class="bg-red-600 text-white px-4 py-2 rounded">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // --- Global State Management ---
+    let appState = {
+        currentUser: null,
+        apiKeys: { 
+            gemini: ["", "", ""],
+            openai: "", 
+            google_api: "" 
+        },
+        userChannels: [],
+        videoIdeas: [],
+        currentVideoAnalysis: null,
+        chat: {
+            isOpen: false,
+            activePeer: null, // {id, email}
+            pollInterval: null,
+            lastUnreadCount: 0
+        },
+        statusPollInterval: null,
+        lastAnnouncement: null
+    };
+    let heartbeatInterval = null;
+    let audioContext; // Para o som de notificação
+
+    // --- Constants ---
+    const ELEMENTS = {
+        loginContainer: document.getElementById('login-container'),
+        registerContainer: document.getElementById('register-container'),
+        activationContainer: document.getElementById('activation-container'),
+        forgotPasswordContainer: document.getElementById('forgot-password-container'),
+        resetPasswordContainer: document.getElementById('reset-password-container'),
+        appContainer: document.getElementById('app-container'),
+        maintenanceOverlay: document.getElementById('maintenance-overlay'),
+        announcementOverlay: document.getElementById('announcement-overlay'),
+        loginForm: document.getElementById('login-form'),
+        registerForm: document.getElementById('register-form'),
+        loginFeedback: document.getElementById('login-feedback'),
+        registerFeedback: document.getElementById('register-feedback'),
+        showRegister: document.getElementById('show-register'),
+        showLogin: document.getElementById('show-login'),
+        sidebar: document.getElementById('sidebar'),
+        sidebarNav: document.getElementById('sidebar-nav'),
+        tabContent: document.getElementById('tab-content'),
+        progressModal: document.getElementById('progress-modal'),
+        progressPhrase: document.getElementById('progress-phrase'),
+        userEmailDisplay: document.getElementById('user-email-display'),
+        logoutBtn: document.getElementById('logout-btn'),
+        openMenuBtn: document.getElementById('open-menu-btn'),
+        menuOverlay: document.getElementById('menu-overlay'),
+        mobileHeaderTitle: document.getElementById('mobile-header-title'),
+        logMessage: document.getElementById('log-message'),
+        chatBubble: document.getElementById('chat-bubble'),
+        chatNotificationBadge: document.getElementById('chat-notification-badge'),
+        loginNotificationPopup: document.getElementById('login-notification-popup'),
+        offlineMessageModal: document.getElementById('offline-message-modal'),
+    };
+
+    const PROGRESS_PHRASES = [ "Decodificando o algoritmo...", "Buscando brechas no sistema...", "Analisando os alvos...", "Interceptando dados de tendência...", "Preparando o plano de ataque..." ];
+
+    // --- Utility Functions ---
+    const addToLog = (message, isError = false) => {
+        const logEl = ELEMENTS.logMessage;
+        logEl.textContent = message;
+        logEl.parentElement.classList.toggle('bg-red-700', isError);
+        logEl.parentElement.classList.toggle('bg-black', !isError);
+    };
+
+    const getTrendLevel = (score) => {
+        if (score > 65) return 'Alta';
+        if (score > 35) return 'Média';
+        return 'Baixa';
+    };
+
+    // --- API Communication ---
+    async function apiRequest(endpoint, method, body = null) {
+        const token = localStorage.getItem('authToken');
+        const options = { 
+            method, 
+            headers: { 
+                'Content-Type': 'application/json',
+            } 
+        };
+        if (token) {
+            options.headers['Authorization'] = `Bearer ${token}`;
+        }
+        if (body) options.body = JSON.stringify(body);
+        
+        const response = await fetch(endpoint, options);
+        
+        if (response.status === 503) {
+            const data = await response.json().catch(() => ({ message: 'Serviço indisponível.' }));
+            // A lógica de manutenção agora é tratada após o login, mas mantemos o throw para outros casos
+            throw new Error(data.message);
+        }
+
+        const data = await response.json().catch(() => null);
+        
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                if (!data || !data.message || !data.message.includes('ativada')) {
+                     handleLogout();
+                }
+            }
+            throw new Error(data ? data.message : 'Ocorreu um erro desconhecido.');
+        }
+        return data;
+    }
+
+    // --- Authentication & Screen Navigation ---
+    function showScreen(screenId) {
+        ['login-container', 'register-container', 'activation-container', 'forgot-password-container', 'reset-password-container', 'app-container', 'maintenance-overlay'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = (id === screenId) ? 'flex' : 'none';
+        });
+    }
+    
+    async function handleLogin(e) {
+        e.preventDefault();
+        ELEMENTS.loginFeedback.textContent = '';
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        const rememberMe = document.getElementById('remember-me').checked;
+        try {
+            const response = await apiRequest('/api/login', 'POST', { email, password, rememberMe });
+            localStorage.setItem('authToken', response.token);
+            appState.currentUser = response.user;
+
+            // CORRIGIDO: Verificar status da aplicação APÓS o login
+            const appStatus = await apiRequest('/api/status', 'GET');
+
+            if (appStatus.maintenance && appStatus.maintenance.is_on && appState.currentUser.role !== 'admin') {
+                showMaintenanceMode(appStatus.maintenance.message);
+            } else {
+                await initializeApp(appStatus.announcement);
+            }
+
+        } catch (error) {
+            if (error.message.includes('ativada')) {
+                showScreen('activation-container');
+            } else {
+                ELEMENTS.loginFeedback.textContent = error.message;
+            }
+        }
+    }
+
+    async function handleRegister(e) {
+        e.preventDefault();
+        ELEMENTS.registerFeedback.textContent = '';
+        const email = document.getElementById('register-email').value;
+        const password = document.getElementById('register-password').value;
+        try {
+            await apiRequest('/api/register', 'POST', { email, password });
+            showScreen('activation-container');
+        } catch (error) {
+            ELEMENTS.registerFeedback.textContent = error.message;
+        }
+    }
+
+    async function handleForgotPassword(e) {
+        e.preventDefault();
+        const feedback = document.getElementById('forgot-feedback');
+        const email = document.getElementById('forgot-email').value;
+        try {
+            const response = await apiRequest('/api/forgot-password', 'POST', { email });
+            feedback.textContent = response.message;
+            feedback.className = 'text-green-500 text-sm text-center min-h-[20px]';
+        } catch (error) {
+            feedback.textContent = error.message;
+            feedback.className = 'text-red-500 text-sm text-center min-h-[20px]';
+        }
+    }
+    
+    async function handleResetPassword(e) {
+        e.preventDefault();
+        const feedback = document.getElementById('reset-feedback');
+        const password = document.getElementById('reset-password').value;
+        const confirmPassword = document.getElementById('reset-password-confirm').value;
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('reset_token');
+
+        if (password !== confirmPassword) {
+            feedback.textContent = 'As senhas não coincidem.';
+            feedback.className = 'text-red-500 text-sm text-center min-h-[20px]';
+            return;
+        }
+        if (!token) {
+             feedback.textContent = 'Token de redefinição inválido ou ausente.';
+             feedback.className = 'text-red-500 text-sm text-center min-h-[20px]';
+             return;
+        }
+
+        try {
+            const response = await apiRequest('/api/reset-password', 'POST', { token, password });
+            feedback.textContent = response.message + ' A redirecionar para o login...';
+            feedback.className = 'text-green-500 text-sm text-center min-h-[20px]';
+            setTimeout(() => {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showScreen('login-container');
+            }, 3000);
+        } catch (error) {
+            feedback.textContent = error.message;
+            feedback.className = 'text-red-500 text-sm text-center min-h-[20px]';
+        }
+    }
+    
+    function handleLogout() {
+        localStorage.removeItem('authToken');
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
+        if (appState.chat.pollInterval) clearInterval(appState.chat.pollInterval);
+        if (appState.statusPollInterval) clearInterval(appState.statusPollInterval);
+        appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null, lastUnreadCount: 0 }, statusPollInterval: null, lastAnnouncement: null };
+        document.getElementById('chat-widget').style.display = 'none';
+        hideOfflineMessageModal();
+        showScreen('login-container');
+        document.getElementById('login-form').reset();
+    }
+
+    // --- Maintenance & Announcement Logic ---
+    function showMaintenanceMode(message) {
+        document.getElementById('maintenance-message').textContent = message || 'Estamos a realizar algumas melhorias na plataforma. Voltaremos em breve!';
+        showScreen('maintenance-overlay');
+    }
+
+    function showAnnouncement(announcement) {
+        if (!announcement || !announcement.message || JSON.stringify(appState.lastAnnouncement) === JSON.stringify(announcement)) return;
+        appState.lastAnnouncement = announcement;
+        document.getElementById('announcement-message').textContent = announcement.message;
+        ELEMENTS.announcementOverlay.style.display = 'flex';
+    }
+
+    async function pollForStatus() {
+        if (!appState.currentUser) return;
+        try {
+            const status = await apiRequest('/api/status', 'GET');
+            if (status.announcement) showAnnouncement(status.announcement);
+            // CORRIGIDO: Verificação de manutenção em tempo real
+            if (status.maintenance && status.maintenance.is_on && appState.currentUser.role !== 'admin') {
+                showMaintenanceMode(status.maintenance.message);
+            }
+        } catch (error) {
+            console.error("Erro ao verificar status:", error.message);
+        }
+    }
+
+    // --- App Initialization ---
+    async function initializeApp(initialAnnouncement = null) {
+        if (!appState.currentUser) return;
+        
+        try {
+            const settings = await apiRequest(`/api/settings`, 'GET');
+            if (settings && Object.keys(settings).length > 0) {
+                appState.apiKeys.gemini = Array.isArray(settings.gemini) && settings.gemini.length === 3 ? settings.gemini : [settings.gemini || "", "", ""];
+                appState.apiKeys.openai = settings.openai || "";
+                appState.apiKeys.google_api = settings.google_api || "";
+                appState.userChannels = settings.userChannels || [];
+                appState.videoIdeas = settings.videoIdeas || [];
+            }
+        } catch(error) {
+            console.error("Não foi possível carregar as configurações:", error.message);
+            addToLog("Falha ao carregar configurações.", true);
+        }
+        
+        const logoAndFavicon = `<svg width="100%" height="100%" viewBox="0 0 280 50" xmlns="http://www.w3.org/2000/svg"><style>.logo-text { font-family: 'Oswald', sans-serif; font-size: 34px; font-weight: 700; fill: white; text-transform: uppercase; letter-spacing: 0.05em; }.dark-text { filter: drop-shadow(0 0 1px rgba(220, 38, 38, 0.8)); }</style><text x="0" y="38" class="logo-text">La Casa</text><rect x="130" y="5" width="145" height="40" fill="#DC2626" /><text x="135" y="38" class="logo-text dark-text">Darks</text></svg>`;
+        document.getElementById('app-logo').innerHTML = logoAndFavicon;
+        document.getElementById('favicon').href = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">👺</text></svg>')}`;
+
+        document.getElementById('user-email-display').textContent = appState.currentUser.email;
+        showScreen('app-container');
+        
+        buildSidebar();
+        renderTabContent('dashboard');
+
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
+        heartbeatInterval = setInterval(() => apiRequest('/api/heartbeat', 'POST'), 3 * 60 * 1000);
+
+        if (appState.chat.pollInterval) clearInterval(appState.chat.pollInterval);
+        appState.chat.pollInterval = setInterval(pollForNotifications, 5000);
+        document.getElementById('chat-widget').style.display = 'block';
+
+        const initialNotifications = await apiRequest('/api/chat/notifications', 'GET');
+        if (initialNotifications && initialNotifications.length > 0) {
+            showLoginNotificationPopup();
+        }
+
+        if (appState.statusPollInterval) clearInterval(appState.statusPollInterval);
+        appState.statusPollInterval = setInterval(pollForStatus, 30000);
+        
+        // Exibe o anúncio inicial se houver um
+        if(initialAnnouncement) {
+            showAnnouncement(initialAnnouncement);
+        }
+    }
+
+    // --- UI Building ---
+    function buildSidebar() {
+        let navItems = [
+            { id: 'dashboard', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" /><path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" /></svg>', label: 'Dashboard' },
+            { type: 'divider', label: 'PESQUISA E ESTRATÉGIA' },
+            { id: 'niche-finder', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>', label: 'Localizador de Nichos' },
+            { id: 'niche-analysis', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>', label: 'Análise de Nicho' },
+            { id: 'video-optimizer', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd" /></svg>', label: 'Analisador de Vídeo' },
+            { id: 'competitor-analysis', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" /></svg>', label: 'Análise de Concorrência' },
+            { id: 'comment-analyzer', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clip-rule="evenodd" /></svg>', label: 'Análise de Comentários' },
+            { type: 'divider', label: 'CRIAÇÃO E CONTEÚDO' },
+            { id: 'title-structures', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h12v10h-4a2 2 0 00-2 2H4a2 2 0 00-2-2v-2a2 2 0 002 2h4a2 2 0 002-2V6a2 2 0 00-2-2H4zm10 0a2 2 0 00-2 2v.99l2-.002V6a2 2 0 00-2-2zM6 14a2 2 0 00-2 2v2h12v-2a2 2 0 00-2-2H6z" clip-rule="evenodd" /></svg>', label: 'Estruturas de Títulos' },
+            { id: 'script-writer', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>', label: 'Criador de Roteiros' },
+            { id: 'thumbnail-prompts', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>', label: 'Prompts de Thumbnail' },
+            { type: 'divider', label: 'OTIMIZAÇÃO E GESTÃO' },
+            { id: 'description-optimizer', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" /></svg>', label: 'Otimizador de Descrição' },
+            { id: 'tag-generator', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5a.997.997 0 01.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>', label: 'Gerador de Tags' },
+            { id: 'srt-converter', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg>', label: 'Conversor de SRT' },
+            { id: 'text-divider', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z" clip-rule="evenodd" /></svg>', label: 'Divisor de Texto' },
+            { id: 'channel-organizer', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" /></svg>', label: 'Organizador de Canais' },
+            { id: 'planner', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" /></svg>', label: 'Planejador de Conteúdo' },
+            { id: 'settings', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>', label: 'Configurações' },
+        ];
+
+        if (appState.currentUser && appState.currentUser.role === 'admin') {
+            navItems.push({ type: 'divider', label: 'ADMINISTRAÇÃO' });
+            navItems.push({ 
+                id: 'admin', 
+                icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>', 
+                label: 'Painel Admin' 
+            });
+        }
+
+        ELEMENTS.sidebarNav.innerHTML = navItems.map(item => {
+            if (item.type === 'divider') {
+                return `<div class="pt-2 mt-2 border-t border-gray-800"><span class="px-4 text-xs font-semibold text-gray-500">${item.label}</span></div>`;
+            }
+            return `<button class="sidebar-btn ${item.id === 'dashboard' ? 'sidebar-btn-active' : ''} w-full text-left flex items-center gap-3 px-4 py-2 rounded-lg text-gray-300" data-tab="${item.id}"><span>${item.icon}</span><span>${item.label}</span></button>`;
+        }).join('');
+    }
+    
+    // --- Utility Functions ---
+    const showProgressModal = () => { ELEMENTS.progressModal.style.display = 'flex'; ELEMENTS.progressPhrase.textContent = PROGRESS_PHRASES[Math.floor(Math.random() * PROGRESS_PHRASES.length)]; };
+    const hideProgressModal = () => { ELEMENTS.progressModal.style.display = 'none'; };
+    const getScoreColor = (score) => score >= 80 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-600';
+    const getScoreTextColor = (score) => score >= 80 ? 'text-green-600' : score >= 50 ? 'text-yellow-600' : 'text-red-600';
+    const createCopyButton = (text) => `<button class="copy-btn text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500" data-copy-text="${encodeURIComponent(text)}">Copiar</button>`;
+    
+    const renderScoreCard = (title, mainScore, subScores, suggestion, isNovel = false) => {
+        let intMainScore = Math.round(Math.min(100, mainScore || 0));
+        if (intMainScore === 0 && Object.keys(subScores).length > 0) {
+            const numericScores = Object.values(subScores).filter(v => typeof v === 'number');
+            if (numericScores.length > 0) {
+                const avg = numericScores.reduce((a, b) => a + b, 0) / numericScores.length;
+                intMainScore = Math.round(Math.min(100, avg));
+            }
+        }
+
+        const novelBadge = isNovel ? '<span class="inline-flex items-center rounded-md bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700">✨ Inédita</span>' : '';
+        const subScoresHtml = Object.entries(subScores).map(([key, value]) => {
+            if (typeof value === 'string') {
+                return `<div class="mb-2"><div class="flex justify-between items-center text-sm mb-1"><span class="text-slate-600">${key}</span><span class="font-semibold text-slate-700 px-2 py-0.5 rounded-md ${value === 'Alta' ? 'bg-green-100 text-green-800' : value === 'Média' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}">${value}</span></div></div>`;
+            }
+            const cappedValue = Math.min(100, Math.round(value || 0));
+            return `<div class="mb-2"><div class="flex justify-between items-center text-sm mb-1"><span class="text-slate-600">${key}</span><span class="font-semibold text-slate-700">${cappedValue}/100</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="h-2 rounded-full ${getScoreColor(cappedValue)}" style="width: ${cappedValue}%;"></div></div></div>`;
+        }).join('');
+        return `<div class="bg-white p-4 rounded-lg border w-full md:w-72 flex-shrink-0"><h4 class="font-semibold text-slate-800 mb-2 font-display">${title}</h4><div class="flex items-center justify-between mb-4"><div class="flex items-baseline gap-1"><span class="text-3xl font-bold ${getScoreTextColor(intMainScore)}">${intMainScore}</span><span class="text-slate-500 text-sm">/ 100</span></div>${novelBadge}</div>${subScoresHtml}${suggestion ? `<p class="text-xs text-slate-500 mt-4"><strong class="text-slate-600">A Virada de Chave:</strong> ${suggestion}</p>` : ''}</div>`;
+    };
+
+    const getLegendForTool = (toolId) => {
+        const legends = {
+            'niche-analysis': `<h4 class="font-semibold text-slate-800 mb-2 font-display">💡 Entendendo as Métricas</h4><ul class="space-y-2 text-slate-600"><li><strong>Hype Score:</strong> Mede o "buzz" e o potencial de viralização.</li><li><strong>Potencial de RPM:</strong> Estimativa de ganho por mil visualizações.</li><li><strong>Demanda de Busca:</strong> Avalia o interesse geral no tópico.</li></ul>`,
+             'video-optimizer': `<h4 class="font-semibold text-slate-800 mb-2 font-display">💡 Entendendo as Métricas</h4><ul class="space-y-2 text-slate-600"><li><strong>Pontuação:</strong> Avalia a qualidade geral do SEO e potencial de CTR.</li><li><strong>Virada de Chave:</strong> Aponta a principal melhoria estratégica aplicada.</li></ul>`,
+            'default': `<h4 class="font-semibold text-slate-800 mb-2 font-display">💡 Entendendo as Métricas</h4><p class="text-slate-600">As pontuações de 0 a 100 indicam o potencial. Valores mais altos sugerem maior sucesso.</p>`
+        };
+        const legendHtml = legends[toolId] || legends['default'];
+        return `<div class="mt-8 text-sm p-4 bg-red-50 rounded-lg border border-red-200">${legendHtml}</div>`;
+    };
+
+    // --- AI API Call Abstraction ---
+    async function callAIModel(prompt, schema = null) {
+        showProgressModal();
+        try {
+            addToLog("Comunicando com o servidor para análise de IA...");
+            const result = await apiRequest('/api/generate', 'POST', { prompt, schema });
+            addToLog(`Análise concluída com sucesso via ${result.apiSource || 'API'}.`);
+            return result.data;
+        } catch (error) {
+            console.error("Erro ao chamar o modelo de IA via backend:", error);
+            addToLog(`Erro: ${error.message}`, true);
+            throw error;
+        } finally {
+            hideProgressModal();
+        }
+    }
+    
+    // --- Tools and Handlers ---
+    let trendsChartInstance = null;
+    const tools = {
+        "dashboard": { title: "Dashboard de Performance", desc: "Selecione um canal para ver as métricas e obter insights da IA.", content: `<div id="dashboard-container"></div>` },
+        "niche-finder": { 
+            title: "Localizador de Nichos", 
+            desc: "Encontre nichos e tendências de mercado com estimativas de RPM.", 
+            content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="niche-keyword" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Palavra-chave (opcional)"><select id="niche-country" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="BR">Brasil</option><option value="US">EUA</option><option value="PT">Portugal</option><option value="ES">Espanha</option><option value="DE">Alemanha</option><option value="FR">França</option><option value="GB">Reino Unido</option><option value="JP">Japão</option></select></div><button id="generate-niches" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🔎 Encontrar Nichos</button><div id="output" class="mt-6"></div><button id="generate-more-niches" class="hidden w-full mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Gerar Mais</button></div>` 
+        },
+        "niche-analysis": { title: "Análise de Nicho (RPM/Hype)", desc: "Analise o potencial de um nicho específico.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="analysis-niche" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nicho a ser analisado"><select id="analysis-country" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="BR">Brasil</option><option value="US">EUA</option><option value="PT">Portugal</option><option value="ES">Espanha</option><option value="DE">Alemanha</option><option value="FR">França</option></select></div><button id="analyze-niche" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">📊 Analisar Nicho</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
+        "video-optimizer": { title: "Analisador de Vídeo (URL)", desc: "Otimize títulos, descrições e tags a partir de uma URL do YouTube.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="url" id="video-url" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="https://www.youtube.com/watch?v=..."><button id="analyze-video" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🚀 Otimizar Vídeo</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
+        "competitor-analysis": { title: "Análise de Concorrência", desc: "Analise a estratégia de canais concorrentes para encontrar oportunidades.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="text" id="competitor-channel-id" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="ID do Canal concorrente (Ex: UC_x5XG1OV2P6uZZ5FSM9Ttw)"><button id="analyze-competitor" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🕵️ Analisar Concorrente</button><div id="output" class="mt-6"></div></div>` },
+        "comment-analyzer": { title: "Análise de Comentários", desc: "Entenda o sentimento do público e extraia ideias dos comentários de um vídeo.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="url" id="comment-video-url" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="URL do vídeo para analisar os comentários"><button id="analyze-comments" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">💬 Analisar Comentários</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
+        "title-structures": { title: "Estruturas de Títulos Virais", desc: "Gere estruturas de títulos com alto potencial de clique.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="structure-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico. Ex: Produtividade"><select id="structure-lang" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português</option><option value="en-US">Inglês</option><option value="es-ES">Espanhol</option></select></div><button id="generate-structures" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🏗️ Gerar Estruturas</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6 space-y-4"></div><button id="generate-more-structures" class="hidden w-full mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Gerar Mais</button></div>` },
+        "script-writer": { title: "Criador de Roteiros", desc: "Gere roteiros com foco em alta retenção.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="space-y-4"><input type="text" id="script-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico do Vídeo"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="number" id="script-duration" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Duração (minutos)"><input type="number" id="script-parts" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nº de Partes"></div><div class="flex items-center"><input id="script-narration-only" type="checkbox" class="h-4 w-4 text-red-600 border-gray-300 rounded"><label for="script-narration-only" class="ml-2 block text-sm text-gray-900">Apenas Narração (sem diálogos)</label></div><button id="generate-script" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">📜 Gerar Roteiro</button></div><div id="output" class="mt-6"></div></div>` },
+        "thumbnail-prompts": { title: "Prompts de Thumbnail", desc: "Gere prompts otimizados para IAs de imagem.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="space-y-4"><input type="text" id="thumb-title" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Título do Vídeo"><select id="thumb-platform" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="Midjourney">Midjourney</option><option value="Leonardo.AI">Leonardo.AI</option><option value="DALL-E 3">DALL-E 3</option><option value="Freepik">Freepik</option></select></div><button id="generate-prompts" class="w-full mt-4 bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🎨 Gerar Prompts</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6 space-y-4"></div><button id="generate-more-prompts" class="hidden w-full mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Gerar Mais</button></div>` },
+        "description-optimizer": { title: "Otimizador de Descrição", desc: "Crie descrições com SEO e CTAs eficazes.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><input type="text" id="desc-title" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" placeholder="Título do Vídeo"><textarea id="desc-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" rows="4" placeholder="Resumo do vídeo e palavras-chave..."></textarea><button id="generate-description" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">📄 Gerar Descrição</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
+        "tag-generator": { title: "Gerador de Tags", desc: "Gere tags relevantes para maximizar o alcance.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="tag-topic" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Tópico do Vídeo"><select id="tag-lang" class="w-full px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português</option><option value="en-US">Inglês</option><option value="es-ES">Espanhol</option></select></div><button id="generate-tags" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🏷️ Gerar Tags</button><div id="legend-container" class="mt-6"></div><div id="output" class="mt-6"></div></div>` },
+        "srt-converter": { title: "Conversor de Texto para SRT", desc: "Cole um texto e converta-o para o formato de legenda .SRT com tempo otimizado.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border"><textarea id="srt-input-text" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" rows="10" placeholder="Cole o texto completo aqui..."></textarea><button id="convert-to-srt" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">🔄 Converter para SRT</button><div id="output" class="mt-6"></div></div>` },
+        "text-divider": { 
+            title: "Divisor de Texto", 
+            desc: "Analise seu roteiro e divida-o em partes menores para facilitar a narração.", 
+            content: `<div class="bg-white p-6 rounded-xl shadow-sm border">
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                                <div class="bg-slate-100 p-4 rounded-lg text-center"><p class="text-sm text-slate-500">Palavras</p><p id="word-count" class="text-3xl font-bold">0</p></div>
+                                <div class="bg-slate-100 p-4 rounded-lg text-center"><p class="text-sm text-slate-500">Caracteres</p><p id="char-count" class="text-3xl font-bold">0</p></div>
+                                <div class="bg-slate-100 p-4 rounded-lg text-center"><p class="text-sm text-slate-500">Tempo de Narração</p><p id="time-estimate" class="text-3xl font-bold">00:00</p></div>
+                            </div>
+                            <textarea id="text-divider-input" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" rows="10" placeholder="Digite ou cole o roteiro completo aqui..."></textarea>
+                            <div class="flex flex-wrap items-center justify-center gap-4 mb-4 p-4 bg-slate-50 rounded-lg">
+                                <label for="split-chunk-size" class="font-medium">Dividir o roteiro a cada</label>
+                                <input type="number" id="split-chunk-size" class="px-4 py-2 bg-white border rounded-lg w-24 text-center" value="150">
+                                <select id="split-chunk-type" class="px-4 py-2 bg-white border rounded-lg">
+                                    <option value="word">palavras</option>
+                                    <option value="char">caracteres</option>
+                                </select>
+                                <button id="split-text-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Dividir Roteiro</button>
+                            </div>
+                            <div id="output" class="mt-6 space-y-4"></div>
+                        </div>` 
+        },
+        "channel-organizer": { title: "Organizador de Canais", desc: "Adicione e gerencie as informações e estratégias dos seus canais.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border mb-6"><h3 class="text-lg font-semibold mb-4 font-display">Adicionar Novo Canal</h3><form id="channel-form" class="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="text" id="org-channel-name" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nome do Canal" required><input type="text" id="org-channel-niche" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nicho Principal" required><select id="org-channel-lang" class="px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português (BR)</option><option value="en-US">Inglês (US)</option><option value="es-ES">Espanhol (ES)</option></select><input type="number" id="org-videos-week" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Vídeos por Semana" required><input type="text" id="org-post-time" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Horário de Postagem. Ex: 18:00"><input type="number" id="org-backlog-qty" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Qtd. de Vídeos no Backlog"><button type="submit" class="md:col-span-2 w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">Adicionar Canal</button></form></div><div id="organizer-output" class="space-y-4"></div>` },
+        "planner": { title: "Planejador de Conteúdo", desc: "Organize suas ideias de vídeo e acompanhe seu progresso.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border mb-6"><h3 class="text-lg font-semibold mb-4 font-display">Adicionar Nova Ideia</h3><form id="planner-form" class="space-y-4"><select id="planner-channel-select" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" required><option value="">Selecione um Canal</option></select><input type="text" id="idea-title" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Título da ideia de vídeo" required><button type="submit" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">Adicionar ao Planejamento</button></form></div><div id="planner-output" class="space-y-4"></div>` },
+        "settings": { 
+            title: "Configurações", 
+            desc: "Gerencie e valide suas chaves de API.", 
+            content: `<div class="bg-white p-6 rounded-xl shadow-sm border space-y-6">
+                            <div>
+                                <h3 class="text-lg font-semibold font-display">Chaves de API</h3>
+                                <div class="space-y-4 mt-2">
+                                    <!-- OpenAI -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            <a href="https://platform.openai.com/api-keys" target="_blank" class="hover:text-red-600 hover:underline">OpenAI API Key (Preferencial)</a>
+                                        </label>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <input type="password" id="openai-key" class="block w-full px-3 py-2 border rounded-md">
+                                            <button id="validate-openai-key" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
+                                            <span id="openai-key-status" class="text-2xl"></span>
+                                        </div>
+                                        <p class="text-xs text-slate-500 mt-1">Se preenchida e válida, esta chave será usada como principal.</p>
+                                    </div>
+                                    <hr/>
+                                    <!-- Gemini -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="hover:text-red-600 hover:underline">Gemini API Key (Principal / Backup)</a>
+                                        </label>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <input type="password" id="gemini-key-1" class="block w-full px-3 py-2 border rounded-md">
+                                            <button id="validate-gemini-key-1" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
+                                            <span id="gemini-key-1-status" class="text-2xl"></span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">Gemini API Key (Reserva 1)</label>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <input type="password" id="gemini-key-2" class="block w-full px-3 py-2 border rounded-md">
+                                            <button id="validate-gemini-key-2" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
+                                            <span id="gemini-key-2-status" class="text-2xl"></span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">Gemini API Key (Reserva 2)</label>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <input type="password" id="gemini-key-3" class="block w-full px-3 py-2 border rounded-md">
+                                            <button id="validate-gemini-key-3" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
+                                            <span id="gemini-key-3-status" class="text-2xl"></span>
+                                        </div>
+                                    </div>
+                                    <hr/>
+                                    <!-- Google API -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="hover:text-red-600 hover:underline">Google API Key (YouTube Data)</a>
+                                        </label>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <input type="password" id="google-api-key" class="block w-full px-3 py-2 border rounded-md">
+                                            <button id="validate-google-api-key" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700">Validar</button>
+                                            <span id="google-api-key-status" class="text-2xl"></span>
+                                        </div>
+                                        <p class="text-xs text-slate-500 mt-1">Usada para buscar dados de canais e vídeos do YouTube.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button id="save-settings" class="w-full bg-red-800 text-white font-bold py-3 px-4 rounded-lg mt-6">Salvar Configurações</button>
+                            <div id="settings-feedback" class="mt-4 min-h-[20px]"></div>
+                        </div>` 
+        },
+        "admin": {
+            title: "Painel Administrativo",
+            desc: "Gerir utilizadores, ver sessões ativas e histórico de acessos.",
+            content: `<div id="admin-container" class="space-y-8"></div>`
+        }
+    };
+    
+    // --- Handlers (Lógica das Ferramentas) ---
+    const handlers = {
+        'generate-niches': async (output, append = false) => {
+            const keyword = document.getElementById('niche-keyword').value || 'tópicos em alta';
+            const country = document.getElementById('niche-country').value;
+            const prompt = `Como um especialista em YouTube, gere 3 nichos promissores sobre '${keyword}' para o país ${country}. Foque em oportunidades com baixa concorrência. Para cada nicho, forneça uma sugestão estratégica que seja uma "virada de chave" e uma estimativa de RPM em dólares americanos.`;
+            const schema = {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        niche_name: { type: "STRING" },
+                        description: { type: "STRING" },
+                        unexplored_subniches: { type: "ARRAY", items: { type: "STRING" } },
+                        rpm_estimate_value: { type: "NUMBER", description: "Estimativa de RPM em dólares, ex: 5.50" },
+                        scores: {
+                            type: "OBJECT",
+                            properties: {
+                                Potencial: { type: "NUMBER", description: "Pontuação de potencial (70-95, >90 é raro)." },
+                                Concorrência: { type: "NUMBER", description: "Pontuação de concorrência (10-60)." },
+                                "Volume de Busca": { type: "NUMBER", description: "Pontuação de volume de busca (60-95)." }
+                            }
+                        },
+                        suggestion: { type: "STRING", description: "A 'virada de chave' para o sucesso no nicho." }
+                    }
+                }
+            };
+            try {
+                const result = await callAIModel(prompt, schema);
+                let html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4"><div class="flex-1"><h3 class="font-semibold text-lg mb-2 font-display">${item.niche_name} ${createCopyButton(item.niche_name)}</h3><p class="text-sm text-slate-700">${item.description}</p><p class="mt-2 font-semibold text-sm">RPM Estimado: $${(item.rpm_estimate_value || 0).toFixed(2)}</p><p class="mt-2 font-semibold text-sm">Subnichos Inexplorados: ${item.unexplored_subniches.join(', ')}</p></div>${renderScoreCard('Análise de Nicho', item.scores.Potencial, { 'Potencial': item.scores.Potencial, 'Concorrência (menor é melhor)': 100 - item.scores.Concorrência, 'Volume de Busca': getTrendLevel(item.scores['Volume de Busca']) }, item.suggestion)}</div>`).join('');
+                if (append) {
+                    const moreButton = document.getElementById('generate-more-niches');
+                    if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
+                } else {
+                    output.innerHTML = html;
+                }
+                document.getElementById('generate-more-niches').style.display = 'block';
+            } catch (error) {
+                 output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
+            }
+        },
+        'analyze-niche': async (output) => {
+            const niche = document.getElementById('analysis-niche').value.trim();
+            const country = document.getElementById('analysis-country').value;
+            if (!niche) { output.innerHTML = `<p class="text-red-500">Insira um nicho para análise.</p>`; return; }
+            
+            const prompt = `Analise profundamente o nicho "${niche}" para o YouTube no país ${country}. Forneça uma estimativa de RPM em dólares, uma pontuação de "hype" (potencial de viralização), e 3 canais de referência que sejam populares nesse país e nesse nicho específico. Os canais devem ser relevantes para o idioma e a cultura do país ${country}. Forneça também uma sugestão estratégica que seja uma "virada de chave".`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    niche_name: { type: "STRING" },
+                    rpm_estimate_value: { type: "NUMBER" },
+                    hype_score: { type: "NUMBER", description: "Pontuação de hype (70-95, >90 é raro)." },
+                    reference_channels: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, url: { type: "STRING" } } } },
+                    suggestion: { type: "STRING", description: "A 'virada de chave' para o sucesso no nicho." }
+                }
+            };
+            
+            try {
+                const [result, trendsData] = await Promise.all([
+                    callAIModel(prompt, schema),
+                    apiRequest(`/api/google-trends/${encodeURIComponent(niche)}/${country}`, 'GET')
+                ]);
+
+                const channelsHtml = result.reference_channels.map(ch => `<a href="${ch.url}" target="_blank" class="text-red-600 hover:underline">${ch.name}</a>`).join(', ');
+                
+                const timelineData = trendsData.default.timelineData;
+                const labels = timelineData.map(d => new Date(d.time * 1000).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }));
+                const values = timelineData.map(d => d.value[0]);
+                const avgInterest = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+
+                output.innerHTML = `
+                    <div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start">
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-lg font-display">${result.niche_name}</h3>
+                            <p class="text-sm mt-1">RPM Estimado: <strong>$${(result.rpm_estimate_value || 0).toFixed(2)}</strong></p>
+                            <p class="text-sm mt-1">Canais de Referência: ${channelsHtml}</p>
+                        </div>
+                        ${renderScoreCard('Análise de Nicho', result.hype_score, { 'Hype Score': result.hype_score, 'Potencial de RPM': (result.rpm_estimate_value || 0) * 10, 'Demanda de Busca': getTrendLevel(avgInterest) }, result.suggestion)}
+                    </div>
+                    <div id="trends-chart-container" class="mt-6 bg-white p-4 rounded-lg border">
+                        <h4 class="font-semibold text-slate-800 mb-2 font-display">Tendência de Interesse (Últimos 12 meses)</h4>
+                        <div class="h-64 relative"><canvas id="trends-chart"></canvas></div>
+                    </div>`;
+
+                const ctx = document.getElementById('trends-chart').getContext('2d');
+                if (trendsChartInstance) trendsChartInstance.destroy();
+                trendsChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: `Interesse em "${niche}"`,
+                            data: values,
+                            borderColor: '#DC2626',
+                            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+
+            } catch (error) {
+                output.innerHTML = `<p class="text-red-500">Erro ao analisar o nicho: ${error.message}</p>`;
+            }
+        },
+        'analyze-video': async (output) => {
+            const url = document.getElementById('video-url').value.trim();
+            if (!url) { output.innerHTML = `<p class="text-red-500">Insira uma URL válida do YouTube.</p>`; return; }
+            const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/);
+            if (!videoIdMatch) { output.innerHTML = `<p class="text-red-500">URL inválida. Não foi possível extrair o ID do vídeo.</p>`; return; }
+            const videoId = videoIdMatch[1];
+            
+            try {
+                showProgressModal();
+                addToLog("Buscando dados do vídeo...");
+                const videoData = await apiRequest(`/api/video-details/${videoId}`, 'GET');
+                appState.currentVideoAnalysis = videoData;
+
+                addToLog("Buscando dados do canal...");
+                const channelData = await apiRequest(`/api/channel-details/${videoData.channelId}`, 'GET');
+
+                const { title, description, tags, detectedLanguage, viewCount, likeCount, commentCount } = videoData;
+                const { subscriberCount } = channelData;
+                const lang = detectedLanguage || 'a língua original do texto';
+                const thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+
+                const prompt = `Como um especialista em SEO para YouTube, analise criticamente os metadados de um vídeo e depois crie versões otimizadas. Gere TODAS as respostas e otimizações no idioma: "${lang}".
+                
+                DADOS ATUAIS:
+                - Título: "${title}"
+                - Descrição: "${description}"
+                - Tags: "${tags.join(', ')}"
+
+                SUA TAREFA:
+                1.  **Análise Crítica:** Avalie cada item (título, descrição, tags) e atribua uma pontuação de 0 a 100 para cada um, explicando brevemente o porquê da nota.
+                2.  **Otimização:** Crie 3 novas sugestões de títulos, 3 headlines (frases curtas e de impacto para notificações), 1 nova descrição e 1 novo conjunto de tags. Para cada item otimizado, atribua uma nova pontuação (SEMPRE ACIMA de 80) e uma "virada de chave" (a principal melhoria).`;
+                
+                const schema = {
+                    type: "OBJECT",
+                    properties: {
+                        analysis: {
+                            type: "OBJECT",
+                            properties: {
+                                title: { type: "OBJECT", properties: { score: { type: "NUMBER" }, critique: { type: "STRING" } } },
+                                description: { type: "OBJECT", properties: { score: { type: "NUMBER" }, critique: { type: "STRING" } } },
+                                tags: { type: "OBJECT", properties: { score: { type: "NUMBER" }, critique: { type: "STRING" } } }
+                            }
+                        },
+                        optimizations: {
+                            type: "OBJECT",
+                            properties: {
+                                titles: { type: "ARRAY", items: { type: "OBJECT", properties: { title: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } } },
+                                headlines: { type: "ARRAY", items: { type: "OBJECT", properties: { text: { type: "STRING" }, score: { type: "NUMBER" } } } },
+                                description: { type: "OBJECT", properties: { text: { type: "STRING" }, hashtags: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } },
+                                tags: { type: "OBJECT", properties: { tag_list: { type: "ARRAY", items: { type: "STRING" } }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } }
+                            }
+                        }
+                    }
+                };
+                
+                const result = await callAIModel(prompt, schema);
+                const { analysis, optimizations } = result;
+
+                const renderTitles = (titles) => titles.map(t => `<div class="mb-4"><div class="flex justify-between items-start gap-2"><p class="text-sm bg-white p-2 rounded border flex-1">${t.title} ${createCopyButton(t.title)}</p><div class="w-32 flex-shrink-0 text-center"><p class="font-bold text-lg ${getScoreTextColor(t.score)}">${t.score}</p><p class="text-xs text-slate-500">Potencial</p></div></div><p class="text-xs text-slate-600 mt-1 pl-1"><strong>Virada de Chave:</strong> ${t.suggestion}</p></div>`).join('');
+                const allHeadlinesText = optimizations.headlines.map(h => h.text).join('\n');
+
+                output.innerHTML = `
+                    <div class="mb-6"><h3 class="text-xl font-bold mb-2 text-white font-display">Vídeo Analisado</h3><div class="flex flex-col md:flex-row gap-4 bg-gray-800 p-4 rounded-lg"><img src="${thumbnailUrl}" onerror="this.style.display='none'" class="rounded-md w-full md:w-48 h-auto object-cover"/><div class="flex-1"><h4 class="font-semibold text-white">${title}</h4><p class="text-xs text-gray-400 mt-1">Idioma Detectado: ${lang}</p></div></div></div>
+                    
+                    <!-- PAINEL DE VISÃO GERAL -->
+                    <div class="mb-6 bg-white p-4 rounded-xl shadow-sm border">
+                        <h3 class="text-lg font-semibold mb-4 text-slate-800 font-display">Visão Geral</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                            <div>
+                                <p class="text-sm text-slate-500">Visualizações</p>
+                                <p class="text-2xl font-bold text-red-600">${viewCount}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-slate-500">Likes</p>
+                                <p class="text-2xl font-bold text-red-600">${likeCount}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-slate-500">Comentários</p>
+                                <p class="text-2xl font-bold text-red-600">${commentCount}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-slate-500">Inscritos do Canal</p>
+                                <p class="text-2xl font-bold text-red-600">${subscriberCount}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-8">
+                        <div><h3 class="text-xl font-bold mb-3 border-b pb-2 text-white border-gray-700 font-display">Análise de Título</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-gray-800 p-4 rounded-lg"><h4 class="font-semibold mb-2 text-white font-display">Título Atual</h4><p class="text-sm bg-gray-700 text-white p-2 rounded border">${title}</p><div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.title.score, { 'SEO & CTR': analysis.title.score }, analysis.title.critique)}</div></div><div class="bg-red-900/20 p-4 rounded-lg border border-red-700"><h4 class="font-semibold mb-2 text-red-400 font-display">Sugestões Otimizadas</h4><div id="optimized-titles-container" class="text-gray-800">${renderTitles(optimizations.titles)}</div><button id="generate-more-titles" class="w-full mt-4 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Gerar Mais Sugestões</button></div></div></div>
+                        
+                        <div class="bg-white p-4 rounded-lg border"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold text-lg font-display">⭐ Headlines de Impacto</h4>${createCopyButton(allHeadlinesText)}</div><div class="grid grid-cols-1 sm:grid-cols-3 gap-4">${optimizations.headlines.map(h => `<div class="bg-red-50 p-3 rounded-md text-center"><p class="font-semibold text-red-800">"${h.text}"</p><p class="text-xs mt-1 font-bold ${getScoreTextColor(h.score)}">${h.score}/100 Potencial</p></div>`).join('')}</div></div>
+
+                        <div><h3 class="text-xl font-bold mb-3 border-b pb-2 text-white border-gray-700 font-display">Análise de Descrição</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-gray-800 p-4 rounded-lg"><h4 class="font-semibold mb-2 text-white font-display">Descrição Atual</h4><div class="text-sm bg-gray-700 text-white p-2 rounded border prose whitespace-pre-wrap max-h-48 overflow-y-auto">${description}</div><div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.description.score, { 'SEO & Clareza': analysis.description.score }, analysis.description.critique)}</div></div><div class="bg-red-900/20 p-4 rounded-lg border border-red-700"><h4 class="font-semibold mb-2 text-red-400 font-display">Descrição Otimizada ${createCopyButton(optimizations.description.text + '\n\n' + optimizations.description.hashtags)}</h4><div class="text-sm bg-white p-2 rounded border prose whitespace-pre-wrap max-h-48 overflow-y-auto">${optimizations.description.text}</div><p class="text-sm bg-white p-2 rounded border mt-2 font-semibold">${optimizations.description.hashtags}</p><div class="mt-4">${renderScoreCard('Pontuação Otimizada', optimizations.description.score, { 'SEO & Engajamento': optimizations.description.score }, optimizations.description.suggestion)}</div></div></div></div>
+                        
+                        <div><h3 class="text-xl font-bold mb-3 border-b pb-2 text-white border-gray-700 font-display">Análise de Tags</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-gray-800 p-4 rounded-lg"><h4 class="font-semibold mb-2 text-white font-display">Tags Atuais</h4><p class="text-sm bg-gray-700 text-white p-2 rounded border">${tags.join(', ')}</p><div class="mt-4">${renderScoreCard('Pontuação Atual', analysis.tags.score, { 'Relevância': analysis.tags.score }, analysis.tags.critique)}</div></div><div class="bg-red-900/20 p-4 rounded-lg border border-red-700"><h4 class="font-semibold mb-2 text-red-400 font-display">Tags Otimizadas ${createCopyButton(optimizations.tags.tag_list.join(', '))}</h4><p class="text-sm bg-white p-2 rounded border">${optimizations.tags.tag_list.join(', ')}</p><div class="mt-4">${renderScoreCard('Pontuação Otimizada', optimizations.tags.score, { 'Relevância & Volume': optimizations.tags.score }, optimizations.tags.suggestion)}</div></div></div></div>
+                    </div>`;
+                document.getElementById('generate-more-titles').addEventListener('click', () => handlers['generate-more-titles'](document.getElementById('optimized-titles-container')));
+
+            } catch (error) {
+                 output.innerHTML = `<p class="text-red-500">Erro ao analisar vídeo: ${error.message}</p>`;
+            }
+        },
+        'generate-more-titles': async (output) => {
+            if (!appState.currentVideoAnalysis) return;
+            const { title, detectedLanguage } = appState.currentVideoAnalysis;
+            const lang = detectedLanguage || 'pt-BR';
+            
+            const prompt = `Gere mais 3 sugestões de títulos otimizados para um vídeo com o título original "${title}". As novas sugestões devem ser criativas, diferentes das anteriores, e ter uma pontuação de potencial viral ACIMA de 80. O idioma deve ser ${lang}.`;
+            const schema = {
+                type: "ARRAY",
+                items: { type: "OBJECT", properties: { title: { type: "STRING" }, score: { type: "NUMBER" }, suggestion: { type: "STRING" } } }
+            };
+
+            const result = await callAIModel(prompt, schema);
+            const renderMoreTitles = (titles) => {
+                return titles.map(t => `
+                    <div class="mb-4 fade-in">
+                        <div class="flex justify-between items-start gap-2">
+                            <p class="text-sm bg-white p-2 rounded border flex-1">${t.title} ${createCopyButton(t.title)}</p>
+                            <div class="w-32 flex-shrink-0 text-center">
+                                <p class="font-bold text-lg ${getScoreTextColor(t.score)}">${t.score}</p>
+                                <p class="text-xs text-slate-500">Potencial</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-600 mt-1 pl-1"><strong>Virada de Chave:</strong> ${t.suggestion}</p>
+                    </div>
+                `).join('');
+            };
+            output.insertAdjacentHTML('beforeend', renderMoreTitles(result));
+        },
+        'analyze-competitor': async (output) => {
+            const channelId = document.getElementById('competitor-channel-id').value.trim();
+            if (!channelId) { output.innerHTML = `<p class="text-red-500">Insira o ID de um canal concorrente.</p>`; return; }
+
+            try {
+                showProgressModal();
+                const stats = await apiRequest(`/api/youtube-stats/${channelId}`, 'GET');
+                const recentVideos = stats.uploadsPlaylistId ? await apiRequest(`/api/youtube-recent-videos/${stats.uploadsPlaylistId}`, 'GET') : [];
+                
+                const videosInfo = recentVideos.map(v => `- Título: "${v.title}", Views: ${v.viewCount}`).join('\n');
+                
+                const prompt = `Aja como um consultor de estratégia de conteúdo para YouTube. Analise os dados de um canal concorrente e forneça uma análise SWOT (Forças, Fraquezas, Oportunidades, Ameaças) aprofundada.
+                DADOS DO CANAL:
+                - Inscritos: ${stats.subscriberCount}
+                - Vídeos Totais: ${stats.videoCount}
+                - Views Totais: ${stats.viewCount}
+                - Vídeos Recentes:
+                ${videosInfo}
+
+                SUA ANÁLISE ESTRATÉGICA:
+                1.  **Forças (Strengths):** Quais são os 2 maiores trunfos deste canal, com base nos títulos e performance?
+                2.  **Fraquezas (Weaknesses):** Qual a maior vulnerabilidade ou ponto cego na estratégia de conteúdo deles?
+                3.  **Oportunidades (Opportunities):** Identifique 3 "brechas de conteúdo" (tópicos ou formatos que eles não cobrem) que poderiam ser exploradas.
+                4.  **Ameaças (Threats):** Qual o maior risco para a relevância contínua deste canal?
+                5.  **Plano de Ação Rápido:** Sugira 2 títulos de vídeo específicos que um novo canal poderia criar para explorar as fraquezas e oportunidades identificadas.`;
+                
+                const schema = {
+                    type: "OBJECT",
+                    properties: {
+                        swot_analysis: {
+                            type: "OBJECT",
+                            properties: {
+                                strengths: { type: "ARRAY", items: { type: "STRING" } },
+                                weaknesses: { type: "ARRAY", items: { type: "STRING" } },
+                                opportunities: { type: "ARRAY", items: { type: "STRING" } },
+                                threats: { type: "ARRAY", items: { type: "STRING" } }
+                            }
+                        },
+                        action_plan: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    title: { type: "STRING" },
+                                    strategy: { type: "STRING" }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                const result = await callAIModel(prompt, schema);
+                const { swot_analysis, action_plan } = result;
+
+                const renderList = (items) => items.map(item => `<li class="text-sm text-slate-700">${item}</li>`).join('');
+
+                output.innerHTML = `
+                    <div class="space-y-6">
+                        <div class="bg-white p-4 rounded-lg border">
+                            <h4 class="font-semibold text-lg mb-2 font-display">Análise SWOT do Concorrente</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-green-50 p-3 rounded-md">
+                                    <h5 class="font-bold text-green-800 font-display">Forças</h5>
+                                    <ul class="list-disc list-inside mt-1">${renderList(swot_analysis.strengths)}</ul>
+                                </div>
+                                <div class="bg-red-50 p-3 rounded-md">
+                                    <h5 class="font-bold text-red-800 font-display">Fraquezas</h5>
+                                    <ul class="list-disc list-inside mt-1">${renderList(swot_analysis.weaknesses)}</ul>
+                                </div>
+                                <div class="bg-blue-50 p-3 rounded-md">
+                                    <h5 class="font-bold text-blue-800 font-display">Oportunidades</h5>
+                                    <ul class="list-disc list-inside mt-1">${renderList(swot_analysis.opportunities)}</ul>
+                                </div>
+                                <div class="bg-yellow-50 p-3 rounded-md">
+                                    <h5 class="font-bold text-yellow-800 font-display">Ameaças</h5>
+                                    <ul class="list-disc list-inside mt-1">${renderList(swot_analysis.threats)}</ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border">
+                            <h4 class="font-semibold text-lg mb-2 font-display">Plano de Ação (Para Você)</h4>
+                            <div class="space-y-3">
+                                ${action_plan.map(idea => `
+                                    <div class="bg-slate-50 p-3 rounded-md">
+                                        <p class="font-semibold text-slate-800">${idea.title} ${createCopyButton(idea.title)}</p>
+                                        <p class="text-xs text-slate-600 mt-1"><strong>Estratégia:</strong> ${idea.strategy}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                output.innerHTML = `<p class="text-red-500">Erro ao analisar concorrente: ${error.message}</p>`;
+            } finally {
+                hideProgressModal();
+            }
+        },
+        'analyze-comments': async (output) => {
+            const url = document.getElementById('comment-video-url').value.trim();
+            if (!url) { output.innerHTML = `<p class="text-red-500">Insira a URL de um vídeo.</p>`; return; }
+            const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/);
+            if (!videoIdMatch) { output.innerHTML = `<p class="text-red-500">URL inválida.</p>`; return; }
+            const videoId = videoIdMatch[1];
+
+            try {
+                showProgressModal();
+                const [comments, videoData] = await Promise.all([
+                    apiRequest(`/api/video-comments/${videoId}`, 'GET'),
+                    apiRequest(`/api/video-details/${videoId}`, 'GET')
+                ]);
+
+                if (comments.length === 0) {
+                    output.innerHTML = `<p class="text-slate-500">Este vídeo não tem comentários ou eles estão desativados.</p>`;
+                    hideProgressModal();
+                    return;
+                }
+                
+                const lang = videoData.detectedLanguage || 'pt-BR';
+                const commentsText = comments.map(c => `- "${c}"`).join('\n');
+                const prompt = `Analise a seguinte lista de comentários REAIS de um vídeo do YouTube. O idioma do vídeo é ${lang}.
+                COMENTÁRIOS:
+                ${commentsText}
+
+                SUA ANÁLISE ESTRUTURADA (responda no idioma ${lang}):
+                1.  **Saúde do Vídeo:** Dê uma nota geral de 0 a 100 para a "saúde" do vídeo com base na recepção do público nos comentários e explique o porquê.
+                2.  **Principais Elogios:** Liste os 3 pontos mais elogiados.
+                3.  **Principais Dúvidas/Críticas:** Liste as 3 principais questões ou críticas.
+                4.  **Ideias para Novos Vídeos:** Sugira 3 títulos de novos vídeos baseados nos comentários. Para cada um, forneça uma "virada de chave" estratégica e uma pontuação de potencial (0-100).`;
+                
+                const schema = {
+                    type: "OBJECT",
+                    properties: {
+                        health: { type: "OBJECT", properties: { score: { type: "NUMBER" }, analysis: { type: "STRING" } } },
+                        praises: { type: "ARRAY", items: { type: "STRING" } },
+                        criticisms: { type: "ARRAY", items: { type: "STRING" } },
+                        video_ideas: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    title: { type: "STRING" },
+                                    suggestion: { type: "STRING" },
+                                    potential_score: { type: "NUMBER" }
+                                }
+                            }
+                        }
+                    }
+                };
+                
+                const result = await callAIModel(prompt, schema);
+                const { health, praises, criticisms, video_ideas } = result;
+
+                const renderListItems = (items) => items.map(item => `<li class="bg-slate-50 p-2 rounded-md text-sm">${item}</li>`).join('');
+
+                output.innerHTML = `
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-1 space-y-4">
+                            ${renderScoreCard('Saúde do Vídeo', health.score, { 'Recepção do Público': health.score }, health.analysis)}
+                        </div>
+                        <div class="lg:col-span-2 space-y-4">
+                            <div class="bg-white p-4 rounded-lg border">
+                                <h4 class="font-semibold text-green-700 mb-2 font-display">👍 Principais Elogios</h4>
+                                <ul class="space-y-2">${renderListItems(praises)}</ul>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border">
+                                <h4 class="font-semibold text-yellow-700 mb-2 font-display">🤔 Principais Dúvidas e Críticas</h4>
+                                <ul class="space-y-2">${renderListItems(criticisms)}</ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 bg-white p-4 rounded-lg border">
+                        <h3 class="text-xl font-bold mb-3 font-display">💡 Oportunidades de Conteúdo</h3>
+                        <div class="space-y-4">
+                            ${video_ideas.map(idea => `
+                                <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg flex justify-between items-start">
+                                    <div>
+                                        <p class="font-semibold text-red-800">${idea.title} ${createCopyButton(idea.title)}</p>
+                                        <p class="text-xs text-slate-600 mt-1"><strong>Virada de Chave:</strong> ${idea.suggestion}</p>
+                                    </div>
+                                    <div class="text-center ml-4">
+                                        <p class="font-bold text-lg ${getScoreTextColor(idea.potential_score)}">${idea.potential_score}</p>
+                                        <p class="text-xs text-slate-500">Potencial</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+
+            } catch (error) {
+                output.innerHTML = `<p class="text-red-500">Erro ao analisar comentários: ${error.message}</p>`;
+            } finally {
+                hideProgressModal();
+            }
+        },
+        'generate-structures': async (output, append = false) => {
+            const topic = document.getElementById('structure-topic').value.trim();
+            const langSelect = document.getElementById('structure-lang');
+            const lang = langSelect.value;
+            const country = lang.split('-')[1] || 'BR';
+            if (!topic) { output.innerHTML = `<p class="text-red-500">Insira um tópico.</p>`; return; }
+            
+            let searchScore = 50; // Default score
+            try {
+                const trendsData = await apiRequest(`/api/google-trends/${encodeURIComponent(topic)}/${country}`, 'GET');
+                const timelineData = trendsData.default.timelineData;
+                if (timelineData && timelineData.length > 0) {
+                    const avgValue = timelineData.reduce((sum, d) => sum + d.value[0], 0) / timelineData.length;
+                    searchScore = Math.round(avgValue);
+                }
+            } catch (error) {
+                console.warn("Não foi possível buscar dados do Google Trends:", error.message);
+            }
+
+            const prompt = `Crie 3 estruturas de títulos virais para "${topic}" no idioma ${lang}, com no MÁXIMO 100 caracteres. A nota de 'Busca' para este tópico é ${searchScore}. Apenas retorne títulos com nota acima de 80. Para cada estrutura, forneça uma sugestão que seja uma "virada de chave".`;
+            const schema = {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        structure_name: { type: "STRING" },
+                        structure: { type: "STRING" },
+                        example_title: { type: "STRING", description: "Exemplo de título (máx 100 chars)." },
+                        explanation: { type: "STRING" },
+                        viral_score: { type: "NUMBER", description: "Pontuação (80-98)." },
+                        suggestion: { type: "STRING", description: "A 'virada de chave' para esta estrutura." },
+                        is_novel: { type: "BOOLEAN", description: "Se a estrutura é inédita e tem pontuação > 93." }
+                    }
+                }
+            };
+            try {
+                const result = await callAIModel(prompt, schema);
+                const filteredResult = result.filter(item => item.viral_score > 80);
+                let html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold font-display">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
+                if (append) {
+                    const moreButton = document.getElementById('generate-more-structures');
+                    if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
+                } else {
+                    output.innerHTML = html;
+                }
+                document.getElementById('generate-more-structures').style.display = 'block';
+            } catch (error) {
+                 output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
+            }
+        },
+        'generate-script': async (output) => {
+            const topic = document.getElementById('script-topic').value.trim();
+            const duration = document.getElementById('script-duration').value;
+            const parts = document.getElementById('script-parts').value;
+            const narrationOnly = document.getElementById('script-narration-only').checked;
+            if (!topic) { output.innerHTML = `<p class="text-red-500">Insira um tópico.</p>`; return; }
+            let prompt = `Atue como um roteirista profissional. Crie um roteiro de alta qualidade sobre "${topic}" em português (pt-BR).`;
+            if (duration) prompt += ` O roteiro deve ter aproximadamente ${duration} minutos de duração.`;
+            if (parts) prompt += ` Divida o roteiro em ${parts} partes distintas, cada parte com cerca de 5 parágrafos.`;
+            if (narrationOnly) prompt += ` O roteiro DEVE conter APENAS narração, sem diálogos.`;
+            prompt += ` Foque em storytelling e hooks emocionais para alta retenção.`;
+            
+            try {
+                const result = await callAIModel(prompt);
+                output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold font-display">Roteiro Gerado</h4>${createCopyButton(result.text)}</div><div class="prose h-96 overflow-y-auto whitespace-pre-wrap p-2 bg-white rounded border">${result.text}</div></div>`;
+            } catch (error) {
+                 output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
+            }
+        },
+        'generate-prompts': async (output, append = false) => {
+            const title = document.getElementById('thumb-title').value.trim();
+            const platform = document.getElementById('thumb-platform').value;
+            if (!title) { output.innerHTML = `<p class="text-red-500">Insira um título.</p>`; return; }
+            const platformConfigs = {
+                'Midjourney': 'Foque em composição cinematográfica, use parâmetros como --ar 16:9, --style raw, --chaos 10, e descreva a iluminação (ex: volumetric lighting, dramatic lighting).',
+                'Leonardo.AI': 'Use palavras-chave como "photorealistic, cinematic, hyper-detailed, 8k". Descreva a emoção e a paleta de cores. Use "negative prompts" para remover elementos indesejados.',
+                'DALL-E 3': 'Seja conversacional e extremamente descritivo. "Crie uma imagem fotorrealista de um astronauta olhando para uma galáxia neon, com um sentimento de admiração. O estilo deve ser cinematográfico e escuro."',
+                'Freepik': 'Use termos comerciais e diretos. "Homem surpreso apontando para um gráfico de ações subindo, fundo de escritório, estilo de foto de banco de imagem, cores vibrantes."'
+            };
+            const prompt = `Gere 2 prompts AVANÇADOS em INGLÊS para a IA '${platform}' para uma thumbnail sobre "${title}". Siga esta diretriz para o prompt: ${platformConfigs[platform]}. Forneça uma sugestão que seja uma "virada de chave".`;
+            const schema = {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        prompt: { type: "STRING" },
+                        score: { type: "NUMBER", description: "Pontuação (70-95)." },
+                        suggestion: { type: "STRING", description: "A 'virada de chave' para este prompt." },
+                        ab_test_suggestion: { type: "STRING" }
+                    }
+                }
+            };
+            try {
+                const result = await callAIModel(prompt, schema);
+                let html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="font-mono text-sm bg-slate-200 p-2 rounded relative group">${item.prompt}<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(item.prompt)}</div></div><p class="text-xs mt-2 text-slate-600"><strong>Teste A/B:</strong> ${item.ab_test_suggestion}</p></div>${renderScoreCard('Potencial de CTR', item.score, { 'Impacto Visual': item.score + 4, 'Clareza': item.score - 3 }, item.suggestion)}</div>`).join('');
+                if (append) {
+                    const moreButton = document.getElementById('generate-more-prompts');
+                    if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
+                } else {
+                    output.innerHTML = html;
+                }
+                document.getElementById('generate-more-prompts').style.display = 'block';
+            } catch (error) {
+                 output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
+            }
+        },
+        'generate-description': async (output) => {
+            const title = document.getElementById('desc-title').value.trim();
+            const topic = document.getElementById('desc-topic').value.trim();
+            if (!title || !topic) { output.innerHTML = `<p class="text-red-500">Insira título e tópico.</p>`; return; }
+            const prompt = `Crie uma descrição de vídeo para o YouTube, altamente otimizada para SEO sobre o título "${title}" e o tópico "${topic}". Inclua parágrafos, CTAs, e hashtags. Calcule uma pontuação de otimização (0-100) baseada em SEO e engajamento, e forneça uma "virada de chave".`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    description: { type: "STRING" },
+                    hashtags: { type: "STRING" },
+                    score: { type: "NUMBER" },
+                    suggestion: { type: "STRING", description: "A 'virada de chave' para esta descrição." }
+                }
+            };
+            try {
+                const result = await callAIModel(prompt, schema);
+                output.innerHTML = `
+                    <div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start">
+                        <div class="flex-1">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-semibold font-display">Descrição Otimizada</h4>
+                                ${createCopyButton(result.description + '\n\n' + result.hashtags)}
+                            </div>
+                            <div class="prose whitespace-pre-wrap text-sm">${result.description}</div>
+                             <div class="mt-4">
+                                <h5 class="font-semibold text-sm flex justify-between items-center font-display">
+                                    <span>Hashtags</span>
+                                    ${createCopyButton(result.hashtags)}
+                                </h5>
+                                <p class="text-sm text-slate-700 p-2 bg-white rounded border mt-1">${result.hashtags}</p>
+                            </div>
+                        </div>
+                        ${renderScoreCard('Otimização', result.score, { 'SEO': result.score, 'Engajamento': result.score > 10 ? result.score - 4 : result.score }, result.suggestion)}
+                    </div>`;
+            } catch (error) {
+                 output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
+            }
+        },
+        'generate-tags': async (output) => {
+            const topic = document.getElementById('tag-topic').value.trim();
+            const lang = document.getElementById('tag-lang').value;
+            if (!topic) { output.innerHTML = `<p class="text-red-500">Insira um tópico.</p>`; return; }
+            const prompt = `Gere 25 tags para o campo de tags do YouTube, sobre "${topic}" no idioma ${lang}. As tags devem ser retornadas como uma única string, separadas por vírgula, com no máximo 500 caracteres. Calcule uma pontuação de 0 a 100 baseada na relevância e volume de busca, e forneça uma "virada de chave".`;
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    tags: { type: "STRING" },
+                    score: { type: "NUMBER" },
+                    suggestion: { type: "STRING", description: "A 'virada de chave' para estas tags." }
+                }
+            };
+            try {
+                const result = await callAIModel(prompt, schema);
+                output.innerHTML = `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="flex justify-between items-center mb-2"><h4 class="font-semibold font-display">Tags Geradas</h4>${createCopyButton(result.tags)}</div><p class="text-sm text-slate-700 p-2 bg-white rounded border">${result.tags}</p></div>${renderScoreCard('Qualidade', result.score, { 'Relevância': result.score, 'Volume': result.score > 10 ? result.score - 8 : result.score }, result.suggestion)}</div>`;
+            } catch (error) {
+                 output.innerHTML = `<p class="text-red-500">Ocorreu um erro: ${error.message}</p>`;
+            }
+        },
+        'convert-to-srt': (output) => {
+            const texto = document.getElementById('srt-input-text').value;
+            if (!texto.trim()) {
+                output.innerHTML = `<p class="text-red-500">Por favor, cole um texto para converter.</p>`;
+                return;
+            }
+
+            const CARACTERES_POR_BLOCO = 500;
+            const PALAVRAS_MAX_BLOCO = 100;
+            const DURACAO_BLOCO = 30;
+            const INTERVALO_ENTRE_BLOCOS = 10;
+
+            function formatarTempo(segundos) {
+                const horas = Math.floor(segundos / 3600);
+                const minutos = Math.floor((segundos % 3600) / 60);
+                const segsRestantes = Math.floor(segundos % 60);
+                const milissegundos = Math.floor((segundos % 1) * 1000);
+                const pad = (num, size = 2) => num.toString().padStart(size, '0');
+                return `${pad(horas)}:${pad(minutos)}:${pad(segsRestantes)},${pad(milissegundos, 3)}`;
+            }
+
+            function formatarBlocoSRT(contador, tempoInicio, textoBloco) {
+                const tempoFim = tempoInicio + DURACAO_BLOCO;
+                return `${contador}\n${formatarTempo(tempoInicio)} --> ${formatarTempo(tempoFim)}\n${textoBloco.trim()}\n\n`;
+            }
+            
+            let srt = '';
+            let contador = 1;
+            let tempoAcumulado = 0;
+            let palavras = texto.split(/\s+/);
+            let blocoAtual = '';
+            let palavrasNoBloco = 0;
+
+            for (let palavra of palavras) {
+                if (blocoAtual.length + palavra.length <= CARACTERES_POR_BLOCO && palavrasNoBloco < PALAVRAS_MAX_BLOCO) {
+                    blocoAtual += palavra + ' ';
+                    palavrasNoBloco++;
+                } else {
+                    let ultimoPontoFinal = blocoAtual.lastIndexOf('.');
+                    if (ultimoPontoFinal > -1 && ultimoPontoFinal < blocoAtual.length - 2) {
+                        let resto = blocoAtual.substring(ultimoPontoFinal + 1);
+                        blocoAtual = blocoAtual.substring(0, ultimoPontoFinal + 1);
+                        srt += formatarBlocoSRT(contador, tempoAcumulado, blocoAtual);
+                        contador++;
+                        tempoAcumulado += DURACAO_BLOCO + INTERVALO_ENTRE_BLOCOS;
+                        blocoAtual = resto + palavra + ' ';
+                        palavrasNoBloco = resto.split(/\s+/).filter(Boolean).length + 1;
+                    } else {
+                        srt += formatarBlocoSRT(contador, tempoAcumulado, blocoAtual);
+                        contador++;
+                        tempoAcumulado += DURACAO_BLOCO + INTERVALO_ENTRE_BLOCOS;
+                        blocoAtual = palavra + ' ';
+                        palavrasNoBloco = 1;
+                    }
+                }
+            }
+
+            if (blocoAtual.trim()) {
+                srt += formatarBlocoSRT(contador, tempoAcumulado, blocoAtual);
+            }
+
+            output.innerHTML = `
+                <div class="bg-slate-100 p-4 rounded-lg">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-semibold font-display">Resultado SRT</h4>
+                        <div>
+                            <button id="download-srt-btn" class="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Download</button>
+                            <button id="clear-srt-btn" class="text-xs bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600">Limpar</button>
+                        </div>
+                    </div>
+                    <div id="srt-result-content" class="prose whitespace-pre-wrap p-2 bg-white rounded border max-h-72 overflow-y-auto">${srt.trim()}</div>
+                </div>`;
+            
+            document.getElementById('download-srt-btn').addEventListener('click', () => {
+                const srtContent = document.getElementById('srt-result-content').textContent;
+                const blob = new Blob([srtContent], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'legendas.srt';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            document.getElementById('clear-srt-btn').addEventListener('click', () => {
+                document.getElementById('srt-input-text').value = '';
+                output.innerHTML = '';
+            });
+        },
+    };
+    
+    // --- Main Render Function ---
+    function renderTabContent(tabId) {
+        const tool = tools[tabId];
+        if (!tool) return;
+        ELEMENTS.tabContent.innerHTML = `<div class="fade-in"><h2 class="text-3xl font-bold text-white mb-2 font-display">${tool.title}</h2><p class="text-gray-400 mb-6">${tool.desc}</p>${tool.content}</div>`;
+        
+        ELEMENTS.mobileHeaderTitle.textContent = tool.title;
+        ELEMENTS.sidebar.classList.remove('open');
+        ELEMENTS.menuOverlay.style.display = 'none';
+
+        if (tabId === 'settings') initializeSettings();
+        if (tabId === 'dashboard') initializeDashboard();
+        if (tabId === 'channel-organizer') initializeChannelOrganizer();
+        if (tabId === 'planner') initializePlanner();
+        if (tabId === 'text-divider') initializeTextDivider();
+        if (tabId === 'admin') initializeAdminPanel();
+
+        const legendContainer = document.getElementById('legend-container');
+        if (legendContainer) {
+            const legendHtml = getLegendForTool(tabId);
+            if (legendHtml) {
+                legendContainer.innerHTML = legendHtml;
+                legendContainer.style.display = 'none';
+            }
+        }
+
+        const outputEl = document.getElementById('output');
+        if (!outputEl) return;
+
+        Object.keys(handlers).forEach(buttonId => {
+            const btn = document.getElementById(buttonId);
+            if(btn) {
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                newBtn.addEventListener('click', () => {
+                    if (legendContainer) legendContainer.style.display = 'block';
+                    handlers[buttonId](outputEl, false)
+                });
+            }
+        });
+        
+        ['niches', 'structures', 'prompts'].forEach(type => {
+            const moreBtn = document.getElementById(`generate-more-${type}`);
+            if (moreBtn) {
+                const newMoreBtn = moreBtn.cloneNode(true);
+                moreBtn.parentNode.replaceChild(newMoreBtn, moreBtn);
+                newMoreBtn.addEventListener('click', () => {
+                    const handlerKey = `generate-${type}`;
+                    handlers[handlerKey](outputEl, true)
+                });
+            }
+        });
+    }
+
+    // --- Specific Initializers ---
+    
+    async function validateOpenAIKey(key, statusEl) {
+        if (!key) {
+            statusEl.innerHTML = '<span title="Chave não informada">⚪</span>';
+            return;
+        }
+        statusEl.innerHTML = '<span class="animate-spin">⏳</span>';
+        try {
+            const response = await fetch('https://api.openai.com/v1/models', {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${key}` }
+            });
+            statusEl.innerHTML = response.ok ? '<span title="Chave Válida">✅</span>' : '<span title="Chave Inválida ou Expirada">❌</span>';
+        } catch (error) {
+            statusEl.innerHTML = '<span title="Erro de rede ao validar">❌</span>';
+        }
+    }
+
+    async function validateGeminiKey(key, statusEl) {
+        if (!key) {
+            statusEl.innerHTML = '<span title="Chave não informada">⚪</span>';
+            return;
+        }
+        statusEl.innerHTML = '<span class="animate-spin">⏳</span>';
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${key}`;
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: "teste" }] }] })
+            });
+            statusEl.innerHTML = response.ok ? '<span title="Chave Válida">✅</span>' : '<span title="Chave Inválida ou Expirada">❌</span>';
+        } catch (error) {
+            statusEl.innerHTML = '<span title="Erro de rede ao validar">❌</span>';
+        }
+    }
+
+    async function validateGoogleApiKey(key, statusEl) {
+        if (!key) {
+            statusEl.innerHTML = '<span title="Chave não informada">⚪</span>';
+            return;
+        }
+        statusEl.innerHTML = '<span class="animate-spin">⏳</span>';
+        const testVideoId = 'dQw4w9WgXcQ';
+        const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${testVideoId}&key=${key}`;
+        try {
+            const response = await fetch(apiUrl);
+            statusEl.innerHTML = response.ok ? '<span title="Chave Válida">✅</span>' : '<span title="Chave Inválida ou sem permissão para YouTube API">❌</span>';
+        } catch (error) {
+            statusEl.innerHTML = '<span title="Erro de rede ao validar">❌</span>';
+        }
+    }
+
+    function initializeSettings() {
+        const ids = {
+            openai: 'openai-key', gemini1: 'gemini-key-1', gemini2: 'gemini-key-2',
+            gemini3: 'gemini-key-3', google: 'google-api-key'
+        };
+        const inputs = {
+            openai: document.getElementById(ids.openai), gemini1: document.getElementById(ids.gemini1),
+            gemini2: document.getElementById(ids.gemini2), gemini3: document.getElementById(ids.gemini3),
+            google: document.getElementById(ids.google)
+        };
+
+        inputs.openai.value = appState.apiKeys.openai || '';
+        inputs.gemini1.value = appState.apiKeys.gemini[0] || '';
+        inputs.gemini2.value = appState.apiKeys.gemini[1] || '';
+        inputs.gemini3.value = appState.apiKeys.gemini[2] || '';
+        inputs.google.value = appState.apiKeys.google_api || '';
+
+        document.getElementById('validate-openai-key').addEventListener('click', () => validateOpenAIKey(inputs.openai.value, document.getElementById('openai-key-status')));
+        document.getElementById('validate-gemini-key-1').addEventListener('click', () => validateGeminiKey(inputs.gemini1.value, document.getElementById('gemini-key-1-status')));
+        document.getElementById('validate-gemini-key-2').addEventListener('click', () => validateGeminiKey(inputs.gemini2.value, document.getElementById('gemini-key-2-status')));
+        document.getElementById('validate-gemini-key-3').addEventListener('click', () => validateGeminiKey(inputs.gemini3.value, document.getElementById('gemini-key-3-status')));
+        document.getElementById('validate-google-api-key').addEventListener('click', () => validateGoogleApiKey(inputs.google.value, document.getElementById('google-api-key-status')));
+
+        document.getElementById('save-settings').addEventListener('click', async () => {
+            const newSettings = {
+                openai: inputs.openai.value.trim(),
+                gemini: [ inputs.gemini1.value.trim(), inputs.gemini2.value.trim(), inputs.gemini3.value.trim() ],
+                google_api: inputs.google.value.trim(),
+                userChannels: appState.userChannels, videoIdeas: appState.videoIdeas
+            };
+            const feedbackEl = document.getElementById('settings-feedback');
+            try {
+                await apiRequest(`/api/settings`, 'POST', { settings: newSettings });
+                appState.apiKeys = { openai: newSettings.openai, gemini: newSettings.gemini, google_api: newSettings.google_api };
+                feedbackEl.textContent = 'Configurações salvas com sucesso!';
+                feedbackEl.className = 'text-green-600 text-sm mt-4';
+            } catch (error) {
+                feedbackEl.textContent = `Erro ao salvar: ${error.message}`;
+                feedbackEl.className = 'text-red-500 text-sm mt-4';
+            } finally {
+                setTimeout(() => feedbackEl.textContent = '', 3000);
+            }
+        });
+    }
+
+    function initializeTextDivider() {
+        const textInput = document.getElementById('text-divider-input');
+        const wordCountEl = document.getElementById('word-count');
+        const charCountEl = document.getElementById('char-count');
+        const timeEstimateEl = document.getElementById('time-estimate');
+        const splitBtn = document.getElementById('split-text-btn');
+
+        const updateAnalytics = () => {
+            const text = textInput.value;
+            const words = text.trim().split(/\s+/).filter(Boolean);
+            wordCountEl.textContent = words.length;
+            charCountEl.textContent = text.length;
+            const timeInSeconds = (words.length / 150) * 60;
+            const minutes = Math.floor(timeInSeconds / 60);
+            const seconds = Math.floor(timeInSeconds % 60);
+            timeEstimateEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        };
+
+        const splitText = () => {
+            const text = textInput.value.trim();
+            const chunkSize = parseInt(document.getElementById('split-chunk-size').value, 10);
+            const chunkType = document.getElementById('split-chunk-type').value;
+            const outputEl = document.getElementById('output');
+
+            if (!text || isNaN(chunkSize) || chunkSize <= 0) {
+                outputEl.innerHTML = '<p class="text-center text-slate-500">Insira um texto e um tamanho de divisão válido.</p>';
+                return;
+            }
+            const parts = [];
+            if (chunkType === 'word') {
+                const words = text.split(/\s+/).filter(Boolean);
+                for (let i = 0; i < words.length; i += chunkSize) {
+                    parts.push(words.slice(i, i + chunkSize).join(' '));
+                }
+            } else {
+                for (let i = 0; i < text.length; i += chunkSize) {
+                    parts.push(text.substring(i, i + chunkSize));
+                }
+            }
+            outputEl.innerHTML = parts.map((part, index) => `
+                <div class="bg-slate-100 p-4 rounded-lg">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-semibold text-slate-800 font-display">Parte ${index + 1}</h4>
+                        ${createCopyButton(part)}
+                    </div>
+                    <p class="text-sm bg-white p-3 rounded border whitespace-pre-wrap">${part}</p>
+                </div>`).join('');
+        };
+
+        textInput.addEventListener('input', updateAnalytics);
+        splitBtn.addEventListener('click', splitText);
+        updateAnalytics();
+    }
+    
+    let mainChartInstance = null;
+    async function initializeDashboard() {
+        const container = document.getElementById('dashboard-container');
+        if (appState.userChannels.length === 0) {
+            container.innerHTML = `<div class="text-center p-8 bg-white rounded-lg border"><p>Nenhum canal adicionado. Vá para <button class="text-red-600 font-semibold" onclick="renderTabContent('channel-organizer')">Organizador de Canais</button> para começar.</p></div>`;
+            return;
+        }
+        
+        const options = appState.userChannels.map(ch => `<option value="${ch.id}">${ch.name}</option>`).join('');
+        container.innerHTML = `
+            <div class="mb-6 flex items-center justify-between">
+                <select id="channel-selector" class="p-2 border rounded-md bg-white">${options}</select>
+                <div id="dashboard-filters" class="flex gap-2"></div>
+            </div>
+            <div id="dashboard-content" class="grid grid-cols-1 lg:grid-cols-3 gap-6"></div>
+            <div id="recent-videos-container" class="mt-6"></div>
+        `;
+        
+        const selector = document.getElementById('channel-selector');
+        selector.addEventListener('change', (e) => renderDashboardData(e.target.value));
+        renderDashboardData(selector.value);
+    }
+
+    async function renderDashboardData(channelId) {
+        const contentContainer = document.getElementById('dashboard-content');
+        const videosContainer = document.getElementById('recent-videos-container');
+        contentContainer.innerHTML = `<div class="lg:col-span-3 text-center p-8"><p class="text-white">Buscando dados do canal...</p></div>`;
+        videosContainer.innerHTML = '';
+        
+        try {
+            const stats = await apiRequest(`/api/youtube-stats/${channelId}`, 'GET');
+            contentContainer.innerHTML = `
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border">
+                    <h3 class="font-semibold mb-4 font-display">Visualizações e Inscritos (Tendência Simulada)</h3>
+                    <div class="h-80 relative"><canvas id="main-chart"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border">
+                    <h3 class="font-semibold mb-4 font-display">Métricas Reais</h3>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="bg-slate-50 p-3 rounded-lg"><p class="text-sm text-slate-500">Inscritos</p><p class="text-2xl font-bold text-slate-800">${stats.subscriberCount}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-lg"><p class="text-sm text-slate-500">Visualizações Totais</p><p class="text-2xl font-bold text-slate-800">${stats.viewCount}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-lg"><p class="text-sm text-slate-500">Vídeos Publicados</p><p class="text-2xl font-bold text-slate-800">${stats.videoCount}</p></div>
+                    </div>
+                </div>`;
+            
+            const renderChart = (days) => {
+                const ctx = document.getElementById('main-chart').getContext('2d');
+                if (mainChartInstance) mainChartInstance.destroy();
+                const gradient = ctx.createLinearGradient(0, 0, 0, 320);
+                gradient.addColorStop(0, 'rgba(220, 38, 38, 0.5)');
+                gradient.addColorStop(1, 'rgba(220, 38, 38, 0)');
+                mainChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: { 
+                        labels: Array.from({ length: days }, (_, i) => `Dia ${i + 1}`), 
+                        datasets: [{ 
+                            label: 'Visualizações', 
+                            data: Array.from({ length: days }, () => Math.floor(Math.random() * 50000) + 10000), 
+                            borderColor: '#DC2626', backgroundColor: gradient, pointBackgroundColor: '#fff',
+                            pointBorderColor: '#DC2626', pointHoverRadius: 6, borderWidth: 2, tension: 0.4, fill: true 
+                        }] 
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+            };
+
+            const filterContainer = document.getElementById('dashboard-filters');
+            filterContainer.innerHTML = [7, 15, 30].map(d => `<button class="filter-btn px-3 py-1 text-sm rounded-md ${d === 30 ? 'bg-red-600 text-white' : 'bg-white text-gray-800'}" data-days="${d}">${d} dias</button>`).join('');
+            filterContainer.addEventListener('click', e => {
+                if(e.target.classList.contains('filter-btn')) {
+                    filterContainer.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('bg-red-600', 'text-white'));
+                    e.target.classList.add('bg-red-600', 'text-white');
+                    renderChart(parseInt(e.target.dataset.days));
+                }
+            });
+            renderChart(30);
+
+            if (stats.uploadsPlaylistId) {
+                const recentVideos = await apiRequest(`/api/youtube-recent-videos/${stats.uploadsPlaylistId}`, 'GET');
+                videosContainer.innerHTML = `
+                    <h3 class="text-xl font-bold mb-4 text-white font-display">Últimos Vídeos</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                        ${recentVideos.map(video => `
+                            <div class="bg-white p-4 rounded-lg border shadow-sm">
+                                <a href="https://www.youtube.com/watch?v=${video.id}" target="_blank">
+                                    <img src="${video.thumbnail}" alt="${video.title}" class="rounded-md mb-2 w-full aspect-video object-cover">
+                                    <h4 class="font-semibold text-sm leading-tight truncate">${video.title}</h4>
+                                </a>
+                                <div class="text-xs text-slate-500 mt-2 flex justify-between">
+                                    <span>👁️ ${video.viewCount}</span>
+                                    <span>👍 ${video.likeCount}</span>
+                                    <span>💬 ${video.commentCount}</span>
+                                </div>
+                            </div>`).join('')}
+                    </div>`;
+            }
+        } catch (error) {
+            contentContainer.innerHTML = `<div class="lg:col-span-3 text-center p-8 bg-red-900/30 rounded-lg"><p class="text-red-400">${error.message}</p><p class="text-sm text-gray-400 mt-2">Verifique se o ID do canal está correto no Organizador de Canais e se sua chave da API do Google está configurada.</p></div>`;
+        }
+    }
+
+    function initializeChannelOrganizer() {
+        const form = document.getElementById('channel-form');
+        const output = document.getElementById('organizer-output');
+        const renderChannels = () => {
+            output.innerHTML = appState.userChannels.length === 0 ? `<p class="text-center text-gray-400 py-8">Nenhum canal adicionado.</p>` :
+                appState.userChannels.map((ch, index) => `<div class="bg-white p-4 rounded-lg shadow-sm border"><div class="flex justify-between items-center"><h3 class="text-lg font-semibold font-display">${ch.name}</h3><button class="remove-channel text-red-500 text-2xl" data-index="${index}" title="Remover Canal">&times;</button></div><div class="text-sm text-slate-600 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2"><p><strong>Nicho:</strong> ${ch.niche}</p><p><strong>Idioma:</strong> ${ch.lang}</p><p><strong>Vídeos/Semana:</strong> ${ch.freq}</p><p><strong>Horário:</strong> ${ch.time}</p><p><strong>Backlog:</strong> ${ch.backlogQty || '0'}</p><p class="col-span-1 sm:col-span-2 break-all"><strong>ID do Canal:</strong> ${ch.id}</p></div></div>`).join('');
+        };
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const channelId = prompt("Por favor, insira o ID do Canal do YouTube (ex: UC_x5XG1OV2P6uZZ5FSM9Ttw)");
+            if (!channelId) return;
+            appState.userChannels.push({
+                id: channelId, name: document.getElementById('org-channel-name').value,
+                niche: document.getElementById('org-channel-niche').value, lang: document.getElementById('org-channel-lang').value,
+                freq: document.getElementById('org-videos-week').value, time: document.getElementById('org-post-time').value,
+                backlogQty: document.getElementById('org-backlog-qty').value,
+            });
+            await saveSettings();
+            renderChannels();
+            form.reset();
+        });
+        output.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('remove-channel')) {
+                appState.userChannels.splice(parseInt(e.target.dataset.index, 10), 1);
+                await saveSettings();
+                renderChannels();
+            }
+        });
+        renderChannels();
+    }
+
+    function initializePlanner() {
+        const form = document.getElementById('planner-form');
+        const output = document.getElementById('planner-output');
+        const channelSelect = document.getElementById('planner-channel-select');
+        channelSelect.innerHTML = '<option value="">Selecione um Canal</option>' + appState.userChannels.map(ch => `<option value="${ch.name}">${ch.name}</option>`).join('');
+        const renderPlanner = () => {
+            output.innerHTML = appState.videoIdeas.length === 0 ? `<p class="text-center text-gray-400 py-8">Nenhuma ideia adicionada.</p>` :
+                appState.videoIdeas.map((idea, index) => `<div class="bg-white p-4 rounded-lg shadow-sm border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"><div><h4 class="font-semibold">${idea.title}</h4><p class="text-sm text-slate-500">${idea.channel}</p></div><div class="flex items-center gap-2"><select class="status-select bg-slate-100 border-slate-200 rounded-md text-sm p-1" data-index="${index}"><option value="Planejado" ${idea.status === 'Planejado' ? 'selected' : ''}>Planejado</option><option value="Em Produção" ${idea.status === 'Em Produção' ? 'selected' : ''}>Em Produção</option><option value="Publicado" ${idea.status === 'Publicado' ? 'selected' : ''}>Publicado</option></select><button class="delete-idea text-red-500 hover:text-red-700 text-2xl" data-index="${index}" title="Remover Ideia">&times;</button></div></div>`).join('');
+        };
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            appState.videoIdeas.push({
+                title: document.getElementById('idea-title').value,
+                channel: channelSelect.value, status: 'Planejado'
+            });
+            await saveSettings();
+            renderPlanner();
+            form.reset();
+        });
+        output.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('delete-idea')) {
+                appState.videoIdeas.splice(e.target.dataset.index, 1);
+                await saveSettings();
+                renderPlanner();
+            }
+        });
+        output.addEventListener('change', async (e) => {
+            if (e.target.classList.contains('status-select')) {
+                appState.videoIdeas[e.target.dataset.index].status = e.target.value;
+                await saveSettings();
+            }
+        });
+        renderPlanner();
+    }
+
+    async function saveSettings() {
+        if (!appState.currentUser) return;
+        const settingsToSave = { 
+            gemini: appState.apiKeys.gemini, openai: appState.apiKeys.openai,
+            google_api: appState.apiKeys.google_api, userChannels: appState.userChannels, 
+            videoIdeas: appState.videoIdeas 
+        };
+        await apiRequest(`/api/settings`, 'POST', { settings: settingsToSave });
+    }
+
+     // --- Lógica do Chat ---
+    const chatWidget = document.getElementById('chat-widget');
+    const chatContainer = document.getElementById('chat-container');
+
+    function playNotificationSound() {
+        if (!audioContext) {
+            try { audioContext = new (window.AudioContext || window.webkitAudioContext)(); } 
+            catch(e) { console.error("Web Audio API não suportada."); return; }
+        }
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.5);
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+    }
+
+    function toggleChatWindow() {
+        appState.chat.isOpen = !appState.chat.isOpen;
+        if (appState.chat.isOpen) {
+            chatContainer.style.display = 'flex';
+            ELEMENTS.chatBubble.classList.remove('pulsate');
+            appState.chat.activePeer = null;
+            if (appState.currentUser.role === 'admin') renderChatUserList();
+            else openChatWith({ id: 1, email: 'Suporte' });
+        } else {
+            chatContainer.style.display = 'none';
+        }
+    }
+
+    async function renderChatUserList() {
+        chatContainer.innerHTML = `<div class="chat-header"><span>Utilizadores</span><button id="chat-close-btn" class="text-white">&times;</button></div><div id="chat-user-list" class="p-2">A carregar...</div>`;
+        document.getElementById('chat-close-btn').addEventListener('click', toggleChatWindow);
+        try {
+            const users = await apiRequest('/api/chat/users', 'GET');
+            const userListEl = document.getElementById('chat-user-list');
+            const onlineUsers = users.filter(u => u.is_online);
+            const offlineUsers = users.filter(u => !u.is_online);
+            let html = '<div class="px-2 text-xs font-semibold text-green-400">ONLINE</div>';
+            html += onlineUsers.length > 0 ? onlineUsers.map(user => `<div class="chat-user-item" data-peer-id="${user.user_id}" data-peer-email="${user.email}"><span><span class="online-status-dot"></span>${user.email}</span>${user.unread_count > 0 ? `<span class="unread-indicator"></span>` : ''}</div>`).join('') : '<p class="text-center text-xs text-gray-400 p-2">Ninguém online.</p>';
+            html += '<div class="mt-4 px-2 text-xs font-semibold text-gray-500">OFFLINE</div>';
+            if (offlineUsers.length > 0) html += offlineUsers.map(user => `<div class="chat-user-item" data-peer-id="${user.user_id}" data-peer-email="${user.email}"><span>${user.email}</span>${user.unread_count > 0 ? `<span class="unread-indicator"></span>` : ''}</div>`).join('');
+            userListEl.innerHTML = html;
+        } catch (error) { userListEl.innerHTML = `<p class="text-red-400 text-sm p-2">${error.message}</p>`; }
+    }
+
+    async function openChatWith(peer) {
+        appState.chat.activePeer = peer;
+        let adminStatusHtml = '';
+        if (appState.currentUser.role !== 'admin') {
+            const status = await apiRequest('/api/chat/admin-status', 'GET');
+            const isOnline = status.isAdminOnline;
+            adminStatusHtml = `<span class="flex items-center text-xs font-normal normal-case"><span class="admin-status-dot ${isOnline ? 'online' : 'offline'}"></span>${isOnline ? 'Online' : 'Offline'}</span>`;
+        }
+        chatContainer.innerHTML = `<div class="chat-header">${appState.currentUser.role === 'admin' ? '<button id="chat-back-btn" class="text-white">&larr; Voltar</button>' : '<div></div>'}<div class="text-center"><span>${peer.email}</span>${adminStatusHtml}</div><button id="chat-close-btn" class="text-white">&times;</button></div><div class="chat-messages" id="chat-messages-area"></div>
+        <div class="chat-input">
+            <input type="text" id="chat-message-input" class="w-full bg-gray-800 text-white rounded-l-md px-3 py-2" placeholder="Digite uma mensagem...">
+            <label for="chat-image-upload" class="cursor-pointer p-2 text-gray-400 hover:text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            </label>
+            <input type="file" id="chat-image-upload" class="hidden" accept="image/*">
+            <button id="chat-send-btn" class="bg-red-600 text-white px-4 rounded-r-md">Enviar</button>
+        </div>`;
+        document.getElementById('chat-close-btn').addEventListener('click', toggleChatWindow);
+        if (appState.currentUser.role === 'admin') document.getElementById('chat-back-btn').addEventListener('click', renderChatUserList);
+        document.getElementById('chat-send-btn').addEventListener('click', sendMessage);
+        document.getElementById('chat-message-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+        document.getElementById('chat-image-upload').addEventListener('change', handleChatImageUpload);
+        await loadMessageHistory();
+    }
+
+    function escapeHTML(str) {
+        if (typeof str !== 'string') return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+    
+    function formatChatMessage(message) {
+        let escapedMessage = escapeHTML(message);
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const imageRegex = new RegExp(urlRegex.source + '\\.(?:jpg|jpeg|gif|png|webp)', 'gi');
+
+        return escapedMessage
+            .replace(imageRegex, (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer"><img src="${url}" alt="Imagem partilhada" class="max-w-full rounded-md mt-2 cursor-pointer"></a>`)
+            .replace(urlRegex, (url) => {
+                if (url.match(/\.(?:jpg|jpeg|gif|png|webp)$/i)) return url;
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-yellow-400 hover:underline">${url}</a>`;
+            });
+    }
+
+    async function loadMessageHistory() {
+        const messagesArea = document.getElementById('chat-messages-area');
+        if (!appState.chat.activePeer || !messagesArea) return;
+        const history = await apiRequest(`/api/chat/history/${appState.chat.activePeer.id}`, 'GET');
+        if (history) {
+            messagesArea.innerHTML = history.map(msg => `<div class="message-bubble ${msg.sender_id === appState.currentUser.id ? 'message-sent' : 'message-received'}">${formatChatMessage(msg.message)}</div>`).join('');
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('chat-message-input');
+        const message = input.value.trim();
+        if (!message || !appState.chat.activePeer) return;
+        await apiRequest('/api/chat/send', 'POST', { receiverId: appState.chat.activePeer.id, message });
+        input.value = '';
+        await loadMessageHistory();
+    }
+
+    async function handleChatImageUpload(e) {
+        const file = e.target.files[0];
+        if (!file || !appState.chat.activePeer) return;
+        
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('/api/chat/upload', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            if (!response.ok) throw new Error('Falha no upload.');
+            const data = await response.json();
+            await apiRequest('/api/chat/send', 'POST', { receiverId: appState.chat.activePeer.id, message: data.imageUrl });
+            await loadMessageHistory();
+        } catch (error) {
+            console.error("Erro no upload da imagem:", error);
+            addToLog("Erro ao enviar imagem.", true);
+        }
+    }
+
+    async function pollForNotifications() {
+        if (!appState.currentUser) return;
+        try {
+            const notifications = await apiRequest('/api/chat/notifications', 'GET');
+            const totalUnread = notifications.reduce((sum, notif) => sum + parseInt(notif.unread_count, 10), 0);
+            if (totalUnread > 0) {
+                ELEMENTS.chatNotificationBadge.textContent = totalUnread;
+                ELEMENTS.chatNotificationBadge.style.display = 'flex';
+                if (!appState.chat.isOpen) ELEMENTS.chatBubble.classList.add('pulsate');
+                if (totalUnread > appState.chat.lastUnreadCount) playNotificationSound();
+            } else {
+                ELEMENTS.chatNotificationBadge.style.display = 'none';
+                ELEMENTS.chatBubble.classList.remove('pulsate');
+            }
+            appState.chat.lastUnreadCount = totalUnread;
+            if (appState.chat.isOpen) {
+                if (appState.currentUser.role === 'admin' && !appState.chat.activePeer) renderChatUserList();
+                if (appState.chat.activePeer && notifications.some(n => n.sender_id === appState.chat.activePeer.id)) loadMessageHistory();
+            }
+        } catch (error) { console.error("Erro ao buscar notificações:", error); }
+    }
+
+    function showLoginNotificationPopup() { ELEMENTS.loginNotificationPopup.style.display = 'block'; }
+    function hideLoginNotificationPopup() { ELEMENTS.loginNotificationPopup.style.display = 'none'; }
+    function showOfflineMessageModal(userId, userEmail) {
+        document.getElementById('offline-user-email').textContent = userEmail;
+        ELEMENTS.offlineMessageModal.dataset.userId = userId;
+        ELEMENTS.offlineMessageModal.style.display = 'flex';
+        document.getElementById('offline-message-textarea').focus();
+    }
+    function hideOfflineMessageModal() {
+        ELEMENTS.offlineMessageModal.style.display = 'none';
+        document.getElementById('offline-message-textarea').value = '';
+    }
+
+    async function initializeAdminPanel() {
+        const container = document.getElementById('admin-container');
+        container.innerHTML = `<p class="text-white">A carregar...</p>`;
+        try {
+            const [users, stats, appStatus] = await Promise.all([ 
+                apiRequest('/api/admin/users', 'GET'), 
+                apiRequest('/api/admin/stats', 'GET'),
+                apiRequest('/api/status', 'GET') // Usamos a rota de status geral
+            ]);
+            
+            const maintenanceStatus = appStatus.maintenance;
+            const announcement = appStatus.announcement;
+
+            const pendingActivationUsers = users.filter(u => !u.is_active);
+            const activeUsers = users.filter(u => u.is_active);
+            
+            let adminHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Total</p><p class="text-4xl font-bold text-slate-800">${stats.totalUsers}</p></div>
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Online</p><p class="text-4xl font-bold text-green-600">${stats.onlineNow}</p></div>
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Logins (24h)</p><p class="text-4xl font-bold text-slate-800">${stats.loginsLast24h}</p></div>
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Pendentes</p><p class="text-4xl font-bold text-yellow-600">${stats.pendingActivation}</p></div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold font-display">Utilizadores Ativos</h3>
+                        <button id="refresh-admin-panel" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold py-2 px-3 rounded flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg>Atualizar</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-500">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3">Email</th>
+                                    <th class="px-6 py-3">Último Login</th>
+                                    <th class="px-6 py-3 text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${activeUsers.map(u => `
+                                    <tr class="bg-white border-b">
+                                        <td class="px-6 py-4 font-medium text-gray-900">${u.email}</td>
+                                        <td class="px-6 py-4">${u.last_login || 'Nunca'}</td>
+                                        <td class="px-6 py-4 text-center space-x-2">
+                                            <button class="offline-message-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-email="${u.email}">Mensagem</button>
+                                            <button class="user-status-toggle bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="false" ${appState.currentUser.id === u.id ? 'disabled' : ''}>Desativar</button>
+                                        </td>
+                                    </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="bg-yellow-900/30 p-6 rounded-xl shadow-sm border border-yellow-700">
+                    <h3 class="text-lg font-semibold mb-4 font-display text-yellow-400">Ativações Pendentes (${pendingActivationUsers.length})</h3>
+                    ${pendingActivationUsers.length > 0 ? `<div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-300">
+                            <thead class="text-xs text-yellow-400 uppercase">
+                                <tr>
+                                    <th class="px-6 py-3">Email</th>
+                                    <th class="px-6 py-3 text-center">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${pendingActivationUsers.map(u => `
+                                    <tr class="border-b border-yellow-800">
+                                        <td class="px-6 py-4">${u.email}</td>
+                                        <td class="px-6 py-4 text-center">
+                                            <button class="user-status-toggle bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="true">Ativar</button>
+                                        </td>
+                                    </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>` : '<p class="text-sm text-yellow-200">Nenhum utilizador a aguardar ativação.</p>'}
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border space-y-4">
+                    <div>
+                        <h3 class="text-lg font-semibold font-display">Modo Manutenção</h3>
+                        <div class="flex items-center gap-4 mt-2">
+                            <label class="flex items-center cursor-pointer">
+                                <div class="relative">
+                                    <input type="checkbox" id="maintenance-toggle" class="sr-only" ${maintenanceStatus.is_on ? 'checked' : ''}>
+                                    <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                                    <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                                </div>
+                                <div class="ml-3 text-gray-700 font-medium" id="maintenance-label">
+                                    ${maintenanceStatus.is_on ? 'Ativo' : 'Inativo'}
+                                </div>
+                            </label>
+                            <input type="text" id="maintenance-message-input" value="${escapeHTML(maintenanceStatus.message)}" class="flex-grow px-3 py-2 border rounded-md" placeholder="Mensagem de manutenção (opcional)">
+                        </div>
+                    </div>
+                    <hr>
+                    <div>
+                        <h3 class="text-lg font-semibold font-display">Anúncio Global</h3>
+                        <p class="text-sm text-slate-500 mb-2">Envie uma mensagem pop-up para todos os utilizadores online.</p>
+                        <textarea id="announcement-message-input" class="w-full px-3 py-2 border rounded-md mb-2" rows="3" placeholder="Digite a sua mensagem...">${escapeHTML(announcement?.message)}</textarea>
+                        <div class="flex justify-end gap-2">
+                            <button id="clear-announcement-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Limpar Anúncio</button>
+                            <button id="send-announcement-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Enviar Anúncio</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.innerHTML = adminHTML;
+
+            const setupAdminActions = () => {
+                document.getElementById('refresh-admin-panel')?.addEventListener('click', initializeAdminPanel);
+                document.querySelectorAll('.user-status-toggle').forEach(button => button.addEventListener('click', async (e) => {
+                    const userId = e.target.dataset.userid;
+                    const isActive = e.target.dataset.isActive === 'true';
+                    await apiRequest(`/api/admin/user/${userId}/status`, 'PUT', { isActive });
+                    initializeAdminPanel();
+                }));
+                document.querySelectorAll('.offline-message-btn').forEach(button => button.addEventListener('click', (e) => showOfflineMessageModal(e.target.dataset.userid, e.target.dataset.email)));
+
+                const maintenanceToggle = document.getElementById('maintenance-toggle');
+                if (maintenanceToggle) {
+                    maintenanceToggle.addEventListener('change', async (e) => {
+                        const isOn = e.target.checked;
+                        const message = document.getElementById('maintenance-message-input').value;
+                        document.getElementById('maintenance-label').textContent = isOn ? 'Ativo' : 'Inativo';
+                        try {
+                            await apiRequest('/api/admin/maintenance', 'POST', { isOn, message });
+                            addToLog(`Modo de manutenção ${isOn ? 'ativado' : 'desativado'}.`);
+                        } catch (error) {
+                            addToLog(`Erro: ${error.message}`, true);
+                            e.target.checked = !isOn; // Revert toggle on error
+                            document.getElementById('maintenance-label').textContent = !isOn ? 'Ativo' : 'Inativo';
+                        }
+                    });
+                }
+
+                document.getElementById('send-announcement-btn')?.addEventListener('click', async () => {
+                    const message = document.getElementById('announcement-message-input').value.trim();
+                    if (!message) return;
+                    try {
+                        await apiRequest('/api/admin/announcement', 'POST', { message });
+                        addToLog('Anúncio enviado com sucesso.');
+                    } catch (error) {
+                        addToLog(`Erro ao enviar anúncio: ${error.message}`, true);
+                    }
+                });
+                
+                // CORRIGIDO: Event listener para o botão de limpar anúncio
+                document.getElementById('clear-announcement-btn')?.addEventListener('click', async () => {
+                     try {
+                        await apiRequest('/api/admin/announcement', 'DELETE');
+                        document.getElementById('announcement-message-input').value = '';
+                        addToLog('Anúncio limpo com sucesso.');
+                    } catch (error) {
+                        addToLog(`Erro ao limpar anúncio: ${error.message}`, true);
+                    }
+                });
+            };
+
+            setupAdminActions();
+        } catch (error) {
+            container.innerHTML = `<p class="text-red-500">Erro: ${error.message}</p>`;
+        }
+    }
+    
+    // --- Session Persistence ---
+    async function checkSession() {
+        const token = localStorage.getItem('authToken');
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        if (urlParams.has('reset_token')) {
+            showScreen('reset-password-container');
+            return;
+        }
+
+        if (token) {
+            try {
+                const response = await apiRequest('/api/verify-session', 'GET');
+                if (response && response.user) {
+                    appState.currentUser = response.user;
+                    // CORRIGIDO: Lógica de verificação de manutenção movida para o handleLogin e aqui
+                    const appStatus = await apiRequest('/api/status', 'GET');
+                    if (appStatus.maintenance && appStatus.maintenance.is_on && appState.currentUser.role !== 'admin') {
+                        showMaintenanceMode(appStatus.maintenance.message);
+                    } else {
+                        await initializeApp(appStatus.announcement);
+                    }
+                } else {
+                    handleLogout();
+                }
+            } catch (error) {
+                console.error("Falha na verificação da sessão:", error);
+                handleLogout();
+            }
+        } else {
+            showScreen('login-container');
+        }
+    }
+
+    // --- Event Listeners ---
+    document.addEventListener('DOMContentLoaded', checkSession);
+    ELEMENTS.loginForm.addEventListener('submit', handleLogin);
+    ELEMENTS.registerForm.addEventListener('submit', handleRegister);
+    document.getElementById('forgot-password-form').addEventListener('submit', handleForgotPassword);
+    document.getElementById('reset-password-form').addEventListener('submit', handleResetPassword);
+    document.getElementById('logout-from-maintenance').addEventListener('click', handleLogout);
+
+    ELEMENTS.showRegister.addEventListener('click', (e) => { e.preventDefault(); showScreen('register-container'); });
+    ELEMENTS.showLogin.addEventListener('click', (e) => { e.preventDefault(); showScreen('login-container'); });
+    document.getElementById('back-to-login').addEventListener('click', (e) => { e.preventDefault(); showScreen('login-container'); });
+    document.getElementById('show-forgot-password').addEventListener('click', (e) => { e.preventDefault(); showScreen('forgot-password-container'); });
+    document.getElementById('show-login-from-forgot').addEventListener('click', (e) => { e.preventDefault(); showScreen('login-container'); });
+    document.getElementById('close-announcement-btn').addEventListener('click', () => { ELEMENTS.announcementOverlay.style.display = 'none'; });
+
+    ELEMENTS.logoutBtn.addEventListener('click', handleLogout);
+    ELEMENTS.sidebarNav.addEventListener('click', (event) => {
+        const clickedButton = event.target.closest('.sidebar-btn');
+        if (clickedButton) {
+            ELEMENTS.sidebarNav.querySelectorAll('.sidebar-btn').forEach(btn => btn.classList.remove('sidebar-btn-active'));
+            clickedButton.classList.add('sidebar-btn-active');
+            renderTabContent(clickedButton.getAttribute('data-tab'));
+        }
+    });
+    ELEMENTS.tabContent.addEventListener('click', (e) => {
+        const copyBtn = e.target.closest('.copy-btn');
+        if (copyBtn) {
+            const textToCopy = decodeURIComponent(copyBtn.dataset.copyText);
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                copyBtn.textContent = 'Copiado!';
+                copyBtn.classList.add('copied');
+                setTimeout(() => {
+                    copyBtn.textContent = 'Copiar';
+                    copyBtn.classList.remove('copied');
+                }, 1500);
+            });
+        }
+    });
+    ELEMENTS.openMenuBtn.addEventListener('click', () => {
+        ELEMENTS.sidebar.classList.add('open');
+        ELEMENTS.menuOverlay.style.display = 'block';
+    });
+    ELEMENTS.menuOverlay.addEventListener('click', () => {
+        ELEMENTS.sidebar.classList.remove('open');
+        ELEMENTS.menuOverlay.style.display = 'none';
+    });
+
+    ELEMENTS.chatBubble.addEventListener('click', toggleChatWindow);
+    chatContainer.addEventListener('click', (e) => {
+        const userItem = e.target.closest('.chat-user-item');
+        if (userItem) {
+            const peer = { id: parseInt(userItem.dataset.peerId, 10), email: userItem.dataset.peerEmail };
+            openChatWith(peer);
+        }
+    });
+    
+    document.getElementById('open-chat-from-popup').addEventListener('click', () => {
+        hideLoginNotificationPopup();
+        if (!appState.chat.isOpen) toggleChatWindow();
+    });
+    document.getElementById('close-popup').addEventListener('click', hideLoginNotificationPopup);
+    
+    document.getElementById('cancel-offline-message').addEventListener('click', hideOfflineMessageModal);
+    document.getElementById('send-offline-message').addEventListener('click', async () => {
+        const userId = ELEMENTS.offlineMessageModal.dataset.userId;
+        const message = document.getElementById('offline-message-textarea').value.trim();
+        if (!userId || !message) return;
+        try {
+            await apiRequest('/api/chat/send', 'POST', { receiverId: userId, message });
+            addToLog('Mensagem offline enviada.');
+            hideOfflineMessageModal();
+        } catch (error) {
+            addToLog(`Erro: ${error.message}`, true);
+        }
+    });
+
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
