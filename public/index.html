@@ -126,6 +126,7 @@
             background-color: #166534 !important; /* bg-green-800 */
             border-color: #16a34a; /* border-green-500 */
             color: #dcfce7; /* text-green-100 */
+            transition: background-color 0.3s ease-in-out;
         }
         .text-part-copied::after {
             content: 'COPIADO';
@@ -614,16 +615,19 @@
         document.getElementById('chat-widget').style.display = 'block';
 
         const initialNotifications = await apiRequest('/api/chat/notifications', 'GET');
-        // INÍCIO: ALTERAÇÃO NA NOTIFICAÇÃO DE CHAT
+        
+        // INÍCIO: ALTERAÇÃO NA NOTIFICAÇÃO DE CHAT (LÓGICA OTIMIZADA)
         if (initialNotifications && initialNotifications.length > 0) {
-            const usersWithMessages = await apiRequest('/api/chat/users', 'GET');
-            const senderEmails = initialNotifications.map(notif => {
-                const senderUser = usersWithMessages.find(u => u.user_id === notif.sender_id);
-                return senderUser ? senderUser.email.split('@')[0] : 'Alguém';
-            });
-            let notificationMessage = `Você tem mensagens de: ${senderEmails.join(', ')}.`;
-            if (notificationMessage.length > 100) {
-                 notificationMessage = `Você tem novas mensagens de ${senderEmails.length} pessoas.`
+            // Usa o sender_email que já vem da API, sem nova requisição
+            const senderNames = initialNotifications.map(notif => notif.sender_email.split('@')[0]);
+            // Remove nomes duplicados
+            const uniqueSenderNames = [...new Set(senderNames)];
+            
+            let notificationMessage;
+            if (uniqueSenderNames.length > 2) {
+                notificationMessage = `Você tem novas mensagens de ${uniqueSenderNames.length} pessoas.`;
+            } else {
+                notificationMessage = `Você tem mensagens de: ${uniqueSenderNames.join(', ')}.`;
             }
             showLoginNotificationPopup(notificationMessage);
         }
@@ -1726,7 +1730,6 @@
                     parts.push(text.substring(i, i + chunkSize));
                 }
             }
-             // INÍCIO: ALTERAÇÃO NO DIVISOR DE TEXTO
             outputEl.innerHTML = parts.map((part, index) => `
                 <div class="text-part-container bg-slate-100 p-4 rounded-lg">
                     <div class="flex justify-between items-center mb-2">
@@ -1735,7 +1738,6 @@
                     </div>
                     <p class="text-sm bg-white p-3 rounded border whitespace-pre-wrap">${part}</p>
                 </div>`).join('');
-            // FIM: ALTERAÇÃO NO DIVISOR DE TEXTO
         };
 
         textInput.addEventListener('input', updateAnalytics);
@@ -2077,12 +2079,12 @@
             }
         } catch (error) { console.error("Erro ao buscar notificações:", error); }
     }
-    // INÍCIO: ALTERAÇÃO NA NOTIFICAÇÃO DE CHAT
+
     function showLoginNotificationPopup(message) { 
         document.getElementById('notification-sender-list').textContent = message || 'Você tem mensagens não lidas.';
         ELEMENTS.loginNotificationPopup.style.display = 'block'; 
     }
-    // FIM: ALTERAÇÃO NA NOTIFICAÇÃO DE CHAT
+
     function hideLoginNotificationPopup() { ELEMENTS.loginNotificationPopup.style.display = 'none'; }
     function showOfflineMessageModal(userId, userEmail) {
         document.getElementById('offline-user-email').textContent = userEmail;
@@ -2176,20 +2178,21 @@
                                 <div class="relative">
                                     <input type="checkbox" id="maintenance-toggle" class="sr-only" ${maintenanceStatus.is_on ? 'checked' : ''}>
                                     <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
-                                    <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                                    <div class="dot absolute left-1 top-1 bg-white w-6
+									                                <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
                                 </div>
                                 <div class="ml-3 text-gray-700 font-medium" id="maintenance-label">
                                     ${maintenanceStatus.is_on ? 'Ativo' : 'Inativo'}
                                 </div>
                             </label>
-                            <input type="text" id="maintenance-message-input" value="${escapeHTML(maintenanceStatus.message)}" class="flex-grow px-3 py-2 border rounded-md" placeholder="Mensagem de manutenção (opcional)">
+                            <input type="text" id="maintenance-message-input" value="${escapeHTML(maintenanceStatus.message || '')}" class="flex-grow px-3 py-2 border rounded-md" placeholder="Mensagem de manutenção (opcional)">
                         </div>
                     </div>
                     <hr>
                     <div>
                         <h3 class="text-lg font-semibold font-display">Anúncio Global</h3>
                         <p class="text-sm text-slate-500 mb-2">Envie uma mensagem pop-up para todos os utilizadores online.</p>
-                        <textarea id="announcement-message-input" class="w-full px-3 py-2 border rounded-md mb-2" rows="3" placeholder="Digite a sua mensagem...">${escapeHTML(announcement?.message)}</textarea>
+                        <textarea id="announcement-message-input" class="w-full px-3 py-2 border rounded-md mb-2" rows="3" placeholder="Digite a sua mensagem...">${escapeHTML(announcement?.message || '')}</textarea>
                         <div class="flex justify-end gap-2">
                             <button id="clear-announcement-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Limpar Anúncio</button>
                             <button id="send-announcement-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Enviar Anúncio</button>
@@ -2237,7 +2240,6 @@
                     }
                 });
                 
-                // CORRIGIDO: Event listener para o botão de limpar anúncio
                 document.getElementById('clear-announcement-btn')?.addEventListener('click', async () => {
                      try {
                         await apiRequest('/api/admin/announcement', 'DELETE');
@@ -2270,7 +2272,6 @@
                 const response = await apiRequest('/api/verify-session', 'GET');
                 if (response && response.user) {
                     appState.currentUser = response.user;
-                    // CORRIGIDO: Lógica de verificação de manutenção movida para o handleLogin e aqui
                     const appStatus = await apiRequest('/api/status', 'GET');
                     if (appStatus.maintenance && appStatus.maintenance.is_on && appState.currentUser.role !== 'admin') {
                         showMaintenanceMode(appStatus.maintenance.message);
@@ -2313,6 +2314,8 @@
             renderTabContent(clickedButton.getAttribute('data-tab'));
         }
     });
+    
+    // INÍCIO: ALTERAÇÃO NO EVENTO DE CLIQUE PARA COPIAR
     ELEMENTS.tabContent.addEventListener('click', (e) => {
         const copyBtn = e.target.closest('.copy-btn');
         if (copyBtn) {
@@ -2320,12 +2323,15 @@
             navigator.clipboard.writeText(textToCopy).then(() => {
                 copyBtn.textContent = 'Copiado!';
                 copyBtn.classList.add('copied');
-                // INÍCIO: ALTERAÇÃO NO DIVISOR DE TEXTO
+                
                 const parentContainer = copyBtn.closest('.text-part-container');
                 if (parentContainer) {
                     parentContainer.classList.add('text-part-copied');
+                    setTimeout(() => {
+                        parentContainer.classList.remove('text-part-copied');
+                    }, 2000); // Remove o efeito após 2 segundos
                 }
-                // FIM: ALTERAÇÃO NO DIVISOR DE TEXTO
+
                 setTimeout(() => {
                     copyBtn.textContent = 'Copiar';
                     copyBtn.classList.remove('copied');
@@ -2333,6 +2339,8 @@
             });
         }
     });
+    // FIM: ALTERAÇÃO NO EVENTO DE CLIQUE PARA COPIAR
+
     ELEMENTS.openMenuBtn.addEventListener('click', () => {
         ELEMENTS.sidebar.classList.add('open');
         ELEMENTS.menuOverlay.style.display = 'block';
