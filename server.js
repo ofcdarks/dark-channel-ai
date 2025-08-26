@@ -810,9 +810,7 @@ app.get('/api/chat/admin-status', verifyToken, async (req, res) => {
     }
 });
 
-// 11. Rota Genérica (Catch-all) para SPA
-// CORRIGIDO: Esta rota agora serve o index.html da raiz do projeto
-a// 11. Rota para servir a aplicação de página única (SPA)
+// 11. Rota para servir a aplicação de página única (SPA)
 // Primeiro, define a pasta 'public' como o local dos arquivos do front-end.
 app.use(express.static(path.join(BASE_DIR, 'public')));
 
