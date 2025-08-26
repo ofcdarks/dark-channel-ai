@@ -124,9 +124,9 @@
         .text-part-container.text-part-copied {
             position: relative;
             background-color: #166534 !important; /* bg-green-800 */
-            border-color: #16a34a; /* border-green-500 */
-            color: #dcfce7; /* text-green-100 */
-            transition: background-color 0.3s ease;
+            border-color: #16a34a !important; /* border-green-500 */
+            color: #dcfce7 !important; /* text-green-100 */
+            overflow: hidden; /* Garante que a marca d'água não vaze */
         }
         .text-part-container.text-part-copied::after {
             content: 'COPIADO';
@@ -136,7 +136,7 @@
             transform: translate(-50%, -50%) rotate(-15deg);
             font-size: 4rem;
             font-weight: 900;
-            color: rgba(255, 255, 255, 0.15); /* Opacidade aumentada */
+            color: rgba(255, 255, 255, 0.15);
             pointer-events: none;
             z-index: 10;
         }
@@ -613,14 +613,11 @@
 
         const initialNotifications = await apiRequest('/api/chat/notifications', 'GET');
         if (initialNotifications && initialNotifications.length > 0) {
-            const usersWithMessages = await apiRequest('/api/chat/users', 'GET');
-            const senderEmails = initialNotifications.map(notif => {
-                const senderUser = usersWithMessages.find(u => u.user_id === notif.sender_id);
-                return senderUser ? senderUser.email.split('@')[0] : 'Alguém';
-            });
-            let notificationMessage = `Você tem mensagens de: ${[...new Set(senderEmails)].join(', ')}.`;
+            const senderEmails = initialNotifications.map(notif => notif.sender_email.split('@')[0]);
+            const uniqueSenders = [...new Set(senderEmails)];
+            let notificationMessage = `Você tem mensagens de: ${uniqueSenders.join(', ')}.`;
             if (notificationMessage.length > 100) {
-                 notificationMessage = `Você tem novas mensagens de ${[...new Set(senderEmails)].length} pessoas.`
+                 notificationMessage = `Você tem novas mensagens de ${uniqueSenders.length} pessoas.`
             }
             showLoginNotificationPopup(notificationMessage);
         }
@@ -1940,32 +1937,41 @@
             chatContainer.style.display = 'flex';
             ELEMENTS.chatBubble.classList.remove('pulsate');
             appState.chat.activePeer = null;
-            if (appState.currentUser.role === 'admin') renderChatUserList();
-            else openChatWith({ id: 1, email: 'Suporte' });
+            if (appState.currentUser.role === 'admin') {
+                renderChatUserList();
+            } else {
+                openChatWith({ id: 1, email: 'Suporte' });
+            }
         } else {
             chatContainer.style.display = 'none';
         }
     }
 
-    // INÍCIO: CORREÇÃO NO CARREGAMENTO DA LISTA DE USUÁRIOS DO CHAT
+    // INÍCIO: CORREÇÃO DA FUNÇÃO DO CHAT ADMIN
     async function renderChatUserList() {
         chatContainer.innerHTML = `<div class="chat-header"><span>Utilizadores</span><button id="chat-close-btn" class="text-white">&times;</button></div><div id="chat-user-list" class="p-2">A carregar...</div>`;
         document.getElementById('chat-close-btn').addEventListener('click', toggleChatWindow);
-        const userListEl = document.getElementById('chat-user-list');
+        const userListEl = document.getElementById('chat-user-list'); // Definido fora do try/catch
         try {
             const users = await apiRequest('/api/chat/users', 'GET');
             const onlineUsers = users.filter(u => u.is_online);
             const offlineUsers = users.filter(u => !u.is_online);
+            
             let html = '<div class="px-2 text-xs font-semibold text-green-400">ONLINE</div>';
             html += onlineUsers.length > 0 ? onlineUsers.map(user => `<div class="chat-user-item" data-peer-id="${user.user_id}" data-peer-email="${user.email}"><span><span class="online-status-dot"></span>${user.email}</span>${user.unread_count > 0 ? `<span class="unread-indicator"></span>` : ''}</div>`).join('') : '<p class="text-center text-xs text-gray-400 p-2">Ninguém online.</p>';
+            
             html += '<div class="mt-4 px-2 text-xs font-semibold text-gray-500">OFFLINE</div>';
-            if (offlineUsers.length > 0) html += offlineUsers.map(user => `<div class="chat-user-item" data-peer-id="${user.user_id}" data-peer-email="${user.email}"><span>${user.email}</span>${user.unread_count > 0 ? `<span class="unread-indicator"></span>` : ''}</div>`).join('');
+            if (offlineUsers.length > 0) {
+                html += offlineUsers.map(user => `<div class="chat-user-item" data-peer-id="${user.user_id}" data-peer-email="${user.email}"><span>${user.email}</span>${user.unread_count > 0 ? `<span class="unread-indicator"></span>` : ''}</div>`).join('');
+            }
+            
             userListEl.innerHTML = html;
         } catch (error) { 
+            // Agora 'userListEl' está acessível aqui para mostrar a mensagem de erro
             userListEl.innerHTML = `<p class="text-red-400 text-sm p-2">${error.message}</p>`; 
         }
     }
-    // FIM: CORREÇÃO NO CARREGAMENTO DA LISTA DE USUÁRIOS DO CHAT
+    // FIM: CORREÇÃO DA FUNÇÃO DO CHAT ADMIN
 
     async function openChatWith(peer) {
         appState.chat.activePeer = peer;
@@ -2074,7 +2080,6 @@
             }
         } catch (error) { console.error("Erro ao buscar notificações:", error); }
     }
-
     function showLoginNotificationPopup(message) { 
         document.getElementById('notification-sender-list').textContent = message || 'Você tem mensagens não lidas.';
         ELEMENTS.loginNotificationPopup.style.display = 'block'; 
@@ -2178,14 +2183,14 @@
                                     ${maintenanceStatus.is_on ? 'Ativo' : 'Inativo'}
                                 </div>
                             </label>
-                            <input type="text" id="maintenance-message-input" value="${escapeHTML(maintenanceStatus.message || '')}" class="flex-grow px-3 py-2 border rounded-md" placeholder="Mensagem de manutenção (opcional)">
+                            <input type="text" id="maintenance-message-input" value="${escapeHTML(maintenanceStatus.message)}" class="flex-grow px-3 py-2 border rounded-md" placeholder="Mensagem de manutenção (opcional)">
                         </div>
                     </div>
                     <hr>
                     <div>
                         <h3 class="text-lg font-semibold font-display">Anúncio Global</h3>
                         <p class="text-sm text-slate-500 mb-2">Envie uma mensagem pop-up para todos os utilizadores online.</p>
-                        <textarea id="announcement-message-input" class="w-full px-3 py-2 border rounded-md mb-2" rows="3" placeholder="Digite a sua mensagem...">${escapeHTML(announcement?.message || '')}</textarea>
+                        <textarea id="announcement-message-input" class="w-full px-3 py-2 border rounded-md mb-2" rows="3" placeholder="Digite a sua mensagem...">${escapeHTML(announcement?.message)}</textarea>
                         <div class="flex justify-end gap-2">
                             <button id="clear-announcement-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Limpar Anúncio</button>
                             <button id="send-announcement-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Enviar Anúncio</button>
@@ -2308,7 +2313,6 @@
         }
     });
     
-    // INÍCIO: CORREÇÃO NO EVENTO DE CLIQUE PARA COPIAR (MARCAÇÃO PERMANENTE)
     ELEMENTS.tabContent.addEventListener('click', (e) => {
         const copyBtn = e.target.closest('.copy-btn');
         if (copyBtn) {
@@ -2321,31 +2325,6 @@
                 if (parentContainer) {
                     parentContainer.classList.add('text-part-copied');
                 }
-
-                setTimeout(() => {
-                    copyBtn.textContent = 'Copiar';
-                    copyBtn.classList.remove('copied');
-                }, 1500);
-            });
-        }
-    });
-    // FIM: CORREÇÃO NO EVENTO DE CLIQUE PARA COPIAR
-
-   ELEMENTS.tabContent.addEventListener('click', (e) => {
-        const copyBtn = e.target.closest('.copy-btn');
-        if (copyBtn) {
-            const textToCopy = decodeURIComponent(copyBtn.dataset.copyText);
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                copyBtn.textContent = 'Copiado!';
-                copyBtn.classList.add('copied');
-                
-                // INÍCIO: CORREÇÃO PARA MARCAÇÃO PERMANENTE
-                const parentContainer = copyBtn.closest('.text-part-container');
-                if (parentContainer) {
-                    // Adiciona a classe para o efeito visual e não a remove mais
-                    parentContainer.classList.add('text-part-copied');
-                }
-                // FIM: CORREÇÃO PARA MARCAÇÃO PERMANENTE
 
                 setTimeout(() => {
                     copyBtn.textContent = 'Copiar';
