@@ -34,6 +34,20 @@
         .prose { max-width: none; color: #374151; }
         .copy-btn.copied { background-color: #10b981; color: white; }
         
+        /* ALTERADO: Estilo para o divisor de texto copiado */
+        .text-part.copied-part {
+            background-color: #166534 !important; /* Verde escuro */
+            border-left: 4px solid #4ade80;
+            transition: background-color 0.3s ease;
+        }
+        .text-part.copied-part h4 {
+            color: #dcfce7 !important; /* Verde claro para o texto do título */
+        }
+        .text-part.copied-part p {
+            background-color: #15803d !important;
+            color: #dcfce7 !important;
+        }
+
         .login-background {
             background-color: #000000;
             background-image: 
@@ -87,7 +101,11 @@
         .admin-status-dot.online { background-color: #22c55e; }
         .admin-status-dot.offline { background-color: #6b7280; }
 
-        /* --- Popup de Notificação de Mensagem --- */
+        /* --- Popups e Modais --- */
+        .custom-modal-overlay {
+            display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.75);
+            z-index: 500; align-items: center; justify-content: center;
+        }
         #login-notification-popup {
             display: none; position: fixed; top: 20px; right: 20px; z-index: 1000;
             background-color: #1f2937; color: white; padding: 16px; border-radius: 8px;
@@ -96,12 +114,6 @@
         }
         @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
         
-        #offline-message-modal {
-            display: none; 
-            position: fixed; inset: 0; background-color: rgba(0,0,0,0.75);
-            z-index: 500; align-items: center; justify-content: center;
-        }
-
         /* --- Overlay de Manutenção e Anúncios --- */
         .full-screen-overlay {
             display: none; position: fixed; inset: 0;
@@ -161,7 +173,6 @@
         <div class="max-w-2xl">
             <h2 class="text-4xl font-extrabold text-red-500 font-display mb-4">EM MANUTENÇÃO</h2>
             <p id="maintenance-message" class="text-lg text-gray-300">Estamos a realizar algumas melhorias na plataforma. Voltaremos em breve!</p>
-            <!-- NOVO: Botão de logout para utilizadores presos na manutenção -->
             <button id="logout-from-maintenance" class="mt-6 bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700">Sair</button>
         </div>
     </div>
@@ -312,13 +323,102 @@
     </div>
 
     <!-- Modal de Mensagem Offline -->
-    <div id="offline-message-modal">
+    <div id="offline-message-modal" class="custom-modal-overlay">
         <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm border border-gray-700 space-y-4">
             <h3 class="text-lg font-semibold text-white">Enviar Mensagem para <span id="offline-user-email"></span></h3>
             <textarea id="offline-message-textarea" class="w-full bg-gray-700 text-white rounded-md p-2" rows="4" placeholder="Digite sua mensagem..."></textarea>
             <div class="flex justify-end gap-3">
                 <button id="cancel-offline-message" class="bg-gray-600 text-white px-4 py-2 rounded">Cancelar</button>
                 <button id="send-offline-message" class="bg-red-600 text-white px-4 py-2 rounded">Enviar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- NOVO: Modal de Confirmação -->
+    <div id="confirmation-modal" class="custom-modal-overlay">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm border border-yellow-500 space-y-4 text-center">
+            <h3 id="confirmation-title" class="text-lg font-bold text-yellow-400"></h3>
+            <p id="confirmation-message" class="text-gray-300"></p>
+            <div class="flex justify-center gap-4 mt-4">
+                <button id="confirm-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded">Confirmar</button>
+                <button id="cancel-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    <!-- Modal de Progresso -->
+    <div id="progress-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-xl text-center w-full max-w-sm border border-gray-700">
+            <h3 class="text-lg font-semibold text-white mb-2">Processando...</h3>
+            <p id="progress-phrase" class="text-sm text-gray-300 mb-4">Analisando os alvos...</p>
+            <div class="w-full bg-gray-700 rounded-full h-2.5"><div class="h-2.5 rounded-full progress-bar-indeterminate"></div></div>
+        </div>
+    </div>
+    
+    <!-- Conteúdo da Aplicação -->
+    <div id="app-container" class="hidden h-screen bg-gray-900">
+        <div id="menu-overlay" class="hidden md:hidden"></div>
+        <aside id="sidebar" class="w-72 bg-black flex-shrink-0 flex flex-col">
+            <div id="app-logo" class="p-6 border-b border-gray-800 flex justify-between items-center h-20"></div>
+            <div class="p-4 text-sm text-gray-400" id="user-email-display"></div>
+            <nav id="sidebar-nav" class="p-4 space-y-1 flex-1 overflow-y-auto"></nav>
+            <div class="p-4 border-t border-gray-800">
+                <button id="logout-btn" class="w-full text-left flex items-center gap-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-red-900/50 hover:text-red-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V5h10a1 1 0 100-2H3zm12.293 4.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L16.586 13H9a1 1 0 110-2h7.586l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </aside>
+        <div id="main-content" class="flex-1 flex flex-col overflow-hidden">
+            <header class="p-4 md:hidden bg-gray-900 border-b border-gray-800 flex items-center">
+                <button id="open-menu-btn" class="text-2xl text-white">☰</button>
+                <h2 id="mobile-header-title" class="ml-4 font-semibold text-lg text-white">Dashboard</h2>
+            </header>
+            <main id="tab-content" class="flex-1 p-6 md:p-10 overflow-y-auto text-gray-800"></main>
+            <footer id="log-bar" class="bg-black text-white p-2 text-xs text-center flex items-center justify-center h-8">
+                <span id="log-message">Bem-vindo ao plano!</span>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Widget do Chat -->
+    <div id="chat-widget">
+        <div id="chat-bubble">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clip-rule="evenodd" /></svg>
+            <div id="chat-notification-badge"></div>
+        </div>
+        <div id="chat-container"></div>
+    </div>
+
+    <!-- Popup de Notificação de Mensagem ao Login -->
+    <div id="login-notification-popup">
+        <p class="font-semibold mb-2">📬 Novas Mensagens!</p>
+        <p class="text-sm text-gray-300 mb-4">Você tem mensagens não lidas. Abra o chat para vê-las.</p>
+        <div class="flex gap-2">
+            <button id="open-chat-from-popup" class="flex-1 bg-red-600 text-white px-3 py-1 rounded text-sm">Abrir Chat</button>
+            <button id="close-popup" class="flex-1 bg-gray-600 text-white px-3 py-1 rounded text-sm">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Mensagem Offline -->
+    <div id="offline-message-modal" class="custom-modal-overlay">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm border border-gray-700 space-y-4">
+            <h3 class="text-lg font-semibold text-white">Enviar Mensagem para <span id="offline-user-email"></span></h3>
+            <textarea id="offline-message-textarea" class="w-full bg-gray-700 text-white rounded-md p-2" rows="4" placeholder="Digite sua mensagem..."></textarea>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-offline-message" class="bg-gray-600 text-white px-4 py-2 rounded">Cancelar</button>
+                <button id="send-offline-message" class="bg-red-600 text-white px-4 py-2 rounded">Enviar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- NOVO: Modal de Confirmação -->
+    <div id="confirmation-modal" class="custom-modal-overlay">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm border border-yellow-500 space-y-4 text-center">
+            <h3 id="confirmation-title" class="text-lg font-bold text-yellow-400"></h3>
+            <p id="confirmation-message" class="text-gray-300"></p>
+            <div class="flex justify-center gap-4 mt-4">
+                <button id="confirm-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded">Confirmar</button>
+                <button id="cancel-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded">Cancelar</button>
             </div>
         </div>
     </div>
@@ -378,6 +478,7 @@
         chatNotificationBadge: document.getElementById('chat-notification-badge'),
         loginNotificationPopup: document.getElementById('login-notification-popup'),
         offlineMessageModal: document.getElementById('offline-message-modal'),
+        confirmationModal: document.getElementById('confirmation-modal'),
     };
 
     const PROGRESS_PHRASES = [ "Decodificando o algoritmo...", "Buscando brechas no sistema...", "Analisando os alvos...", "Interceptando dados de tendência...", "Preparando o plano de ataque..." ];
@@ -414,14 +515,14 @@
         
         if (response.status === 503) {
             const data = await response.json().catch(() => ({ message: 'Serviço indisponível.' }));
-            // A lógica de manutenção agora é tratada após o login, mas mantemos o throw para outros casos
             throw new Error(data.message);
         }
 
         const data = await response.json().catch(() => null);
         
+        // CORRIGIDO: Lógica de logout ajustada para não deslogar em erros de login
         if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
+            if ((response.status === 401 || response.status === 403) && endpoint !== '/api/login') {
                 if (!data || !data.message || !data.message.includes('ativada')) {
                      handleLogout();
                 }
@@ -450,7 +551,6 @@
             localStorage.setItem('authToken', response.token);
             appState.currentUser = response.user;
 
-            // CORRIGIDO: Verificar status da aplicação APÓS o login
             const appStatus = await apiRequest('/api/status', 'GET');
 
             if (appStatus.maintenance && appStatus.maintenance.is_on && appState.currentUser.role !== 'admin') {
@@ -540,7 +640,7 @@
         document.getElementById('login-form').reset();
     }
 
-    // --- Maintenance & Announcement Logic ---
+    // --- Maintenance & Announcement & Confirmation Logic ---
     function showMaintenanceMode(message) {
         document.getElementById('maintenance-message').textContent = message || 'Estamos a realizar algumas melhorias na plataforma. Voltaremos em breve!';
         showScreen('maintenance-overlay');
@@ -553,12 +653,43 @@
         ELEMENTS.announcementOverlay.style.display = 'flex';
     }
 
+    // NOVO: Função para mostrar modal de confirmação
+    function showConfirmationModal(title, message, onConfirm) {
+        document.getElementById('confirmation-title').textContent = title;
+        document.getElementById('confirmation-message').textContent = message;
+        ELEMENTS.confirmationModal.style.display = 'flex';
+
+        const confirmBtn = document.getElementById('confirm-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+
+        const confirmHandler = () => {
+            onConfirm();
+            hideConfirmationModal();
+        };
+
+        const cancelHandler = () => {
+            hideConfirmationModal();
+        };
+
+        // Remove listeners antigos para evitar chamadas múltiplas
+        confirmBtn.replaceWith(confirmBtn.cloneNode(true));
+        cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+
+        // Adiciona novos listeners
+        document.getElementById('confirm-btn').addEventListener('click', confirmHandler);
+        document.getElementById('cancel-btn').addEventListener('click', cancelHandler);
+    }
+
+    function hideConfirmationModal() {
+        ELEMENTS.confirmationModal.style.display = 'none';
+    }
+
+
     async function pollForStatus() {
         if (!appState.currentUser) return;
         try {
             const status = await apiRequest('/api/status', 'GET');
             if (status.announcement) showAnnouncement(status.announcement);
-            // CORRIGIDO: Verificação de manutenção em tempo real
             if (status.maintenance && status.maintenance.is_on && appState.currentUser.role !== 'admin') {
                 showMaintenanceMode(status.maintenance.message);
             }
@@ -610,12 +741,10 @@
         if (appState.statusPollInterval) clearInterval(appState.statusPollInterval);
         appState.statusPollInterval = setInterval(pollForStatus, 30000);
         
-        // Exibe o anúncio inicial se houver um
         if(initialAnnouncement) {
             showAnnouncement(initialAnnouncement);
         }
     }
-
     // --- UI Building ---
     function buildSidebar() {
         let navItems = [
@@ -1709,7 +1838,7 @@
                 }
             }
             outputEl.innerHTML = parts.map((part, index) => `
-                <div class="bg-slate-100 p-4 rounded-lg">
+                <div class="text-part bg-slate-100 p-4 rounded-lg">
                     <div class="flex justify-between items-center mb-2">
                         <h4 class="font-semibold text-slate-800 font-display">Parte ${index + 1}</h4>
                         ${createCopyButton(part)}
@@ -1899,7 +2028,6 @@
         };
         await apiRequest(`/api/settings`, 'POST', { settings: settingsToSave });
     }
-
      // --- Lógica do Chat ---
     const chatWidget = document.getElementById('chat-widget');
     const chatContainer = document.getElementById('chat-container');
@@ -2078,7 +2206,7 @@
             const [users, stats, appStatus] = await Promise.all([ 
                 apiRequest('/api/admin/users', 'GET'), 
                 apiRequest('/api/admin/stats', 'GET'),
-                apiRequest('/api/status', 'GET') // Usamos a rota de status geral
+                apiRequest('/api/status', 'GET')
             ]);
             
             const maintenanceStatus = appStatus.maintenance;
@@ -2114,8 +2242,8 @@
                                         <td class="px-6 py-4 font-medium text-gray-900">${u.email}</td>
                                         <td class="px-6 py-4">${u.last_login || 'Nunca'}</td>
                                         <td class="px-6 py-4 text-center space-x-2">
-                                            <button class="offline-message-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-email="${u.email}">Mensagem</button>
-                                            <button class="user-status-toggle bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="false" ${appState.currentUser.id === u.id ? 'disabled' : ''}>Desativar</button>
+                                            <button class="user-status-toggle bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="false" ${appState.currentUser.id === u.id ? 'disabled' : ''}>Bloquear</button>
+                                            <button class="delete-user-btn bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-email="${u.email}" ${appState.currentUser.id === u.id ? 'disabled' : ''}>Excluir</button>
                                         </td>
                                     </tr>`).join('')}
                             </tbody>
@@ -2183,7 +2311,24 @@
                     await apiRequest(`/api/admin/user/${userId}/status`, 'PUT', { isActive });
                     initializeAdminPanel();
                 }));
-                document.querySelectorAll('.offline-message-btn').forEach(button => button.addEventListener('click', (e) => showOfflineMessageModal(e.target.dataset.userid, e.target.dataset.email)));
+                // NOVO: Listener para o botão de excluir
+                document.querySelectorAll('.delete-user-btn').forEach(button => button.addEventListener('click', (e) => {
+                    const userId = e.target.dataset.userid;
+                    const userEmail = e.target.dataset.email;
+                    showConfirmationModal(
+                        'Excluir Utilizador', 
+                        `Tem a certeza que deseja excluir permanentemente o utilizador ${userEmail}? Esta ação não pode ser desfeita.`, 
+                        async () => {
+                            try {
+                                await apiRequest(`/api/admin/user/${userId}`, 'DELETE');
+                                addToLog(`Utilizador ${userEmail} excluído com sucesso.`);
+                                initializeAdminPanel();
+                            } catch (error) {
+                                addToLog(`Erro ao excluir: ${error.message}`, true);
+                            }
+                        }
+                    );
+                }));
 
                 const maintenanceToggle = document.getElementById('maintenance-toggle');
                 if (maintenanceToggle) {
@@ -2213,7 +2358,6 @@
                     }
                 });
                 
-                // CORRIGIDO: Event listener para o botão de limpar anúncio
                 document.getElementById('clear-announcement-btn')?.addEventListener('click', async () => {
                      try {
                         await apiRequest('/api/admin/announcement', 'DELETE');
@@ -2246,7 +2390,6 @@
                 const response = await apiRequest('/api/verify-session', 'GET');
                 if (response && response.user) {
                     appState.currentUser = response.user;
-                    // CORRIGIDO: Lógica de verificação de manutenção movida para o handleLogin e aqui
                     const appStatus = await apiRequest('/api/status', 'GET');
                     if (appStatus.maintenance && appStatus.maintenance.is_on && appState.currentUser.role !== 'admin') {
                         showMaintenanceMode(appStatus.maintenance.message);
@@ -2296,10 +2439,12 @@
             navigator.clipboard.writeText(textToCopy).then(() => {
                 copyBtn.textContent = 'Copiado!';
                 copyBtn.classList.add('copied');
-                setTimeout(() => {
-                    copyBtn.textContent = 'Copiar';
-                    copyBtn.classList.remove('copied');
-                }, 1500);
+                
+                // ALTERADO: Lógica para marcação permanente no Divisor de Texto
+                const textPartContainer = copyBtn.closest('.text-part');
+                if (textPartContainer) {
+                    textPartContainer.classList.add('copied-part');
+                }
             });
         }
     });
@@ -2344,10 +2489,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
