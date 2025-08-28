@@ -119,6 +119,24 @@ const initializeDb = async () => {
             value JSONB
         );
     `);
+
+    // NOVA TABELA: user_costs para a planilha de custos
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS user_costs (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            category_id VARCHAR(50) NOT NULL,
+            item_name VARCHAR(255) NOT NULL,
+            description TEXT,
+            value NUMERIC(10, 2) NOT NULL,
+            frequency VARCHAR(50) NOT NULL,
+            payment_date DATE,
+            payment_method VARCHAR(50),
+            card_last_digits VARCHAR(4),
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+    `);
     
     console.log("Tabelas verificadas/criadas com sucesso.");
 
@@ -594,6 +612,85 @@ app.get('/api/google-trends/:keyword/:country', verifyToken, async (req, res) =>
         res.status(500).json({ message: "Erro ao buscar dados de tendências." });
     }
 });
+
+// NOVAS ROTAS PARA A PLANILHA DE CUSTOS
+app.get('/api/costs', verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM user_costs WHERE user_id = $1 ORDER BY created_at ASC', [req.user.id]);
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Erro ao buscar custos do utilizador:", error);
+        res.status(500).json({ message: "Erro interno do servidor ao buscar custos." });
+    }
+});
+
+app.post('/api/costs', verifyToken, async (req, res) => {
+    const { id, category_id, item_name, description, value, frequency, payment_date, payment_method, card_last_digits } = req.body;
+    const userId = req.user.id;
+
+    try {
+        if (id) {
+            // Atualizar item existente
+            const result = await pool.query(
+                `UPDATE user_costs SET 
+                    category_id = $1, 
+                    item_name = $2, 
+                    description = $3, 
+                    value = $4, 
+                    frequency = $5, 
+                    payment_date = $6, 
+                    payment_method = $7, 
+                    card_last_digits = $8,
+                    updated_at = NOW()
+                WHERE id = $9 AND user_id = $10 RETURNING *`,
+                [category_id, item_name, description, value, frequency, payment_date, payment_method, card_last_digits, id, userId]
+            );
+            if (result.rowCount === 0) {
+                return res.status(404).json({ message: "Item de custo não encontrado ou não pertence ao utilizador." });
+            }
+            res.json(result.rows[0]);
+        } else {
+            // Inserir novo item
+            const result = await pool.query(
+                `INSERT INTO user_costs 
+                    (user_id, category_id, item_name, description, value, frequency, payment_date, payment_method, card_last_digits) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+                [userId, category_id, item_name, description, value, frequency, payment_date, payment_method, card_last_digits]
+            );
+            res.status(201).json(result.rows[0]);
+        }
+    } catch (error) {
+        console.error("Erro ao salvar/atualizar custo do utilizador:", error);
+        res.status(500).json({ message: "Erro interno do servidor ao salvar custo." });
+    }
+});
+
+app.delete('/api/costs/:id', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user.id;
+    try {
+        const result = await pool.query('DELETE FROM user_costs WHERE id = $1 AND user_id = $2 RETURNING id', [id, userId]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: "Item de custo não encontrado ou não pertence ao utilizador." });
+        }
+        res.json({ message: 'Item de custo excluído com sucesso.', id });
+    } catch (error) {
+        console.error("Erro ao excluir custo do utilizador:", error);
+        res.status(500).json({ message: "Erro interno do servidor ao excluir custo." });
+    }
+});
+
+app.delete('/api/costs', verifyToken, async (req, res) => {
+    const userId = req.user.id;
+    try {
+        await pool.query('DELETE FROM user_costs WHERE user_id = $1', [userId]);
+        res.json({ message: 'Todos os custos do utilizador foram excluídos com sucesso.' });
+    } catch (error) {
+        console.error("Erro ao excluir todos os custos do utilizador:", error);
+        res.status(500).json({ message: "Erro interno do servidor ao excluir todos os custos." });
+    }
+});
+
 
 // 9. Rotas de Administração
 app.get('/api/admin/users', verifyToken, requireAdmin, async (req, res) => {
