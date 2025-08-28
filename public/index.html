@@ -323,7 +323,7 @@
                 <button id="open-menu-btn" class="text-2xl text-white">☰</button>
                 <h2 id="mobile-header-title" class="ml-4 font-semibold text-lg text-white">Dashboard</h2>
             </header>
-            <main id="tab-content" class="flex-1 p-6 md:p-10 overflow-y-auto text-gray-800"></main>
+            <main id="tab-content" class="flex-1 p-6 md:p-10 overflow-y-auto text-slate-200"></main>
             <footer id="log-bar" class="bg-black text-white p-2 text-xs text-center flex items-center justify-center h-8">
                 <span id="log-message">Bem-vindo ao plano!</span>
             </footer>
@@ -497,12 +497,18 @@
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
         const rememberMe = document.getElementById('remember-me').checked;
+        console.log('Attempting login...');
         try {
             const response = await apiRequest('/api/login', 'POST', { email, password, rememberMe });
             localStorage.setItem('authToken', response.token);
             appState.currentUser = response.user;
+            console.log('Login successful. User:', appState.currentUser);
+
+            // Clean the URL after successful login
+            window.history.pushState({}, document.title, window.location.pathname);
 
             const appStatus = await apiRequest('/api/status', 'GET');
+            console.log('App status fetched:', appStatus);
 
             if (appStatus.maintenance && appStatus.maintenance.is_on && appState.currentUser.role !== 'admin') {
                 showMaintenanceMode(appStatus.maintenance.message);
@@ -511,6 +517,7 @@
             }
 
         } catch (error) {
+            console.error('Login failed:', error);
             if (error.message.includes('ativada')) {
                 showScreen('activation-container');
             } else {
@@ -651,7 +658,11 @@
 
     // --- App Initialization ---
     async function initializeApp(initialAnnouncement = null) {
-        if (!appState.currentUser) return;
+        if (!appState.currentUser) {
+            console.log('initializeApp: No current user, returning.');
+            return;
+        }
+        console.log('initializeApp: Initializing application for user:', appState.currentUser.email);
         
         try {
             const settings = await apiRequest(`/api/settings`, 'GET');
@@ -662,8 +673,9 @@
                 appState.userChannels = settings.userChannels || [];
                 appState.videoIdeas = settings.videoIdeas || [];
             }
+            console.log('initializeApp: Settings loaded.');
         } catch(error) {
-            console.error("Não foi possível carregar as configurações:", error.message);
+            console.error("initializeApp: Não foi possível carregar as configurações:", error.message);
             addToLog("Falha ao carregar configurações.", true);
         }
         
@@ -672,10 +684,13 @@
         document.getElementById('favicon').href = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">👺</text></svg>')}`;
 
         document.getElementById('user-email-display').textContent = appState.currentUser.email;
+        console.log('initializeApp: Calling showScreen("app-container")...');
         showScreen('app-container');
+        console.log('initializeApp: app-container should now be visible.');
         
         buildSidebar();
         renderTabContent('dashboard');
+        console.log('initializeApp: Dashboard rendered.');
 
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         heartbeatInterval = setInterval(() => apiRequest('/api/heartbeat', 'POST'), 3 * 60 * 1000);
@@ -695,6 +710,7 @@
         if(initialAnnouncement) {
             showAnnouncement(initialAnnouncement);
         }
+        console.log('initializeApp: Finished initialization.');
     }
     // --- UI Building ---
     function buildSidebar() {
@@ -2238,6 +2254,10 @@
                     const index = costItems.findIndex(ci => ci.id === savedItem.id);
                     if (index !== -1) {
                         costItems[index] = savedItem;
+                    } else {
+                        // This case should ideally not happen for existing items if IDs are unique
+                        // But for new items, if savedItem has a new ID, add it.
+                        costItems.push(savedItem);
                     }
                     updateAllTotals();
                 }
@@ -2272,8 +2292,10 @@
             const fetchedCosts = await apiRequest('/api/costs', 'GET');
             costItems = fetchedCosts;
             addToLog('Custos carregados com sucesso.');
+            console.log('Fetched costs:', costItems); // Debugging log
         } catch (error) {
             addToLog(`Erro ao carregar custos: ${error.message}`, true);
+            console.error('Error fetching costs:', error); // Debugging log
             costItems = [];
         }
 
@@ -2293,7 +2315,7 @@
             } else {
                 // If no existing items, add initial placeholder items (unsaved)
                 categoryData.initialItems.forEach(item => {
-                    const tempItem = { ...item, value: 0, frequency: 'mensal', payment_date: null, payment_method: null, card_last_digits: null };
+                    const tempItem = { id: null, ...item, value: 0, frequency: 'mensal', payment_date: null, payment_method: null, card_last_digits: null };
                     categoryBody.appendChild(createCostRowElement(tempItem, categoryData.id));
                 });
             }
@@ -2477,7 +2499,7 @@
         if (!appState.currentUser) return;
         try {
             const notifications = await apiRequest('/api/chat/notifications', 'GET');
-            const totalUnread = notifications.reduce((sum, notif) => sum + parseInt(notif.unread_count, 10), 0),0);
+            const totalUnread = notifications.reduce((sum, notif) => sum + parseInt(notif.unread_count, 10), 0);
             if (totalUnread > 0) {
                 ELEMENTS.chatNotificationBadge.textContent = totalUnread;
                 ELEMENTS.chatNotificationBadge.style.display = 'flex';
@@ -2690,15 +2712,18 @@
         const urlParams = new URLSearchParams(window.location.search);
         
         if (urlParams.has('reset_token')) {
+            console.log('checkSession: Reset token found, showing reset password container.');
             showScreen('reset-password-container');
             return;
         }
 
         if (token) {
+            console.log('checkSession: Auth token found, verifying session...');
             try {
                 const response = await apiRequest('/api/verify-session', 'GET');
                 if (response && response.user) {
                     appState.currentUser = response.user;
+                    console.log('checkSession: Session verified. User:', appState.currentUser);
                     const appStatus = await apiRequest('/api/status', 'GET');
                     if (appStatus.maintenance && appStatus.maintenance.is_on && appState.currentUser.role !== 'admin') {
                         showMaintenanceMode(appStatus.maintenance.message);
@@ -2706,13 +2731,15 @@
                         await initializeApp(appStatus.announcement);
                     }
                 } else {
+                    console.log('checkSession: Session verification failed, logging out.');
                     handleLogout();
                 }
             } catch (error) {
-                console.error("Falha na verificação da sessão:", error);
+                console.error("checkSession: Falha na verificação da sessão:", error);
                 handleLogout();
             }
         } else {
+            console.log('checkSession: No auth token found, showing login container.');
             showScreen('login-container');
         }
     }
