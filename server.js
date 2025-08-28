@@ -58,6 +58,10 @@ const pool = new Pool({
 const initializeDb = async () => {
   const client = await pool.connect();
   try {
+    // Garantir que a extensão uuid-ossp esteja disponível
+    await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`);
+    console.log("Extensão 'uuid-ossp' verificada/criada com sucesso.");
+
     // Tabela de Utilizadores
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
