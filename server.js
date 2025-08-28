@@ -58,10 +58,6 @@ const pool = new Pool({
 const initializeDb = async () => {
   const client = await pool.connect();
   try {
-    // Garantir que a extensão uuid-ossp esteja disponível
-    await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`);
-    console.log("Extensão 'uuid-ossp' verificada/criada com sucesso.");
-
     // Tabela de Utilizadores
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -121,36 +117,6 @@ const initializeDb = async () => {
         CREATE TABLE IF NOT EXISTS app_status (
             key VARCHAR(50) PRIMARY KEY,
             value JSONB
-        );
-    `);
-
-    // Tabela user_costs para a planilha de custos (já existente)
-    await client.query(`
-        CREATE TABLE IF NOT EXISTS user_costs (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            category_id VARCHAR(50) NOT NULL,
-            item_name VARCHAR(255) NOT NULL,
-            description TEXT,
-            value NUMERIC(10, 2) NOT NULL,
-            frequency VARCHAR(50) NOT NULL,
-            payment_date DATE,
-            payment_method VARCHAR(50),
-            card_last_digits VARCHAR(4),
-            created_at TIMESTAMPTZ DEFAULT NOW(),
-            updated_at TIMESTAMPTZ DEFAULT NOW()
-        );
-    `);
-
-    // NOVA TABELA: user_cost_categories para categorias personalizadas
-    await client.query(`
-        CREATE TABLE IF NOT EXISTS user_cost_categories (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            name VARCHAR(255) NOT NULL,
-            order_index INTEGER DEFAULT 0,
-            created_at TIMESTAMPTZ DEFAULT NOW(),
-            updated_at TIMESTAMPTZ DEFAULT NOW()
         );
     `);
     
@@ -628,154 +594,6 @@ app.get('/api/google-trends/:keyword/:country', verifyToken, async (req, res) =>
         res.status(500).json({ message: "Erro ao buscar dados de tendências." });
     }
 });
-
-// ROTAS PARA ITENS DA PLANILHA DE CUSTOS
-app.get('/api/costs', verifyToken, async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM user_costs WHERE user_id = $1 ORDER BY created_at ASC', [req.user.id]);
-        res.json(result.rows);
-    } catch (error) {
-        console.error("Erro ao buscar custos do utilizador:", error);
-        res.status(500).json({ message: "Erro interno do servidor ao buscar custos." });
-    }
-});
-
-app.post('/api/costs', verifyToken, async (req, res) => {
-    const { id, category_id, item_name, description, value, frequency, payment_date, payment_method, card_last_digits } = req.body;
-    const userId = req.user.id;
-
-    try {
-        if (id) {
-            // Atualizar item existente
-            const result = await pool.query(
-                `UPDATE user_costs SET 
-                    category_id = $1, 
-                    item_name = $2, 
-                    description = $3, 
-                    value = $4, 
-                    frequency = $5, 
-                    payment_date = $6, 
-                    payment_method = $7, 
-                    card_last_digits = $8,
-                    updated_at = NOW()
-                WHERE id = $9 AND user_id = $10 RETURNING *`,
-                [category_id, item_name, description, value, frequency, payment_date, payment_method, card_last_digits, id, userId]
-            );
-            if (result.rowCount === 0) {
-                return res.status(404).json({ message: "Item de custo não encontrado ou não pertence ao utilizador." });
-            }
-            res.json(result.rows[0]);
-        } else {
-            // Inserir novo item
-            const result = await pool.query(
-                `INSERT INTO user_costs 
-                    (user_id, category_id, item_name, description, value, frequency, payment_date, payment_method, card_last_digits) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-                [userId, category_id, item_name, description, value, frequency, payment_date, payment_method, card_last_digits]
-            );
-            res.status(201).json(result.rows[0]);
-        }
-    } catch (error) {
-        console.error("Erro ao salvar/atualizar custo do utilizador:", error);
-        res.status(500).json({ message: "Erro interno do servidor ao salvar custo." });
-    }
-});
-
-app.delete('/api/costs/:id', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    const userId = req.user.id;
-    try {
-        const result = await pool.query('DELETE FROM user_costs WHERE id = $1 AND user_id = $2 RETURNING id', [id, userId]);
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: "Item de custo não encontrado ou não pertence ao utilizador." });
-        }
-        res.json({ message: 'Item de custo excluído com sucesso.', id });
-    } catch (error) {
-        console.error("Erro ao excluir custo do utilizador:", error);
-        res.status(500).json({ message: "Erro interno do servidor ao excluir custo." });
-    }
-});
-
-app.delete('/api/costs', verifyToken, async (req, res) => {
-    const userId = req.user.id;
-    try {
-        await pool.query('DELETE FROM user_costs WHERE user_id = $1', [userId]);
-        res.json({ message: 'Todos os custos do utilizador foram excluídos com sucesso.' });
-    } catch (error) {
-        console.error("Erro ao excluir todos os custos do utilizador:", error);
-        res.status(500).json({ message: "Erro interno do servidor ao excluir todos os custos." });
-    }
-});
-
-// NOVAS ROTAS PARA CATEGORIAS DA PLANILHA DE CUSTOS
-app.get('/api/cost-categories', verifyToken, async (req, res) => {
-    try {
-        const result = await pool.query('SELECT id, name, order_index FROM user_cost_categories WHERE user_id = $1 ORDER BY order_index ASC, created_at ASC', [req.user.id]);
-        res.json(result.rows);
-    } catch (error) {
-        console.error("Erro ao buscar categorias de custo do utilizador:", error);
-        res.status(500).json({ message: "Erro interno do servidor ao buscar categorias." });
-    }
-});
-
-app.post('/api/cost-categories', verifyToken, async (req, res) => {
-    const { id, name, order_index } = req.body;
-    const userId = req.user.id;
-
-    try {
-        if (id) {
-            // Atualizar categoria existente
-            const result = await pool.query(
-                `UPDATE user_cost_categories SET 
-                    name = $1, 
-                    order_index = $2,
-                    updated_at = NOW()
-                WHERE id = $3 AND user_id = $4 RETURNING *`,
-                [name, order_index, id, userId]
-            );
-            if (result.rowCount === 0) {
-                return res.status(404).json({ message: "Categoria não encontrada ou não pertence ao utilizador." });
-            }
-            res.json(result.rows[0]);
-        } else {
-            // Inserir nova categoria
-            // Determinar o próximo order_index
-            const maxOrderResult = await pool.query('SELECT MAX(order_index) FROM user_cost_categories WHERE user_id = $1', [userId]);
-            const newOrderIndex = (maxOrderResult.rows[0].max || 0) + 1;
-
-            const result = await pool.query(
-                `INSERT INTO user_cost_categories 
-                    (user_id, name, order_index) 
-                VALUES ($1, $2, $3) RETURNING *`,
-                [userId, name, newOrderIndex]
-            );
-            res.status(201).json(result.rows[0]);
-        }
-    } catch (error) {
-        console.error("Erro ao salvar/atualizar categoria de custo:", error);
-        res.status(500).json({ message: "Erro interno do servidor ao salvar categoria." });
-    }
-});
-
-app.delete('/api/cost-categories/:id', verifyToken, async (req, res) => {
-    const { id } = req.params;
-    const userId = req.user.id;
-    try {
-        // Primeiro, excluir todos os itens de custo associados a esta categoria
-        await pool.query('DELETE FROM user_costs WHERE category_id = $1 AND user_id = $2', [id, userId]);
-
-        // Depois, excluir a categoria
-        const result = await pool.query('DELETE FROM user_cost_categories WHERE id = $1 AND user_id = $2 RETURNING id', [id, userId]);
-        if (result.rowCount === 0) {
-            return res.status(404).json({ message: "Categoria não encontrada ou não pertence ao utilizador." });
-        }
-        res.json({ message: 'Categoria e seus itens de custo excluídos com sucesso.', id });
-    } catch (error) {
-        console.error("Erro ao excluir categoria de custo do utilizador:", error);
-        res.status(500).json({ message: "Erro interno do servidor ao excluir categoria." });
-    }
-});
-
 
 // 9. Rotas de Administração
 app.get('/api/admin/users', verifyToken, requireAdmin, async (req, res) => {

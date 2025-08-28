@@ -164,33 +164,6 @@
             }
             #chat-container { width: 90vw; height: 70vh; right: 5vw; bottom: 90px; }
         }
-
-        /* Custom styles for better input focus/hover for planilha */
-        .form-input-field:focus {
-            border-color: #DC2626; /* Red-600 */
-            box-shadow: 0 0 0 1px #DC2626;
-        }
-        .form-select-field:focus {
-            border-color: #DC2626; /* Red-600 */
-            box-shadow: 0 0 0 1px #DC2626;
-        }
-        /* Overriding text colors for planilha table inputs/selects */
-        .cost-category input, .cost-category select {
-            background-color: #1f2937; /* bg-gray-800 */
-            color: #e2e8f0; /* text-slate-200 */
-            border-color: #4b5563; /* border-gray-600 */
-        }
-        .cost-category input::placeholder {
-            color: #9ca3af; /* placeholder-gray-400 */
-        }
-        .cost-category select option {
-            background-color: #1f2937; /* bg-gray-800 */
-            color: #e2e8f0; /* text-slate-200 */
-        }
-        .cost-category .bg-gray-200 { /* For disabled input */
-            background-color: #4b5563; /* bg-gray-600 */
-            color: #a0aec0; /* text-gray-500 */
-        }
     </style>
 </head>
 <body class="text-slate-200">
@@ -323,7 +296,84 @@
                 <button id="open-menu-btn" class="text-2xl text-white">☰</button>
                 <h2 id="mobile-header-title" class="ml-4 font-semibold text-lg text-white">Dashboard</h2>
             </header>
-            <main id="tab-content" class="flex-1 p-6 md:p-10 overflow-y-auto text-slate-200"></main>
+            <main id="tab-content" class="flex-1 p-6 md:p-10 overflow-y-auto text-gray-800"></main>
+            <footer id="log-bar" class="bg-black text-white p-2 text-xs text-center flex items-center justify-center h-8">
+                <span id="log-message">Bem-vindo ao plano!</span>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Widget do Chat -->
+    <div id="chat-widget">
+        <div id="chat-bubble">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clip-rule="evenodd" /></svg>
+            <div id="chat-notification-badge"></div>
+        </div>
+        <div id="chat-container"></div>
+    </div>
+
+    <!-- Popup de Notificação de Mensagem ao Login -->
+    <div id="login-notification-popup">
+        <p class="font-semibold mb-2">📬 Novas Mensagens!</p>
+        <p class="text-sm text-gray-300 mb-4">Você tem mensagens não lidas. Abra o chat para vê-las.</p>
+        <div class="flex gap-2">
+            <button id="open-chat-from-popup" class="flex-1 bg-red-600 text-white px-3 py-1 rounded text-sm">Abrir Chat</button>
+            <button id="close-popup" class="flex-1 bg-gray-600 text-white px-3 py-1 rounded text-sm">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Mensagem Offline -->
+    <div id="offline-message-modal" class="custom-modal-overlay">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm border border-gray-700 space-y-4">
+            <h3 class="text-lg font-semibold text-white">Enviar Mensagem para <span id="offline-user-email"></span></h3>
+            <textarea id="offline-message-textarea" class="w-full bg-gray-700 text-white rounded-md p-2" rows="4" placeholder="Digite sua mensagem..."></textarea>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-offline-message" class="bg-gray-600 text-white px-4 py-2 rounded">Cancelar</button>
+                <button id="send-offline-message" class="bg-red-600 text-white px-4 py-2 rounded">Enviar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- NOVO: Modal de Confirmação -->
+    <div id="confirmation-modal" class="custom-modal-overlay">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm border border-yellow-500 space-y-4 text-center">
+            <h3 id="confirmation-title" class="text-lg font-bold text-yellow-400"></h3>
+            <p id="confirmation-message" class="text-gray-300"></p>
+            <div class="flex justify-center gap-4 mt-4">
+                <button id="confirm-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded">Confirmar</button>
+                <button id="cancel-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    <!-- Modal de Progresso -->
+    <div id="progress-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-xl text-center w-full max-w-sm border border-gray-700">
+            <h3 class="text-lg font-semibold text-white mb-2">Processando...</h3>
+            <p id="progress-phrase" class="text-sm text-gray-300 mb-4">Analisando os alvos...</p>
+            <div class="w-full bg-gray-700 rounded-full h-2.5"><div class="h-2.5 rounded-full progress-bar-indeterminate"></div></div>
+        </div>
+    </div>
+    
+    <!-- Conteúdo da Aplicação -->
+    <div id="app-container" class="hidden h-screen bg-gray-900">
+        <div id="menu-overlay" class="hidden md:hidden"></div>
+        <aside id="sidebar" class="w-72 bg-black flex-shrink-0 flex flex-col">
+            <div id="app-logo" class="p-6 border-b border-gray-800 flex justify-between items-center h-20"></div>
+            <div class="p-4 text-sm text-gray-400" id="user-email-display"></div>
+            <nav id="sidebar-nav" class="p-4 space-y-1 flex-1 overflow-y-auto"></nav>
+            <div class="p-4 border-t border-gray-800">
+                <button id="logout-btn" class="w-full text-left flex items-center gap-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-red-900/50 hover:text-red-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V5h10a1 1 0 100-2H3zm12.293 4.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L16.586 13H9a1 1 0 110-2h7.586l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </aside>
+        <div id="main-content" class="flex-1 flex flex-col overflow-hidden">
+            <header class="p-4 md:hidden bg-gray-900 border-b border-gray-800 flex items-center">
+                <button id="open-menu-btn" class="text-2xl text-white">☰</button>
+                <h2 id="mobile-header-title" class="ml-4 font-semibold text-lg text-white">Dashboard</h2>
+            </header>
+            <main id="tab-content" class="flex-1 p-6 md:p-10 overflow-y-auto text-gray-800"></main>
             <footer id="log-bar" class="bg-black text-white p-2 text-xs text-center flex items-center justify-center h-8">
                 <span id="log-message">Bem-vindo ao plano!</span>
             </footer>
@@ -392,9 +442,7 @@
             lastUnreadCount: 0
         },
         statusPollInterval: null,
-        lastAnnouncement: null,
-        costItems: [], // Array to hold cost items
-        costCategories: [] // NEW: Array to hold user-defined cost categories
+        lastAnnouncement: null
     };
     let heartbeatInterval = null;
     let audioContext; // Para o som de notificação
@@ -498,18 +546,12 @@
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
         const rememberMe = document.getElementById('remember-me').checked;
-        console.log('Attempting login...');
         try {
             const response = await apiRequest('/api/login', 'POST', { email, password, rememberMe });
             localStorage.setItem('authToken', response.token);
             appState.currentUser = response.user;
-            console.log('Login successful. User:', appState.currentUser);
-
-            // Clean the URL after successful login
-            window.history.pushState({}, document.title, window.location.pathname);
 
             const appStatus = await apiRequest('/api/status', 'GET');
-            console.log('App status fetched:', appStatus);
 
             if (appStatus.maintenance && appStatus.maintenance.is_on && appState.currentUser.role !== 'admin') {
                 showMaintenanceMode(appStatus.maintenance.message);
@@ -518,7 +560,6 @@
             }
 
         } catch (error) {
-            console.error('Login failed:', error);
             if (error.message.includes('ativada')) {
                 showScreen('activation-container');
             } else {
@@ -592,7 +633,7 @@
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         if (appState.chat.pollInterval) clearInterval(appState.chat.pollInterval);
         if (appState.statusPollInterval) clearInterval(appState.statusPollInterval);
-        appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null, lastUnreadCount: 0 }, statusPollInterval: null, lastAnnouncement: null, costItems: [], costCategories: [] };
+        appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null, lastUnreadCount: 0 }, statusPollInterval: null, lastAnnouncement: null };
         document.getElementById('chat-widget').style.display = 'none';
         hideOfflineMessageModal();
         showScreen('login-container');
@@ -659,11 +700,7 @@
 
     // --- App Initialization ---
     async function initializeApp(initialAnnouncement = null) {
-        if (!appState.currentUser) {
-            console.log('initializeApp: No current user, returning.');
-            return;
-        }
-        console.log('initializeApp: Initializing application for user:', appState.currentUser.email);
+        if (!appState.currentUser) return;
         
         try {
             const settings = await apiRequest(`/api/settings`, 'GET');
@@ -674,9 +711,8 @@
                 appState.userChannels = settings.userChannels || [];
                 appState.videoIdeas = settings.videoIdeas || [];
             }
-            console.log('initializeApp: Settings loaded.');
         } catch(error) {
-            console.error("initializeApp: Não foi possível carregar as configurações:", error.message);
+            console.error("Não foi possível carregar as configurações:", error.message);
             addToLog("Falha ao carregar configurações.", true);
         }
         
@@ -685,13 +721,10 @@
         document.getElementById('favicon').href = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">👺</text></svg>')}`;
 
         document.getElementById('user-email-display').textContent = appState.currentUser.email;
-        console.log('initializeApp: Calling showScreen("app-container")...');
         showScreen('app-container');
-        console.log('initializeApp: app-container should now be visible.');
         
         buildSidebar();
         renderTabContent('dashboard');
-        console.log('initializeApp: Dashboard rendered.');
 
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         heartbeatInterval = setInterval(() => apiRequest('/api/heartbeat', 'POST'), 3 * 60 * 1000);
@@ -711,7 +744,6 @@
         if(initialAnnouncement) {
             showAnnouncement(initialAnnouncement);
         }
-        console.log('initializeApp: Finished initialization.');
     }
     // --- UI Building ---
     function buildSidebar() {
@@ -734,8 +766,6 @@
             { id: 'text-divider', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z" clip-rule="evenodd" /></svg>', label: 'Divisor de Texto' },
             { id: 'channel-organizer', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" /></svg>', label: 'Organizador de Canais' },
             { id: 'planner', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" /></svg>', label: 'Planejador de Conteúdo' },
-            { type: 'divider', label: 'FERRAMENTAS DE GESTÃO' },
-            { id: 'cost-spreadsheet', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>', label: 'Planilha de Custos' },
             { id: 'settings', icon: '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>', label: 'Configurações' },
         ];
 
@@ -840,10 +870,10 @@
                                 <div class="bg-slate-100 p-4 rounded-lg text-center"><p class="text-sm text-slate-500">Tempo de Narração</p><p id="time-estimate" class="text-3xl font-bold">00:00</p></div>
                             </div>
                             <textarea id="text-divider-input" class="w-full px-4 py-3 bg-slate-100 border rounded-lg mb-4" rows="10" placeholder="Digite ou cole o roteiro completo aqui..."></textarea>
-                            <div class="flex flex-wrap items-center justify-center gap-4 mb-4 p-4 bg-slate-500/20 rounded-lg">
+                            <div class="flex flex-wrap items-center justify-center gap-4 mb-4 p-4 bg-slate-50 rounded-lg">
                                 <label for="split-chunk-size" class="font-medium">Dividir o roteiro a cada</label>
-                                <input type="number" id="split-chunk-size" class="px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg w-24 text-center" value="150">
-                                <select id="split-chunk-type" class="px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg">
+                                <input type="number" id="split-chunk-size" class="px-4 py-2 bg-white border rounded-lg w-24 text-center" value="150">
+                                <select id="split-chunk-type" class="px-4 py-2 bg-white border rounded-lg">
                                     <option value="word">palavras</option>
                                     <option value="char">caracteres</option>
                                 </select>
@@ -854,86 +884,6 @@
         },
         "channel-organizer": { title: "Organizador de Canais", desc: "Adicione e gerencie as informações e estratégias dos seus canais.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border mb-6"><h3 class="text-lg font-semibold mb-4 font-display">Adicionar Novo Canal</h3><form id="channel-form" class="grid grid-cols-1 md:grid-cols-2 gap-4"><input type="text" id="org-channel-name" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nome do Canal" required><input type="text" id="org-channel-niche" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Nicho Principal" required><select id="org-channel-lang" class="px-4 py-3 bg-slate-100 border rounded-lg"><option value="pt-BR">Português (BR)</option><option value="en-US">Inglês (US)</option><option value="es-ES">Espanhol (ES)</option></select><input type="number" id="org-videos-week" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Vídeos por Semana" required><input type="text" id="org-post-time" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Horário de Postagem. Ex: 18:00"><input type="number" id="org-backlog-qty" class="px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Qtd. de Vídeos no Backlog"><button type="submit" class="md:col-span-2 w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">Adicionar Canal</button></form></div><div id="organizer-output" class="space-y-4"></div>` },
         "planner": { title: "Planejador de Conteúdo", desc: "Organize suas ideias de vídeo e acompanhe seu progresso.", content: `<div class="bg-white p-6 rounded-xl shadow-sm border mb-6"><h3 class="text-lg font-semibold mb-4 font-display">Adicionar Nova Ideia</h3><form id="planner-form" class="space-y-4"><select id="planner-channel-select" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" required><option value="">Selecione um Canal</option></select><input type="text" id="idea-title" class="w-full px-4 py-3 bg-slate-100 border rounded-lg" placeholder="Título da ideia de vídeo" required><button type="submit" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg">Adicionar ao Planejamento</button></form></div><div id="planner-output" class="space-y-4"></div>` },
-        "cost-spreadsheet": {
-            title: "Planilha de Custos",
-            desc: "Gerencie os custos dos seus canais dark de ferramentas com detalhes de pagamento.",
-            content: `
-                <div id="cost-spreadsheet-app-content" class="max-w-7xl mx-auto bg-gray-900 rounded-xl p-6 md:p-8 lg:p-10 text-slate-200">
-                    <h1 class="text-3xl sm:text-4xl font-bold text-white mb-6 text-center font-display">
-                        📊 Planilha de Custos para Canais Dark de Ferramentas
-                    </h1>
-                    <p class="text-gray-400 mb-8 text-center max-w-2xl mx-auto">
-                        Organize e acompanhe os custos de produção, software, marketing e despesas diversas dos seus canais dark de ferramentas, incluindo detalhes de pagamento.
-                    </p>
-
-                    <!-- Main Categories Container -->
-                    <div id="cost-categories" class="space-y-8">
-                        <!-- Cost Category Template -->
-                        <template id="cost-category-template">
-                            <div class="cost-category bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-700">
-                                <div class="flex justify-between items-center mb-4">
-                                    <input type="text" class="category-title-input text-2xl font-semibold text-white bg-transparent border-b border-gray-600 focus:border-red-600 focus:outline-none font-display w-full" value="" />
-                                    <button type="button" class="delete-category-btn text-red-500 hover:text-red-700 text-2xl ml-4" title="Remover Categoria">&times;</button>
-                                </div>
-                                <div class="overflow-x-auto mb-4">
-                                    <table class="min-w-full divide-y divide-gray-700">
-                                        <thead class="bg-gray-700">
-                                            <tr>
-                                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Item de Custo</th>
-                                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Descrição</th>
-                                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Valor (R$)</th>
-                                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Frequência</th>
-                                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Data Pagamento</th>
-                                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Forma Pagamento</th>
-                                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Final Cartão</th>
-                                                <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="bg-gray-800 divide-y divide-gray-700 category-body">
-                                            <!-- Initial row will be added by JS -->
-                                        </tbody>
-                                        <tfoot class="bg-gray-700">
-                                            <tr>
-                                                <td colspan="5" class="px-3 py-2 text-right text-sm font-medium text-gray-300">Total da Categoria:</td>
-                                                <td colspan="2" class="px-3 py-2 text-left text-lg font-bold text-white category-total">R$ 0.00</td>
-                                                <td></td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                                <button type="button" class="add-row-btn px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out">
-                                    + Adicionar Item
-                                </button>
-                            </div>
-                        </template>
-                        <!-- End Cost Category Template -->
-                    </div>
-
-                    <!-- Add New Category Button -->
-                    <div class="mt-8 flex justify-center">
-                        <button id="add-category-btn" class="px-6 py-3 bg-green-600 text-white text-base font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out shadow-lg">
-                            + Adicionar Nova Categoria
-                        </button>
-                    </div>
-
-                    <!-- Grand Total Section -->
-                    <div class="mt-10 pt-6 border-t-2 border-red-700">
-                        <div class="flex flex-col sm:flex-row justify-between items-center bg-red-900/30 p-6 rounded-lg shadow-md border border-red-800">
-                            <h2 class="text-2xl font-bold text-red-300 mb-4 sm:mb-0 font-display">Total Geral de Custos:</h2>
-                            <span id="grand-total" class="text-3xl font-extrabold text-white">R$ 0.00</span>
-                        </div>
-                        <div class="mt-6 flex justify-center">
-                            <button id="clear-all-btn" class="px-6 py-3 bg-red-600 text-white text-base font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out shadow-lg">
-                                Limpar Tudo
-                            </button>
-                            <button id="save-all-btn" class="ml-4 px-6 py-3 bg-blue-600 text-white text-base font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out shadow-lg">
-                                Salvar Tudo
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `
-        },
         "settings": { 
             title: "Configurações", 
             desc: "Gerencie e valide suas chaves de API.", 
@@ -1478,7 +1428,7 @@
             try {
                 const result = await callAIModel(prompt, schema);
                 const filteredResult = result.filter(item => item.viral_score > 80);
-                let html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h3 class="font-semibold font-display">${item.example_title} ${createCopyButton(item.example_title)}</h3><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
+                let html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold font-display">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
                 if (append) {
                     const moreButton = document.getElementById('generate-more-structures');
                     if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
@@ -1534,7 +1484,7 @@
             };
             try {
                 const result = await callAIModel(prompt, schema);
-                let html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="font-mono text-sm bg-slate-200 p-2 rounded relative group">${item.prompt}<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(item.prompt)}</div></div><p class="text-xs mt-2 text-slate-600"><strong>Teste A/B:</strong> ${item.ab_test_suggestion}</p></div>${renderScoreCard('Potencial de CTR', item.score, { 'Impacto Visual': item.score + 4, 'Clareza': item.score - 3 }, item.suggestion)}</div>`).join('');
+                let html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="font-mono text-sm bg-slate-200 p-2 rounded relative group">${item.prompt}<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(item.prompt)}</div></div><p class="text-xs mt-2 text-slate-600"><strong>Teste A/B:</strong> ${item.ab_test_suggestion}</p></div>${renderScoreCard('Potencial de CTR', item.score, { 'Impacto Visual': item.score + 4, 'Clareza': item.score - 3 }, item.suggestion)}</div>`).join('');
                 if (append) {
                     const moreButton = document.getElementById('generate-more-prompts');
                     if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
@@ -1711,7 +1661,6 @@
         if (tabId === 'planner') initializePlanner();
         if (tabId === 'text-divider') initializeTextDivider();
         if (tabId === 'admin') initializeAdminPanel();
-        if (tabId === 'cost-spreadsheet') initializeCostSpreadsheet(); // NEW: Initialize cost spreadsheet
 
         const legendContainer = document.getElementById('legend-container');
         if (legendContainer) {
@@ -1874,7 +1823,7 @@
             const outputEl = document.getElementById('output');
 
             if (!text || isNaN(chunkSize) || chunkSize <= 0) {
-                outputEl.innerHTML = '<p class="text-center text-red-500">Insira um texto e um tamanho de divisão válido.</p>';
+                outputEl.innerHTML = '<p class="text-center text-slate-500">Insira um texto e um tamanho de divisão válido.</p>';
                 return;
             }
             const parts = [];
@@ -1889,12 +1838,12 @@
                 }
             }
             outputEl.innerHTML = parts.map((part, index) => `
-                <div class="text-part bg-gray-800 p-4 rounded-lg">
+                <div class="text-part bg-slate-100 p-4 rounded-lg">
                     <div class="flex justify-between items-center mb-2">
-                        <h4 class="font-semibold text-white font-display">Parte ${index + 1}</h4>
+                        <h4 class="font-semibold text-slate-800 font-display">Parte ${index + 1}</h4>
                         ${createCopyButton(part)}
                     </div>
-                    <p class="text-sm bg-gray-700 text-white p-3 rounded border whitespace-pre-wrap">${part}</p>
+                    <p class="text-sm bg-white p-3 rounded border whitespace-pre-wrap">${part}</p>
                 </div>`).join('');
         };
 
@@ -1907,14 +1856,14 @@
     async function initializeDashboard() {
         const container = document.getElementById('dashboard-container');
         if (appState.userChannels.length === 0) {
-            container.innerHTML = `<div class="text-center p-8 bg-gray-800 rounded-lg border border-gray-700"><p class="text-white">Nenhum canal adicionado. Vá para <button class="text-red-600 font-semibold" onclick="renderTabContent('channel-organizer')">Organizador de Canais</button> para começar.</p></div>`;
+            container.innerHTML = `<div class="text-center p-8 bg-white rounded-lg border"><p>Nenhum canal adicionado. Vá para <button class="text-red-600 font-semibold" onclick="renderTabContent('channel-organizer')">Organizador de Canais</button> para começar.</p></div>`;
             return;
         }
         
         const options = appState.userChannels.map(ch => `<option value="${ch.id}">${ch.name}</option>`).join('');
         container.innerHTML = `
             <div class="mb-6 flex items-center justify-between">
-                <select id="channel-selector" class="p-2 border rounded-md bg-gray-700 text-white border-gray-600">${options}</select>
+                <select id="channel-selector" class="p-2 border rounded-md bg-white">${options}</select>
                 <div id="dashboard-filters" class="flex gap-2"></div>
             </div>
             <div id="dashboard-content" class="grid grid-cols-1 lg:grid-cols-3 gap-6"></div>
@@ -1935,16 +1884,16 @@
         try {
             const stats = await apiRequest(`/api/youtube-stats/${channelId}`, 'GET');
             contentContainer.innerHTML = `
-                <div class="lg:col-span-2 bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-700">
-                    <h3 class="font-semibold mb-4 text-white font-display">Visualizações e Inscritos (Tendência Simulada)</h3>
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border">
+                    <h3 class="font-semibold mb-4 font-display">Visualizações e Inscritos (Tendência Simulada)</h3>
                     <div class="h-80 relative"><canvas id="main-chart"></canvas></div>
                 </div>
-                <div class="bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-700">
-                    <h3 class="font-semibold mb-4 text-white font-display">Métricas Reais</h3>
+                <div class="bg-white p-6 rounded-xl shadow-sm border">
+                    <h3 class="font-semibold mb-4 font-display">Métricas Reais</h3>
                     <div class="grid grid-cols-1 gap-4">
-                        <div class="bg-gray-700 p-3 rounded-lg"><p class="text-sm text-gray-400">Inscritos</p><p class="text-2xl font-bold text-white">${stats.subscriberCount}</p></div>
-                        <div class="bg-gray-700 p-3 rounded-lg"><p class="text-sm text-gray-400">Visualizações Totais</p><p class="text-2xl font-bold text-white">${stats.viewCount}</p></div>
-                        <div class="bg-gray-700 p-3 rounded-lg"><p class="text-sm text-gray-400">Vídeos Publicados</p><p class="text-2xl font-bold text-white">${stats.videoCount}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-lg"><p class="text-sm text-slate-500">Inscritos</p><p class="text-2xl font-bold text-slate-800">${stats.subscriberCount}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-lg"><p class="text-sm text-slate-500">Visualizações Totais</p><p class="text-2xl font-bold text-slate-800">${stats.viewCount}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-lg"><p class="text-sm text-slate-500">Vídeos Publicados</p><p class="text-2xl font-bold text-slate-800">${stats.videoCount}</p></div>
                     </div>
                 </div>`;
             
@@ -1970,13 +1919,11 @@
             };
 
             const filterContainer = document.getElementById('dashboard-filters');
-            filterContainer.innerHTML = [7, 15, 30].map(d => `<button class="filter-btn px-3 py-1 text-sm rounded-md ${d === 30 ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}" data-days="${d}">${d} dias</button>`).join('');
+            filterContainer.innerHTML = [7, 15, 30].map(d => `<button class="filter-btn px-3 py-1 text-sm rounded-md ${d === 30 ? 'bg-red-600 text-white' : 'bg-white text-gray-800'}" data-days="${d}">${d} dias</button>`).join('');
             filterContainer.addEventListener('click', e => {
                 if(e.target.classList.contains('filter-btn')) {
                     filterContainer.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('bg-red-600', 'text-white'));
-                    filterContainer.querySelectorAll('.filter-btn').forEach(btn => btn.classList.add('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600'));
                     e.target.classList.add('bg-red-600', 'text-white');
-                    e.target.classList.remove('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
                     renderChart(parseInt(e.target.dataset.days));
                 }
             });
@@ -1988,12 +1935,12 @@
                     <h3 class="text-xl font-bold mb-4 text-white font-display">Últimos Vídeos</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                         ${recentVideos.map(video => `
-                            <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-sm">
+                            <div class="bg-white p-4 rounded-lg border shadow-sm">
                                 <a href="https://www.youtube.com/watch?v=${video.id}" target="_blank">
                                     <img src="${video.thumbnail}" alt="${video.title}" class="rounded-md mb-2 w-full aspect-video object-cover">
-                                    <h4 class="font-semibold text-sm leading-tight text-white truncate">${video.title}</h4>
+                                    <h4 class="font-semibold text-sm leading-tight truncate">${video.title}</h4>
                                 </a>
-                                <div class="text-xs text-gray-400 mt-2 flex justify-between">
+                                <div class="text-xs text-slate-500 mt-2 flex justify-between">
                                     <span>👁️ ${video.viewCount}</span>
                                     <span>👍 ${video.likeCount}</span>
                                     <span>💬 ${video.commentCount}</span>
@@ -2011,7 +1958,7 @@
         const output = document.getElementById('organizer-output');
         const renderChannels = () => {
             output.innerHTML = appState.userChannels.length === 0 ? `<p class="text-center text-gray-400 py-8">Nenhum canal adicionado.</p>` :
-                appState.userChannels.map((ch, index) => `<div class="bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-700"><div class="flex justify-between items-center"><h3 class="text-lg font-semibold text-white font-display">${ch.name}</h3><button class="remove-channel text-red-500 text-2xl" data-index="${index}" title="Remover Canal">&times;</button></div><div class="text-sm text-gray-400 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2"><p><strong>Nicho:</strong> ${ch.niche}</p><p><strong>Idioma:</strong> ${ch.lang}</p><p><strong>Vídeos/Semana:</strong> ${ch.freq}</p><p><strong>Horário:</strong> ${ch.time}</p><p><strong>Backlog:</strong> ${ch.backlogQty || '0'}</p><p class="col-span-1 sm:col-span-2 break-all"><strong>ID do Canal:</strong> ${ch.id}</p></div></div>`).join('');
+                appState.userChannels.map((ch, index) => `<div class="bg-white p-4 rounded-lg shadow-sm border"><div class="flex justify-between items-center"><h3 class="text-lg font-semibold font-display">${ch.name}</h3><button class="remove-channel text-red-500 text-2xl" data-index="${index}" title="Remover Canal">&times;</button></div><div class="text-sm text-slate-600 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2"><p><strong>Nicho:</strong> ${ch.niche}</p><p><strong>Idioma:</strong> ${ch.lang}</p><p><strong>Vídeos/Semana:</strong> ${ch.freq}</p><p><strong>Horário:</strong> ${ch.time}</p><p><strong>Backlog:</strong> ${ch.backlogQty || '0'}</p><p class="col-span-1 sm:col-span-2 break-all"><strong>ID do Canal:</strong> ${ch.id}</p></div></div>`).join('');
         };
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -2044,7 +1991,7 @@
         channelSelect.innerHTML = '<option value="">Selecione um Canal</option>' + appState.userChannels.map(ch => `<option value="${ch.name}">${ch.name}</option>`).join('');
         const renderPlanner = () => {
             output.innerHTML = appState.videoIdeas.length === 0 ? `<p class="text-center text-gray-400 py-8">Nenhuma ideia adicionada.</p>` :
-                appState.videoIdeas.map((idea, index) => `<div class="bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"><div><h4 class="font-semibold text-white">${idea.title}</h4><p class="text-sm text-gray-400">${idea.channel}</p></div><div class="flex items-center gap-2"><select class="status-select bg-gray-700 border-gray-600 rounded-md text-sm p-1 text-white" data-index="${index}"><option value="Planejado" ${idea.status === 'Planejado' ? 'selected' : ''}>Planejado</option><option value="Em Produção" ${idea.status === 'Em Produção' ? 'selected' : ''}>Em Produção</option><option value="Publicado" ${idea.status === 'Publicado' ? 'selected' : ''}>Publicado</option></select><button class="delete-idea text-red-500 hover:text-red-700 text-2xl" data-index="${index}" title="Remover Ideia">&times;</button></div></div>`).join('');
+                appState.videoIdeas.map((idea, index) => `<div class="bg-white p-4 rounded-lg shadow-sm border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"><div><h4 class="font-semibold">${idea.title}</h4><p class="text-sm text-slate-500">${idea.channel}</p></div><div class="flex items-center gap-2"><select class="status-select bg-slate-100 border-slate-200 rounded-md text-sm p-1" data-index="${index}"><option value="Planejado" ${idea.status === 'Planejado' ? 'selected' : ''}>Planejado</option><option value="Em Produção" ${idea.status === 'Em Produção' ? 'selected' : ''}>Em Produção</option><option value="Publicado" ${idea.status === 'Publicado' ? 'selected' : ''}>Publicado</option></select><button class="delete-idea text-red-500 hover:text-red-700 text-2xl" data-index="${index}" title="Remover Ideia">&times;</button></div></div>`).join('');
         };
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -2080,460 +2027,6 @@
             videoIdeas: appState.videoIdeas 
         };
         await apiRequest(`/api/settings`, 'POST', { settings: settingsToSave });
-    }
-
-    // --- NEW: Cost Spreadsheet Initialization Logic ---
-    let costItems = []; // Array to store all cost items
-
-    // Initial default categories (will be used if user has no categories saved)
-    const defaultCostCategoriesData = [
-        {
-            id: 'producao', // Use a simple string ID for default categories
-            name: '1. Custos de Produção',
-            initialItems: [
-                { item_name: 'Roteirista/Pesquisador', description: 'Custo com roteirista para criar o conteúdo.' },
-                { item_name: 'Locutor(a) ou Voz IA', description: 'Gasto com narração do vídeo.' },
-                { item_name: 'Editor de Vídeos', description: 'Custo com a edição do material.' },
-                { item_name: 'Imagens/Vídeos de Estoque', description: 'Compra de material visual para os vídeos.' },
-                { item_name: 'Música e Efeitos Sonoros', description: 'Compra de trilhas sonoras e efeitos.' },
-                { item_name: 'Miniaturas (Thumbnails)', description: 'Custo com design das miniaturas.' },
-            ]
-        },
-        {
-            id: 'software',
-            name: '2. Custos de Software e Ferramentas',
-            initialItems: [
-                { item_name: 'Ferramenta de IA (Ex: ChatGPT)', description: 'Assinatura de ferramentas de inteligência artificial.' },
-                { item_name: 'Plataforma de Automação', description: 'Software para automatizar o processo de criação de vídeo.' },
-                { item_name: 'Software de Análise (Ex: TubeBuddy)', description: 'Ferramentas para otimização de SEO e análise de canal.' },
-                { item_name: 'Hospedagem de Dados', description: 'Custo com armazenamento de arquivos.' },
-            ]
-        },
-        {
-            id: 'marketing',
-            name: '3. Custos de Marketing e Promoção',
-            initialItems: [
-                { item_name: 'Anúncios no YouTube/Google Ads', description: 'Gasto com campanhas pagas.' },
-                { item_name: 'Parcerias com Influencers', description: 'Pagamentos para outros canais ou influencers.' },
-                { item_name: 'Divulgação em Redes Sociais', description: 'Anúncios no Facebook, Instagram, TikTok.' },
-            ]
-        },
-        {
-            id: 'diversos',
-            name: '4. Custos Diversos',
-            initialItems: [
-                { item_name: 'Taxas de Plataforma (Ex: PayPal)', description: 'Taxas de transferência para receber pagamentos.' },
-                { item_name: 'Serviços Contábeis', description: 'Custo com contador, se tiver.' },
-                { item_name: 'Outros Custos', description: 'Qualquer outra despesa não listada.' },
-            ]
-        },
-    ];
-
-    const formatCurrency = (value) => {
-        return `R$ ${parseFloat(value).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
-    };
-
-    const calculateCategoryTotal = (categoryId) => {
-        let total = 0;
-        costItems.filter(item => item.category_id === categoryId).forEach(item => {
-            total += parseFloat(item.value || 0);
-        });
-        return total;
-    };
-
-    const updateAllTotals = () => {
-        let grandTotal = 0;
-        appState.costCategories.forEach(categoryData => {
-            const categoryTotalSpan = document.querySelector(`.cost-category[data-category-id="${categoryData.id}"] .category-total`);
-            if (categoryTotalSpan) {
-                const total = calculateCategoryTotal(categoryData.id);
-                categoryTotalSpan.textContent = formatCurrency(total);
-                grandTotal += total;
-            }
-        });
-        document.getElementById('grand-total').textContent = formatCurrency(grandTotal);
-    };
-
-    async function saveCostItem(itemData) {
-        try {
-            const response = await apiRequest('/api/costs', 'POST', itemData);
-            addToLog('Item de custo salvo com sucesso.');
-            return response;
-        } catch (error) {
-            addToLog(`Erro ao salvar item de custo: ${error.message}`, true);
-            return null;
-        }
-    }
-
-    async function deleteCostItem(itemId) {
-        try {
-            await apiRequest(`/api/costs/${itemId}`, 'DELETE');
-            addToLog('Item de custo excluído com sucesso.');
-        } catch (error) {
-            addToLog(`Erro ao excluir item de custo: ${error.message}`, true);
-        }
-    }
-
-    async function deleteAllCosts() {
-        try {
-            await apiRequest('/api/costs', 'DELETE');
-            addToLog('Todos os itens de custo foram excluídos do backend.');
-        } catch (error) {
-            addToLog(`Erro ao excluir todos os custos: ${error.message}`, true);
-        }
-    }
-
-    // NEW: API calls for categories
-    async function fetchCostCategories() {
-        try {
-            const response = await apiRequest('/api/cost-categories', 'GET');
-            addToLog('Categorias de custo carregadas com sucesso.');
-            return response;
-        } catch (error) {
-            addToLog(`Erro ao carregar categorias de custo: ${error.message}`, true);
-            return [];
-        }
-    }
-
-    async function saveCostCategory(categoryData) {
-        try {
-            const response = await apiRequest('/api/cost-categories', 'POST', categoryData);
-            addToLog('Categoria de custo salva com sucesso.');
-            return response;
-        } catch (error) {
-            addToLog(`Erro ao salvar categoria de custo: ${error.message}`, true);
-            return null;
-        }
-    }
-
-    async function deleteCostCategory(categoryId) {
-        try {
-            await apiRequest(`/api/cost-categories/${categoryId}`, 'DELETE');
-            addToLog('Categoria de custo e seus itens excluídos com sucesso.');
-            return true;
-        } catch (error) {
-            addToLog(`Erro ao excluir categoria de custo: ${error.message}`, true);
-            return false;
-        }
-    }
-
-    const createCostRowElement = (item, categoryId) => {
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-gray-700';
-        tr.dataset.itemId = item.id; // Store item ID
-        tr.dataset.categoryId = categoryId;
-
-        const paymentDateValue = item.payment_date ? new Date(item.payment_date).toISOString().split('T')[0] : '';
-
-        tr.innerHTML = `
-            <td class="px-3 py-2 whitespace-nowrap">
-                <input type="text" class="item-name form-input-field w-full border-gray-600 rounded-md shadow-sm text-sm p-2 bg-gray-700 text-white placeholder-gray-400" value="${escapeHTML(item.item_name || '')}" placeholder="Ex: Roteirista">
-            </td>
-            <td class="px-3 py-2 whitespace-nowrap">
-                <input type="text" class="item-description form-input-field w-full border-gray-600 rounded-md shadow-sm text-sm p-2 bg-gray-700 text-white placeholder-gray-400" value="${escapeHTML(item.description || '')}" placeholder="Ex: freelancer por vídeo">
-            </td>
-            <td class="px-3 py-2 whitespace-nowrap">
-                <input type="number" step="0.01" class="item-value form-input-field w-full border-gray-600 rounded-md shadow-sm text-sm p-2 bg-gray-700 text-white placeholder-gray-400" value="${item.value !== undefined ? item.value : ''}" placeholder="0.00">
-            </td>
-            <td class="px-3 py-2 whitespace-nowrap">
-                <select class="item-frequency form-select-field w-full border-gray-600 rounded-md shadow-sm text-sm p-2 bg-gray-700 text-white">
-                    <option value="mensal" ${item.frequency === 'mensal' ? 'selected' : ''}>Mensal</option>
-                    <option value="unica" ${item.frequency === 'unica' ? 'selected' : ''}>Única</option>
-                </select>
-            </td>
-            <td class="px-3 py-2 whitespace-nowrap">
-                <input type="date" class="item-payment-date form-input-field w-full border-gray-600 rounded-md shadow-sm text-sm p-2 bg-gray-700 text-white" value="${paymentDateValue}">
-            </td>
-            <td class="px-3 py-2 whitespace-nowrap">
-                <select class="item-payment-method form-select-field w-full border-gray-600 rounded-md shadow-sm text-sm p-2 bg-gray-700 text-white">
-                    <option value="">Selecione</option>
-                    <option value="debito" ${item.payment_method === 'debito' ? 'selected' : ''}>Débito</option>
-                    <option value="credito" ${item.payment_method === 'credito' ? 'selected' : ''}>Crédito</option>
-                    <option value="boleto" ${item.payment_method === 'boleto' ? 'selected' : ''}>Boleto</option>
-                    <option value="pix" ${item.payment_method === 'pix' ? 'selected' : ''}>PIX</option>
-                    <option value="transferencia" ${item.payment_method === 'transferencia' ? 'selected' : ''}>Transferência</option>
-                    <option value="outro" ${item.payment_method === 'outro' ? 'selected' : ''}>Outro</option>
-                </select>
-            </td>
-            <td class="px-3 py-2 whitespace-nowrap">
-                <input type="text" class="item-card-last-digits form-input-field w-full border-gray-600 rounded-md shadow-sm text-sm p-2 bg-gray-700 text-white placeholder-gray-400" value="${escapeHTML(item.card_last_digits || '')}" placeholder="Ex: 1234" maxlength="4" pattern="[0-9]{4}">
-            </td>
-            <td class="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
-                <button type="button" class="remove-row-btn text-red-500 hover:text-red-700 focus:outline-none transition duration-150 ease-in-out">
-                    Remover
-                </button>
-            </td>
-        `;
-
-        const paymentMethodSelect = tr.querySelector('.item-payment-method');
-        const cardLastDigitsInput = tr.querySelector('.item-card-last-digits');
-
-        const toggleCardDigitsInput = () => {
-            const isCardPayment = paymentMethodSelect.value === 'credito' || paymentMethodSelect.value === 'debito';
-            cardLastDigitsInput.disabled = !isCardPayment;
-            cardLastDigitsInput.classList.toggle('bg-gray-700', !isCardPayment);
-            cardLastDigitsInput.classList.toggle('text-gray-400', !isCardPayment);
-            cardLastDigitsInput.classList.toggle('text-white', isCardPayment);
-            if (!isCardPayment) {
-                cardLastDigitsInput.value = '';
-            }
-        };
-
-        // Initial state
-        toggleCardDigitsInput();
-
-        // Event listeners for data changes
-        const inputFields = tr.querySelectorAll('input, select');
-        inputFields.forEach(field => {
-            field.addEventListener('change', async () => {
-                const updatedItem = {
-                    id: item.id,
-                    category_id: categoryId,
-                    item_name: tr.querySelector('.item-name').value,
-                    description: tr.querySelector('.item-description').value,
-                    value: parseFloat(tr.querySelector('.item-value').value || 0),
-                    frequency: tr.querySelector('.item-frequency').value,
-                    payment_date: tr.querySelector('.item-payment-date').value || null,
-                    payment_method: tr.querySelector('.item-payment-method').value || null,
-                    card_last_digits: tr.querySelector('.item-card-last-digits').value || null,
-                };
-                const savedItem = await saveCostItem(updatedItem);
-                if (savedItem) {
-                    const index = costItems.findIndex(ci => ci.id === savedItem.id);
-                    if (index !== -1) {
-                        costItems[index] = savedItem;
-                    } else {
-                        costItems.push(savedItem);
-                    }
-                    updateAllTotals();
-                }
-            });
-        });
-
-        paymentMethodSelect.addEventListener('change', toggleCardDigitsInput);
-        tr.querySelector('.remove-row-btn').addEventListener('click', async () => {
-            if (item.id) {
-                await deleteCostItem(item.id);
-                costItems = costItems.filter(ci => ci.id !== item.id);
-            }
-            tr.remove();
-            updateAllTotals();
-        });
-
-        return tr;
-    };
-
-    // NEW: Function to create a category element
-    const createCostCategoryElement = (categoryData) => {
-        const clone = document.importNode(document.getElementById('cost-category-template').content, true);
-        const categoryDiv = clone.querySelector('.cost-category');
-        categoryDiv.setAttribute('data-category-id', categoryData.id);
-
-        const titleInput = categoryDiv.querySelector('.category-title-input');
-        titleInput.value = categoryData.name;
-        titleInput.addEventListener('change', async () => {
-            categoryData.name = titleInput.value;
-            const savedCategory = await saveCostCategory(categoryData);
-            if (savedCategory) {
-                const index = appState.costCategories.findIndex(cat => cat.id === savedCategory.id);
-                if (index !== -1) appState.costCategories[index] = savedCategory;
-                updateAllTotals();
-            }
-        });
-
-        const deleteCategoryBtn = categoryDiv.querySelector('.delete-category-btn');
-        deleteCategoryBtn.addEventListener('click', () => {
-            showConfirmationModal(
-                'Remover Categoria',
-                `Tem certeza que deseja remover a categoria "${categoryData.name}" e todos os seus itens de custo? Esta ação não pode ser desfeita.`,
-                async () => {
-                    const success = await deleteCostCategory(categoryData.id);
-                    if (success) {
-                        appState.costCategories = appState.costCategories.filter(cat => cat.id !== categoryData.id);
-                        categoryDiv.remove();
-                        updateAllTotals();
-                        addToLog(`Categoria "${categoryData.name}" e seus itens removidos.`);
-                    }
-                }
-            );
-        });
-
-        const categoryBody = categoryDiv.querySelector('.category-body');
-        const existingCategoryItems = costItems.filter(item => item.category_id === categoryData.id);
-        
-        if (existingCategoryItems.length > 0) {
-            existingCategoryItems.forEach(item => {
-                categoryBody.appendChild(createCostRowElement(item, categoryData.id));
-            });
-        } else {
-            // Add initial placeholder items if no saved items for this category
-            // Only add if it's a default category or a newly added custom category
-            if (categoryData.initialItems && categoryData.initialItems.length > 0) {
-                 categoryData.initialItems.forEach(item => {
-                    const tempItem = { id: null, ...item, value: 0, frequency: 'mensal', payment_date: null, payment_method: null, card_last_digits: null };
-                    categoryBody.appendChild(createCostRowElement(tempItem, categoryData.id));
-                });
-            }
-        }
-
-        categoryDiv.querySelector('.add-row-btn').addEventListener('click', async () => {
-            const newItemData = {
-                category_id: categoryData.id,
-                item_name: '',
-                description: '',
-                value: 0,
-                frequency: 'mensal',
-                payment_date: null,
-                payment_method: null,
-                card_last_digits: null,
-            };
-            const savedItem = await saveCostItem(newItemData);
-            if (savedItem) {
-                costItems.push(savedItem);
-                categoryBody.appendChild(createCostRowElement(savedItem, categoryData.id));
-                updateAllTotals();
-            }
-        });
-
-        return categoryDiv;
-    };
-
-
-    async function initializeCostSpreadsheet() {
-        const costCategoriesContainer = document.getElementById('cost-categories');
-        const addCategoryBtn = document.getElementById('add-category-btn');
-        const clearAllBtn = document.getElementById('clear-all-btn'); // Get the clear all button
-        const saveAllBtn = document.getElementById('save-all-btn'); // Get the save all button
-
-        if (!costCategoriesContainer || !document.getElementById('cost-category-template') || !addCategoryBtn || !clearAllBtn || !saveAllBtn) {
-            console.error("Elementos da planilha não encontrados.");
-            return;
-        }
-
-        costCategoriesContainer.innerHTML = ''; // Clear existing content
-
-        try {
-            // Fetch categories first
-            const fetchedCategories = await fetchCostCategories();
-            if (fetchedCategories.length === 0) {
-                // If no categories, initialize with defaults and save them
-                appState.costCategories = JSON.parse(JSON.stringify(defaultCostCategoriesData)); // Deep copy
-                for (const cat of appState.costCategories) {
-                    const savedCat = await saveCostCategory(cat);
-                    if (savedCat) cat.id = savedCat.id; // Update ID for newly saved default categories
-                }
-                addToLog('Categorias padrão inicializadas e salvas.');
-            } else {
-                appState.costCategories = fetchedCategories;
-                addToLog('Categorias de custo carregadas com sucesso.');
-            }
-
-            // Then fetch cost items
-            const fetchedCosts = await apiRequest('/api/costs', 'GET');
-            costItems = fetchedCosts;
-            addToLog('Itens de custo carregados com sucesso.');
-            console.log('Fetched costs:', costItems);
-            console.log('Fetched categories:', appState.costCategories);
-
-        } catch (error) {
-            addToLog(`Erro ao carregar dados da planilha: ${error.message}`, true);
-            console.error('Error fetching spreadsheet data:', error);
-            appState.costCategories = JSON.parse(JSON.stringify(defaultCostCategoriesData)); // Fallback to defaults
-            costItems = [];
-        }
-
-        // Render categories and their items
-        appState.costCategories.sort((a, b) => (a.order_index || 0) - (b.order_index || 0)).forEach(categoryData => {
-            costCategoriesContainer.appendChild(createCostCategoryElement(categoryData));
-        });
-
-        // Re-attach event listeners for the main buttons
-        addCategoryBtn.onclick = async () => { // Use .onclick to replace previous listener
-            const newCategoryName = prompt("Digite o nome da nova categoria:");
-            if (newCategoryName) {
-                const newCategoryData = { name: newCategoryName, order_index: appState.costCategories.length };
-                const savedCategory = await saveCostCategory(newCategoryData);
-                if (savedCategory) {
-                    appState.costCategories.push(savedCategory);
-                    costCategoriesContainer.appendChild(createCostCategoryElement(savedCategory));
-                    updateAllTotals();
-                    addToLog(`Nova categoria "${savedCategory.name}" adicionada e salva.`);
-                }
-            }
-        };
-
-        clearAllBtn.onclick = () => { // Use .onclick to replace previous listener
-            showConfirmationModal(
-                'Limpar Planilha',
-                'Tem certeza que deseja limpar TODOS os dados da planilha (categorias e itens)? Esta ação não pode ser desfeita.',
-                async () => {
-                    // Delete all items first
-                    await deleteAllCosts(); 
-                    costItems = []; // Clear local array
-
-                    // Then delete all categories
-                    for (const cat of appState.costCategories) {
-                        await deleteCostCategory(cat.id); // This also deletes associated items
-                    }
-                    appState.costCategories = []; // Clear local array
-
-                    // Re-initialize the spreadsheet with default categories
-                    initializeCostSpreadsheet(); 
-                    addToLog('Todos os custos e categorias foram limpos.');
-                }
-            );
-        };
-
-        saveAllBtn.onclick = async () => { // Use .onclick to replace previous listener
-            const allItemsToSave = [];
-            document.querySelectorAll('.cost-category').forEach(categoryDiv => {
-                const categoryId = categoryDiv.dataset.categoryId;
-                categoryDiv.querySelectorAll('.category-body tr').forEach(row => {
-                    const itemId = row.dataset.itemId;
-                    const itemData = {
-                        id: itemId,
-                        category_id: categoryId,
-                        item_name: row.querySelector('.item-name').value,
-                        description: row.querySelector('.item-description').value,
-                        value: parseFloat(row.querySelector('.item-value').value || 0),
-                        frequency: row.querySelector('.item-frequency').value,
-                        payment_date: row.querySelector('.item-payment-date').value || null,
-                        payment_method: row.querySelector('.item-payment-method').value || null,
-                        card_last_digits: row.querySelector('.item-card-last-digits').value || null,
-                    };
-                    allItemsToSave.push(itemData);
-                });
-            });
-
-            const allCategoryUpdates = [];
-            appState.costCategories.forEach(cat => {
-                const categoryDiv = document.querySelector(`.cost-category[data-category-id="${cat.id}"]`);
-                if (categoryDiv) {
-                    const updatedName = categoryDiv.querySelector('.category-title-input').value;
-                    if (updatedName !== cat.name) {
-                        allCategoryUpdates.push({ ...cat, name: updatedName });
-                    } else {
-                        allCategoryUpdates.push(cat); // Include unchanged categories for full sync
-                    }
-                }
-            });
-
-            // Save/Update all items
-            for (const itemData of allItemsToSave) {
-                await saveCostItem(itemData);
-            }
-
-            // Save/Update all categories
-            for (const categoryData of allCategoryUpdates) {
-                await saveCostCategory(categoryData);
-            }
-
-            addToLog('Todas as alterações da planilha foram salvas.');
-            updateAllTotals();
-        };
-
-
-        updateAllTotals(); // Initial calculation
     }
           // --- Lógica do Chat ---
     const chatWidget = document.getElementById('chat-widget');
@@ -2716,9 +2209,6 @@
                 apiRequest('/api/status', 'GET')
             ]);
             
-            console.log('Admin Panel - Fetched users:', users); // Debugging
-            console.log('Admin Panel - Fetched stats:', stats); // Debugging
-
             const maintenanceStatus = appStatus.maintenance;
             const announcement = appStatus.announcement;
 
@@ -2727,19 +2217,19 @@
             
             let adminHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 text-center"><p class="text-sm text-gray-400">Total</p><p class="text-4xl font-bold text-white">${stats.totalUsers}</p></div>
-                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 text-center"><p class="text-sm text-gray-400">Online</p><p class="text-4xl font-bold text-green-600">${stats.onlineNow}</p></div>
-                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 text-center"><p class="text-sm text-gray-400">Logins (24h)</p><p class="text-4xl font-bold text-white">${stats.loginsLast24h}</p></div>
-                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 text-center"><p class="text-sm text-gray-400">Pendentes</p><p class="text-4xl font-bold text-yellow-600">${stats.pendingActivation}</p></div>
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Total</p><p class="text-4xl font-bold text-slate-800">${stats.totalUsers}</p></div>
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Online</p><p class="text-4xl font-bold text-green-600">${stats.onlineNow}</p></div>
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Logins (24h)</p><p class="text-4xl font-bold text-slate-800">${stats.loginsLast24h}</p></div>
+                    <div class="bg-white p-4 rounded-lg border text-center"><p class="text-sm text-slate-500">Pendentes</p><p class="text-4xl font-bold text-yellow-600">${stats.pendingActivation}</p></div>
                 </div>
-                <div class="bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-700">
+                <div class="bg-white p-6 rounded-xl shadow-sm border">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-white font-display">Utilizadores Ativos</h3>
-                        <button id="refresh-admin-panel" class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs font-bold py-2 px-3 rounded flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg>Atualizar</button>
+                        <h3 class="text-lg font-semibold font-display">Utilizadores Ativos</h3>
+                        <button id="refresh-admin-panel" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold py-2 px-3 rounded flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg>Atualizar</button>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left text-gray-300">
-                            <thead class="text-xs text-gray-400 uppercase bg-gray-700">
+                        <table class="w-full text-sm text-left text-gray-500">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                                 <tr>
                                     <th class="px-6 py-3">Email</th>
                                     <th class="px-6 py-3">Último Login</th>
@@ -2748,8 +2238,8 @@
                             </thead>
                             <tbody>
                                 ${activeUsers.map(u => `
-                                    <tr class="bg-gray-800 border-b border-gray-700 hover:bg-gray-700">
-                                        <td class="px-6 py-4 font-medium text-white">${u.email}</td>
+                                    <tr class="bg-white border-b">
+                                        <td class="px-6 py-4 font-medium text-gray-900">${u.email}</td>
                                         <td class="px-6 py-4">${u.last_login || 'Nunca'}</td>
                                         <td class="px-6 py-4 text-center space-x-2">
                                             <button class="user-status-toggle bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="false" ${appState.currentUser.id === u.id ? 'disabled' : ''}>Bloquear</button>
@@ -2764,7 +2254,7 @@
                     <h3 class="text-lg font-semibold mb-4 font-display text-yellow-400">Ativações Pendentes (${pendingActivationUsers.length})</h3>
                     ${pendingActivationUsers.length > 0 ? `<div class="overflow-x-auto">
                         <table class="w-full text-sm text-left text-gray-300">
-                            <thead class="text-xs text-yellow-400 uppercase bg-yellow-900/20">
+                            <thead class="text-xs text-yellow-400 uppercase">
                                 <tr>
                                     <th class="px-6 py-3">Email</th>
                                     <th class="px-6 py-3 text-center">Ação</th>
@@ -2772,7 +2262,7 @@
                             </thead>
                             <tbody>
                                 ${pendingActivationUsers.map(u => `
-                                    <tr class="border-b border-yellow-800 hover:bg-yellow-900/40">
+                                    <tr class="border-b border-yellow-800">
                                         <td class="px-6 py-4">${u.email}</td>
                                         <td class="px-6 py-4 text-center">
                                             <button class="user-status-toggle bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-2 rounded" data-userid="${u.id}" data-is-active="true">Ativar</button>
@@ -2782,9 +2272,9 @@
                         </table>
                     </div>` : '<p class="text-sm text-yellow-200">Nenhum utilizador a aguardar ativação.</p>'}
                 </div>
-                <div class="bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-700 space-y-4">
+                <div class="bg-white p-6 rounded-xl shadow-sm border space-y-4">
                     <div>
-                        <h3 class="text-lg font-semibold text-white font-display">Modo Manutenção</h3>
+                        <h3 class="text-lg font-semibold font-display">Modo Manutenção</h3>
                         <div class="flex items-center gap-4 mt-2">
                             <label class="flex items-center cursor-pointer">
                                 <div class="relative">
@@ -2792,18 +2282,18 @@
                                     <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
                                     <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
                                 </div>
-                                <div class="ml-3 text-gray-300 font-medium" id="maintenance-label">
+                                <div class="ml-3 text-gray-700 font-medium" id="maintenance-label">
                                     ${maintenanceStatus.is_on ? 'Ativo' : 'Inativo'}
                                 </div>
                             </label>
-                            <input type="text" id="maintenance-message-input" value="${escapeHTML(maintenanceStatus.message)}" class="flex-grow px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white placeholder-gray-400" placeholder="Mensagem de manutenção (opcional)">
+                            <input type="text" id="maintenance-message-input" value="${escapeHTML(maintenanceStatus.message)}" class="flex-grow px-3 py-2 border rounded-md" placeholder="Mensagem de manutenção (opcional)">
                         </div>
                     </div>
-                    <hr class="border-gray-700">
+                    <hr>
                     <div>
-                        <h3 class="text-lg font-semibold text-white font-display">Anúncio Global</h3>
-                        <p class="text-sm text-gray-400 mb-2">Envie uma mensagem pop-up para todos os utilizadores online.</p>
-                        <textarea id="announcement-message-input" class="w-full px-3 py-2 border border-gray-600 rounded-md mb-2 bg-gray-700 text-white placeholder-gray-400" rows="3" placeholder="Digite a sua mensagem...">${escapeHTML(announcement?.message)}</textarea>
+                        <h3 class="text-lg font-semibold font-display">Anúncio Global</h3>
+                        <p class="text-sm text-slate-500 mb-2">Envie uma mensagem pop-up para todos os utilizadores online.</p>
+                        <textarea id="announcement-message-input" class="w-full px-3 py-2 border rounded-md mb-2" rows="3" placeholder="Digite a sua mensagem...">${escapeHTML(announcement?.message)}</textarea>
                         <div class="flex justify-end gap-2">
                             <button id="clear-announcement-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Limpar Anúncio</button>
                             <button id="send-announcement-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Enviar Anúncio</button>
@@ -2891,18 +2381,15 @@
         const urlParams = new URLSearchParams(window.location.search);
         
         if (urlParams.has('reset_token')) {
-            console.log('checkSession: Reset token found, showing reset password container.');
             showScreen('reset-password-container');
             return;
         }
 
         if (token) {
-            console.log('checkSession: Auth token found, verifying session...');
             try {
                 const response = await apiRequest('/api/verify-session', 'GET');
                 if (response && response.user) {
                     appState.currentUser = response.user;
-                    console.log('checkSession: Session verified. User:', appState.currentUser);
                     const appStatus = await apiRequest('/api/status', 'GET');
                     if (appStatus.maintenance && appStatus.maintenance.is_on && appState.currentUser.role !== 'admin') {
                         showMaintenanceMode(appStatus.maintenance.message);
@@ -2910,15 +2397,13 @@
                         await initializeApp(appStatus.announcement);
                     }
                 } else {
-                    console.log('checkSession: Session verification failed, logging out.');
                     handleLogout();
                 }
             } catch (error) {
-                console.error("checkSession: Falha na verificação da sessão:", error);
+                console.error("Falha na verificação da sessão:", error);
                 handleLogout();
             }
         } else {
-            console.log('checkSession: No auth token found, showing login container.');
             showScreen('login-container');
         }
     }
