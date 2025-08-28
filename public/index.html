@@ -393,7 +393,8 @@
         },
         statusPollInterval: null,
         lastAnnouncement: null,
-        costItems: [] // NEW: Array to hold cost items
+        costItems: [], // Array to hold cost items
+        costCategories: [] // NEW: Array to hold user-defined cost categories
     };
     let heartbeatInterval = null;
     let audioContext; // Para o som de notificação
@@ -591,7 +592,7 @@
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         if (appState.chat.pollInterval) clearInterval(appState.chat.pollInterval);
         if (appState.statusPollInterval) clearInterval(appState.statusPollInterval);
-        appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null, lastUnreadCount: 0 }, statusPollInterval: null, lastAnnouncement: null, costItems: [] };
+        appState = { currentUser: null, apiKeys: { gemini: ["","",""], openai: "", google_api: "" }, userChannels: [], videoIdeas: [], chat: { isOpen: false, activePeer: null, pollInterval: null, lastUnreadCount: 0 }, statusPollInterval: null, lastAnnouncement: null, costItems: [], costCategories: [] };
         document.getElementById('chat-widget').style.display = 'none';
         hideOfflineMessageModal();
         showScreen('login-container');
@@ -870,7 +871,10 @@
                         <!-- Cost Category Template -->
                         <template id="cost-category-template">
                             <div class="cost-category bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-700">
-                                <h2 class="text-2xl font-semibold text-white mb-4 category-title font-display"></h2>
+                                <div class="flex justify-between items-center mb-4">
+                                    <input type="text" class="category-title-input text-2xl font-semibold text-white bg-transparent border-b border-gray-600 focus:border-red-600 focus:outline-none font-display w-full" value="" />
+                                    <button type="button" class="delete-category-btn text-red-500 hover:text-red-700 text-2xl ml-4" title="Remover Categoria">&times;</button>
+                                </div>
                                 <div class="overflow-x-auto mb-4">
                                     <table class="min-w-full divide-y divide-gray-700">
                                         <thead class="bg-gray-700">
@@ -905,6 +909,13 @@
                         <!-- End Cost Category Template -->
                     </div>
 
+                    <!-- Add New Category Button -->
+                    <div class="mt-8 flex justify-center">
+                        <button id="add-category-btn" class="px-6 py-3 bg-green-600 text-white text-base font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out shadow-lg">
+                            + Adicionar Nova Categoria
+                        </button>
+                    </div>
+
                     <!-- Grand Total Section -->
                     <div class="mt-10 pt-6 border-t-2 border-red-700">
                         <div class="flex flex-col sm:flex-row justify-between items-center bg-red-900/30 p-6 rounded-lg shadow-md border border-red-800">
@@ -914,6 +925,9 @@
                         <div class="mt-6 flex justify-center">
                             <button id="clear-all-btn" class="px-6 py-3 bg-red-600 text-white text-base font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out shadow-lg">
                                 Limpar Tudo
+                            </button>
+                            <button id="save-all-btn" class="ml-4 px-6 py-3 bg-blue-600 text-white text-base font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out shadow-lg">
+                                Salvar Tudo
                             </button>
                         </div>
                     </div>
@@ -2071,10 +2085,11 @@
     // --- NEW: Cost Spreadsheet Initialization Logic ---
     let costItems = []; // Array to store all cost items
 
-    const costCategoriesData = [
+    // Initial default categories (will be replaced by fetched categories from backend)
+    const defaultCostCategoriesData = [
         {
-            title: '1. Custos de Produção',
             id: 'producao',
+            name: '1. Custos de Produção',
             initialItems: [
                 { item_name: 'Roteirista/Pesquisador', description: 'Custo com roteirista para criar o conteúdo.' },
                 { item_name: 'Locutor(a) ou Voz IA', description: 'Gasto com narração do vídeo.' },
@@ -2085,8 +2100,8 @@
             ]
         },
         {
-            title: '2. Custos de Software e Ferramentas',
             id: 'software',
+            name: '2. Custos de Software e Ferramentas',
             initialItems: [
                 { item_name: 'Ferramenta de IA (Ex: ChatGPT)', description: 'Assinatura de ferramentas de inteligência artificial.' },
                 { item_name: 'Plataforma de Automação', description: 'Software para automatizar o processo de criação de vídeo.' },
@@ -2095,8 +2110,8 @@
             ]
         },
         {
-            title: '3. Custos de Marketing e Promoção',
             id: 'marketing',
+            name: '3. Custos de Marketing e Promoção',
             initialItems: [
                 { item_name: 'Anúncios no YouTube/Google Ads', description: 'Gasto com campanhas pagas.' },
                 { item_name: 'Parcerias com Influencers', description: 'Pagamentos para outros canais ou influencers.' },
@@ -2104,8 +2119,8 @@
             ]
         },
         {
-            title: '4. Custos Diversos',
             id: 'diversos',
+            name: '4. Custos Diversos',
             initialItems: [
                 { item_name: 'Taxas de Plataforma (Ex: PayPal)', description: 'Taxas de transferência para receber pagamentos.' },
                 { item_name: 'Serviços Contábeis', description: 'Custo com contador, se tiver.' },
@@ -2128,7 +2143,7 @@
 
     const updateAllTotals = () => {
         let grandTotal = 0;
-        costCategoriesData.forEach(categoryData => {
+        appState.costCategories.forEach(categoryData => {
             const categoryTotalSpan = document.querySelector(`.cost-category[data-category-id="${categoryData.id}"] .category-total`);
             if (categoryTotalSpan) {
                 const total = calculateCategoryTotal(categoryData.id);
@@ -2159,12 +2174,31 @@
         }
     }
 
-    async function deleteAllCosts() {
+    async function saveCostCategory(categoryData) {
         try {
-            await apiRequest('/api/costs', 'DELETE');
-            addToLog('Todos os custos foram excluídos com sucesso.');
+            // For now, categories are local. This would be an API call if persisted.
+            addToLog('Categoria salva localmente (persistência no backend a ser implementada).');
+            return categoryData; // Return the same data for local update
         } catch (error) {
-            addToLog(`Erro ao excluir todos os custos: ${error.message}`, true);
+            addToLog(`Erro ao salvar categoria: ${error.message}`, true);
+            return null;
+        }
+    }
+
+    async function deleteCostCategory(categoryId) {
+        try {
+            // For now, categories are local. This would be an API call if persisted.
+            addToLog('Categoria excluída localmente (persistência no backend a ser implementada).');
+            // Also delete all cost items associated with this category
+            const itemsToDelete = costItems.filter(item => item.category_id === categoryId);
+            for (const item of itemsToDelete) {
+                await deleteCostItem(item.id); // Delete from backend
+            }
+            costItems = costItems.filter(item => item.category_id !== categoryId); // Delete from local array
+            return true;
+        } catch (error) {
+            addToLog(`Erro ao excluir categoria: ${error.message}`, true);
+            return false;
         }
     }
 
@@ -2250,13 +2284,10 @@
                 };
                 const savedItem = await saveCostItem(updatedItem);
                 if (savedItem) {
-                    // Update the item in the local costItems array
                     const index = costItems.findIndex(ci => ci.id === savedItem.id);
                     if (index !== -1) {
                         costItems[index] = savedItem;
                     } else {
-                        // This case should ideally not happen for existing items if IDs are unique
-                        // But for new items, if savedItem has a new ID, add it.
                         costItems.push(savedItem);
                     }
                     updateAllTotals();
@@ -2277,11 +2308,83 @@
         return tr;
     };
 
+    // NEW: Function to create a category element
+    const createCostCategoryElement = (categoryData) => {
+        const clone = document.importNode(document.getElementById('cost-category-template').content, true);
+        const categoryDiv = clone.querySelector('.cost-category');
+        categoryDiv.setAttribute('data-category-id', categoryData.id);
+
+        const titleInput = categoryDiv.querySelector('.category-title-input');
+        titleInput.value = categoryData.name;
+        titleInput.addEventListener('change', async () => {
+            categoryData.name = titleInput.value;
+            await saveCostCategory(categoryData); // Save category name (local for now)
+            updateAllTotals();
+        });
+
+        const deleteCategoryBtn = categoryDiv.querySelector('.delete-category-btn');
+        deleteCategoryBtn.addEventListener('click', () => {
+            showConfirmationModal(
+                'Remover Categoria',
+                `Tem certeza que deseja remover a categoria "${categoryData.name}" e todos os seus itens de custo?`,
+                async () => {
+                    const success = await deleteCostCategory(categoryData.id);
+                    if (success) {
+                        appState.costCategories = appState.costCategories.filter(cat => cat.id !== categoryData.id);
+                        categoryDiv.remove();
+                        updateAllTotals();
+                        addToLog(`Categoria "${categoryData.name}" e seus itens removidos.`);
+                    }
+                }
+            );
+        });
+
+        const categoryBody = categoryDiv.querySelector('.category-body');
+        const existingCategoryItems = costItems.filter(item => item.category_id === categoryData.id);
+        
+        if (existingCategoryItems.length > 0) {
+            existingCategoryItems.forEach(item => {
+                categoryBody.appendChild(createCostRowElement(item, categoryData.id));
+            });
+        } else {
+            // Add initial placeholder items if no saved items for this category
+            if (categoryData.initialItems) {
+                categoryData.initialItems.forEach(item => {
+                    const tempItem = { id: null, ...item, value: 0, frequency: 'mensal', payment_date: null, payment_method: null, card_last_digits: null };
+                    categoryBody.appendChild(createCostRowElement(tempItem, categoryData.id));
+                });
+            }
+        }
+
+        categoryDiv.querySelector('.add-row-btn').addEventListener('click', async () => {
+            const newItemData = {
+                category_id: categoryData.id,
+                item_name: '',
+                description: '',
+                value: 0,
+                frequency: 'mensal',
+                payment_date: null,
+                payment_method: null,
+                card_last_digits: null,
+            };
+            const savedItem = await saveCostItem(newItemData);
+            if (savedItem) {
+                costItems.push(savedItem);
+                categoryBody.appendChild(createCostRowElement(savedItem, categoryData.id));
+                updateAllTotals();
+            }
+        });
+
+        return categoryDiv;
+    };
+
+
     async function initializeCostSpreadsheet() {
         const costCategoriesContainer = document.getElementById('cost-categories');
-        const categoryTemplate = document.getElementById('cost-category-template');
+        const addCategoryBtn = document.getElementById('add-category-btn');
+        const saveAllBtn = document.getElementById('save-all-btn');
 
-        if (!costCategoriesContainer || !categoryTemplate) {
+        if (!costCategoriesContainer || !document.getElementById('cost-category-template')) {
             console.error("Elementos da planilha não encontrados.");
             return;
         }
@@ -2292,70 +2395,80 @@
             const fetchedCosts = await apiRequest('/api/costs', 'GET');
             costItems = fetchedCosts;
             addToLog('Custos carregados com sucesso.');
-            console.log('Fetched costs:', costItems); // Debugging log
+            console.log('Fetched costs:', costItems);
         } catch (error) {
             addToLog(`Erro ao carregar custos: ${error.message}`, true);
-            console.error('Error fetching costs:', error); // Debugging log
+            console.error('Error fetching costs:', error);
             costItems = [];
         }
 
-        costCategoriesData.forEach(categoryData => {
-            const clone = document.importNode(categoryTemplate.content, true);
-            const categoryDiv = clone.querySelector('.cost-category');
-            categoryDiv.setAttribute('data-category-id', categoryData.id);
-            categoryDiv.querySelector('.category-title').textContent = categoryData.title;
-            const categoryBody = categoryDiv.querySelector('.category-body');
+        // For now, use default categories. In next step, fetch from backend.
+        // If appState.costCategories is empty, initialize with default.
+        if (appState.costCategories.length === 0) {
+            appState.costCategories = JSON.parse(JSON.stringify(defaultCostCategoriesData)); // Deep copy
+        }
 
-            // Populate with existing items for this category
-            const existingCategoryItems = costItems.filter(item => item.category_id === categoryData.id);
-            if (existingCategoryItems.length > 0) {
-                existingCategoryItems.forEach(item => {
-                    categoryBody.appendChild(createCostRowElement(item, categoryData.id));
-                });
-            } else {
-                // If no existing items, add initial placeholder items (unsaved)
-                categoryData.initialItems.forEach(item => {
-                    const tempItem = { id: null, ...item, value: 0, frequency: 'mensal', payment_date: null, payment_method: null, card_last_digits: null };
-                    categoryBody.appendChild(createCostRowElement(tempItem, categoryData.id));
-                });
-            }
+        appState.costCategories.forEach(categoryData => {
+            costCategoriesContainer.appendChild(createCostCategoryElement(categoryData));
+        });
 
-            // Add event listener for the "Add Item" button
-            categoryDiv.querySelector('.add-row-btn').addEventListener('click', async () => {
-                const newItemData = {
-                    category_id: categoryData.id,
-                    item_name: '',
-                    description: '',
-                    value: 0,
-                    frequency: 'mensal',
-                    payment_date: null,
-                    payment_method: null,
-                    card_last_digits: null,
-                };
-                const savedItem = await saveCostItem(newItemData);
-                if (savedItem) {
-                    costItems.push(savedItem);
-                    categoryBody.appendChild(createCostRowElement(savedItem, categoryData.id));
-                    updateAllTotals();
-                }
-            });
-
-            costCategoriesContainer.appendChild(clone);
+        addCategoryBtn.addEventListener('click', () => {
+            const newCategoryId = `custom-${Date.now()}`;
+            const newCategory = { id: newCategoryId, name: 'Nova Categoria', initialItems: [] };
+            appState.costCategories.push(newCategory);
+            costCategoriesContainer.appendChild(createCostCategoryElement(newCategory));
+            updateAllTotals();
+            addToLog('Nova categoria adicionada localmente. Salve para persistir.');
         });
 
         document.getElementById('clear-all-btn').addEventListener('click', () => {
             showConfirmationModal(
                 'Limpar Planilha',
-                'Tem certeza que deseja limpar todos os dados da planilha? Esta ação não pode ser desfeita.',
+                'Tem certeza que deseja limpar TODOS os dados da planilha (categorias e itens)? Esta ação não pode ser desfeita.',
                 async () => {
-                    await deleteAllCosts();
-                    costItems = []; // Clear local array
-                    // Re-render the entire spreadsheet to show empty initial rows
+                    await deleteAllCosts(); // Deletes all items from backend
+                    // For categories, if they were persisted, we'd delete them here too.
+                    // For now, clear local categories and re-initialize with defaults.
+                    appState.costCategories = [];
+                    costItems = []; 
                     initializeCostSpreadsheet(); 
-                    addToLog('Todos os custos foram limpos.');
+                    addToLog('Todos os custos e categorias foram limpos.');
                 }
             );
         });
+
+        saveAllBtn.addEventListener('click', async () => {
+            // This button will trigger saves for all current cost items.
+            // For categories, if they were persisted, we'd save them here too.
+            const allItemsToSave = [];
+            document.querySelectorAll('.cost-category').forEach(categoryDiv => {
+                const categoryId = categoryDiv.dataset.categoryId;
+                categoryDiv.querySelectorAll('.category-body tr').forEach(row => {
+                    const itemId = row.dataset.itemId;
+                    const itemData = {
+                        id: itemId,
+                        category_id: categoryId,
+                        item_name: row.querySelector('.item-name').value,
+                        description: row.querySelector('.item-description').value,
+                        value: parseFloat(row.querySelector('.item-value').value || 0),
+                        frequency: row.querySelector('.item-frequency').value,
+                        payment_date: row.querySelector('.item-payment-date').value || null,
+                        payment_method: row.querySelector('.item-payment-method').value || null,
+                        card_last_digits: row.querySelector('.item-card-last-digits').value || null,
+                    };
+                    allItemsToSave.push(itemData);
+                });
+            });
+
+            // For categories, if they were persisted, you'd save them here
+            // For now, just re-save all items
+            for (const itemData of allItemsToSave) {
+                await saveCostItem(itemData);
+            }
+            addToLog('Todas as alterações da planilha foram salvas.');
+            updateAllTotals();
+        });
+
 
         updateAllTotals(); // Initial calculation
     }
@@ -2540,6 +2653,9 @@
                 apiRequest('/api/status', 'GET')
             ]);
             
+            console.log('Admin Panel - Fetched users:', users); // Debugging
+            console.log('Admin Panel - Fetched stats:', stats); // Debugging
+
             const maintenanceStatus = appStatus.maintenance;
             const announcement = appStatus.announcement;
 
