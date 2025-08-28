@@ -1478,7 +1478,7 @@
             try {
                 const result = await callAIModel(prompt, schema);
                 const filteredResult = result.filter(item => item.viral_score > 80);
-                let html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold font-display">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
+                let html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold font-display">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
                 if (append) {
                     const moreButton = document.getElementById('generate-more-structures');
                     if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
@@ -2085,10 +2085,10 @@
     // --- NEW: Cost Spreadsheet Initialization Logic ---
     let costItems = []; // Array to store all cost items
 
-    // Initial default categories (will be replaced by fetched categories from backend)
+    // Initial default categories (will be used if user has no categories saved)
     const defaultCostCategoriesData = [
         {
-            id: 'producao',
+            id: 'producao', // Use a simple string ID for default categories
             name: '1. Custos de Produção',
             initialItems: [
                 { item_name: 'Roteirista/Pesquisador', description: 'Custo com roteirista para criar o conteúdo.' },
@@ -2174,30 +2174,45 @@
         }
     }
 
+    async function deleteAllCosts() {
+        try {
+            await apiRequest('/api/costs', 'DELETE');
+            addToLog('Todos os itens de custo foram excluídos do backend.');
+        } catch (error) {
+            addToLog(`Erro ao excluir todos os custos: ${error.message}`, true);
+        }
+    }
+
+    // NEW: API calls for categories
+    async function fetchCostCategories() {
+        try {
+            const response = await apiRequest('/api/cost-categories', 'GET');
+            addToLog('Categorias de custo carregadas com sucesso.');
+            return response;
+        } catch (error) {
+            addToLog(`Erro ao carregar categorias de custo: ${error.message}`, true);
+            return [];
+        }
+    }
+
     async function saveCostCategory(categoryData) {
         try {
-            // For now, categories are local. This would be an API call if persisted.
-            addToLog('Categoria salva localmente (persistência no backend a ser implementada).');
-            return categoryData; // Return the same data for local update
+            const response = await apiRequest('/api/cost-categories', 'POST', categoryData);
+            addToLog('Categoria de custo salva com sucesso.');
+            return response;
         } catch (error) {
-            addToLog(`Erro ao salvar categoria: ${error.message}`, true);
+            addToLog(`Erro ao salvar categoria de custo: ${error.message}`, true);
             return null;
         }
     }
 
     async function deleteCostCategory(categoryId) {
         try {
-            // For now, categories are local. This would be an API call if persisted.
-            addToLog('Categoria excluída localmente (persistência no backend a ser implementada).');
-            // Also delete all cost items associated with this category
-            const itemsToDelete = costItems.filter(item => item.category_id === categoryId);
-            for (const item of itemsToDelete) {
-                await deleteCostItem(item.id); // Delete from backend
-            }
-            costItems = costItems.filter(item => item.category_id !== categoryId); // Delete from local array
+            await apiRequest(`/api/cost-categories/${categoryId}`, 'DELETE');
+            addToLog('Categoria de custo e seus itens excluídos com sucesso.');
             return true;
         } catch (error) {
-            addToLog(`Erro ao excluir categoria: ${error.message}`, true);
+            addToLog(`Erro ao excluir categoria de custo: ${error.message}`, true);
             return false;
         }
     }
@@ -2318,15 +2333,19 @@
         titleInput.value = categoryData.name;
         titleInput.addEventListener('change', async () => {
             categoryData.name = titleInput.value;
-            await saveCostCategory(categoryData); // Save category name (local for now)
-            updateAllTotals();
+            const savedCategory = await saveCostCategory(categoryData);
+            if (savedCategory) {
+                const index = appState.costCategories.findIndex(cat => cat.id === savedCategory.id);
+                if (index !== -1) appState.costCategories[index] = savedCategory;
+                updateAllTotals();
+            }
         });
 
         const deleteCategoryBtn = categoryDiv.querySelector('.delete-category-btn');
         deleteCategoryBtn.addEventListener('click', () => {
             showConfirmationModal(
                 'Remover Categoria',
-                `Tem certeza que deseja remover a categoria "${categoryData.name}" e todos os seus itens de custo?`,
+                `Tem certeza que deseja remover a categoria "${categoryData.name}" e todos os seus itens de custo? Esta ação não pode ser desfeita.`,
                 async () => {
                     const success = await deleteCostCategory(categoryData.id);
                     if (success) {
@@ -2348,8 +2367,9 @@
             });
         } else {
             // Add initial placeholder items if no saved items for this category
-            if (categoryData.initialItems) {
-                categoryData.initialItems.forEach(item => {
+            // Only add if it's a default category or a newly added custom category
+            if (categoryData.initialItems && categoryData.initialItems.length > 0) {
+                 categoryData.initialItems.forEach(item => {
                     const tempItem = { id: null, ...item, value: 0, frequency: 'mensal', payment_date: null, payment_method: null, card_last_digits: null };
                     categoryBody.appendChild(createCostRowElement(tempItem, categoryData.id));
                 });
@@ -2392,33 +2412,52 @@
         costCategoriesContainer.innerHTML = ''; // Clear existing content
 
         try {
+            // Fetch categories first
+            const fetchedCategories = await fetchCostCategories();
+            if (fetchedCategories.length === 0) {
+                // If no categories, initialize with defaults and save them
+                appState.costCategories = JSON.parse(JSON.stringify(defaultCostCategoriesData)); // Deep copy
+                for (const cat of appState.costCategories) {
+                    const savedCat = await saveCostCategory(cat);
+                    if (savedCat) cat.id = savedCat.id; // Update ID for newly saved default categories
+                }
+                addToLog('Categorias padrão inicializadas e salvas.');
+            } else {
+                appState.costCategories = fetchedCategories;
+                addToLog('Categorias de custo carregadas com sucesso.');
+            }
+
+            // Then fetch cost items
             const fetchedCosts = await apiRequest('/api/costs', 'GET');
             costItems = fetchedCosts;
-            addToLog('Custos carregados com sucesso.');
+            addToLog('Itens de custo carregados com sucesso.');
             console.log('Fetched costs:', costItems);
+            console.log('Fetched categories:', appState.costCategories);
+
         } catch (error) {
-            addToLog(`Erro ao carregar custos: ${error.message}`, true);
-            console.error('Error fetching costs:', error);
+            addToLog(`Erro ao carregar dados da planilha: ${error.message}`, true);
+            console.error('Error fetching spreadsheet data:', error);
+            appState.costCategories = JSON.parse(JSON.stringify(defaultCostCategoriesData)); // Fallback to defaults
             costItems = [];
         }
 
-        // For now, use default categories. In next step, fetch from backend.
-        // If appState.costCategories is empty, initialize with default.
-        if (appState.costCategories.length === 0) {
-            appState.costCategories = JSON.parse(JSON.stringify(defaultCostCategoriesData)); // Deep copy
-        }
-
-        appState.costCategories.forEach(categoryData => {
+        // Render categories and their items
+        appState.costCategories.sort((a, b) => (a.order_index || 0) - (b.order_index || 0)).forEach(categoryData => {
             costCategoriesContainer.appendChild(createCostCategoryElement(categoryData));
         });
 
-        addCategoryBtn.addEventListener('click', () => {
-            const newCategoryId = `custom-${Date.now()}`;
-            const newCategory = { id: newCategoryId, name: 'Nova Categoria', initialItems: [] };
-            appState.costCategories.push(newCategory);
-            costCategoriesContainer.appendChild(createCostCategoryElement(newCategory));
-            updateAllTotals();
-            addToLog('Nova categoria adicionada localmente. Salve para persistir.');
+        addCategoryBtn.addEventListener('click', async () => {
+            const newCategoryName = prompt("Digite o nome da nova categoria:");
+            if (newCategoryName) {
+                const newCategoryData = { name: newCategoryName, order_index: appState.costCategories.length };
+                const savedCategory = await saveCostCategory(newCategoryData);
+                if (savedCategory) {
+                    appState.costCategories.push(savedCategory);
+                    costCategoriesContainer.appendChild(createCostCategoryElement(savedCategory));
+                    updateAllTotals();
+                    addToLog(`Nova categoria "${savedCategory.name}" adicionada e salva.`);
+                }
+            }
         });
 
         document.getElementById('clear-all-btn').addEventListener('click', () => {
@@ -2426,11 +2465,17 @@
                 'Limpar Planilha',
                 'Tem certeza que deseja limpar TODOS os dados da planilha (categorias e itens)? Esta ação não pode ser desfeita.',
                 async () => {
-                    await deleteAllCosts(); // Deletes all items from backend
-                    // For categories, if they were persisted, we'd delete them here too.
-                    // For now, clear local categories and re-initialize with defaults.
-                    appState.costCategories = [];
-                    costItems = []; 
+                    // Delete all items first
+                    await deleteAllCosts(); 
+                    costItems = []; // Clear local array
+
+                    // Then delete all categories
+                    for (const cat of appState.costCategories) {
+                        await deleteCostCategory(cat.id); // This also deletes associated items
+                    }
+                    appState.costCategories = []; // Clear local array
+
+                    // Re-initialize the spreadsheet with default categories
                     initializeCostSpreadsheet(); 
                     addToLog('Todos os custos e categorias foram limpos.');
                 }
@@ -2438,8 +2483,6 @@
         });
 
         saveAllBtn.addEventListener('click', async () => {
-            // This button will trigger saves for all current cost items.
-            // For categories, if they were persisted, we'd save them here too.
             const allItemsToSave = [];
             document.querySelectorAll('.cost-category').forEach(categoryDiv => {
                 const categoryId = categoryDiv.dataset.categoryId;
@@ -2460,11 +2503,29 @@
                 });
             });
 
-            // For categories, if they were persisted, you'd save them here
-            // For now, just re-save all items
+            const allCategoryUpdates = [];
+            appState.costCategories.forEach(cat => {
+                const categoryDiv = document.querySelector(`.cost-category[data-category-id="${cat.id}"]`);
+                if (categoryDiv) {
+                    const updatedName = categoryDiv.querySelector('.category-title-input').value;
+                    if (updatedName !== cat.name) {
+                        allCategoryUpdates.push({ ...cat, name: updatedName });
+                    } else {
+                        allCategoryUpdates.push(cat); // Include unchanged categories for full sync
+                    }
+                }
+            });
+
+            // Save/Update all items
             for (const itemData of allItemsToSave) {
                 await saveCostItem(itemData);
             }
+
+            // Save/Update all categories
+            for (const categoryData of allCategoryUpdates) {
+                await saveCostCategory(categoryData);
+            }
+
             addToLog('Todas as alterações da planilha foram salvas.');
             updateAllTotals();
         });
