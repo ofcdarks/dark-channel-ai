@@ -1478,7 +1478,7 @@
             try {
                 const result = await callAIModel(prompt, schema);
                 const filteredResult = result.filter(item => item.viral_score > 80);
-                let html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h4 class="font-semibold font-display">${item.example_title} ${createCopyButton(item.example_title)}</h4><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
+                let html = filteredResult.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><h3 class="font-semibold font-display">${item.example_title} ${createCopyButton(item.example_title)}</h3><p class="text-sm text-slate-600"><strong>Estrutura:</strong> ${item.structure_name} - <code>${item.structure}</code></p><p class="text-sm text-slate-600 mt-1">${item.explanation}</p></div><div class="flex-shrink-0">${renderScoreCard('Potencial Viral', item.viral_score, { 'Curiosidade': item.viral_score, 'Clareza': item.viral_score - 5, 'Demanda de Busca': getTrendLevel(searchScore) }, item.suggestion, item.is_novel && item.viral_score > 93)}</div></div>`).join('');
                 if (append) {
                     const moreButton = document.getElementById('generate-more-structures');
                     if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
@@ -1534,7 +1534,7 @@
             };
             try {
                 const result = await callAIModel(prompt, schema);
-                let html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="font-mono text-sm bg-slate-200 p-2 rounded relative group">${item.prompt}<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(item.prompt)}</div></div><p class="text-xs mt-2 text-slate-600"><strong>Teste A/B:</strong> ${item.ab_test_suggestion}</p></div>${renderScoreCard('Potencial de CTR', item.score, { 'Impacto Visual': item.score + 4, 'Clareza': item.score - 3 }, item.suggestion)}</div>`).join('');
+                let html = result.map(item => `<div class="bg-slate-100 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-4 items-start"><div class="flex-1"><div class="font-mono text-sm bg-slate-200 p-2 rounded relative group">${item.prompt}<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">${createCopyButton(item.prompt)}</div></div><p class="text-xs mt-2 text-slate-600"><strong>Teste A/B:</strong> ${item.ab_test_suggestion}</p></div>${renderScoreCard('Potencial de CTR', item.score, { 'Impacto Visual': item.score + 4, 'Clareza': item.score - 3 }, item.suggestion)}</div>`).join('');
                 if (append) {
                     const moreButton = document.getElementById('generate-more-prompts');
                     if(moreButton) moreButton.insertAdjacentHTML('beforebegin', html);
@@ -2402,9 +2402,10 @@
     async function initializeCostSpreadsheet() {
         const costCategoriesContainer = document.getElementById('cost-categories');
         const addCategoryBtn = document.getElementById('add-category-btn');
-        const saveAllBtn = document.getElementById('save-all-btn');
+        const clearAllBtn = document.getElementById('clear-all-btn'); // Get the clear all button
+        const saveAllBtn = document.getElementById('save-all-btn'); // Get the save all button
 
-        if (!costCategoriesContainer || !document.getElementById('cost-category-template')) {
+        if (!costCategoriesContainer || !document.getElementById('cost-category-template') || !addCategoryBtn || !clearAllBtn || !saveAllBtn) {
             console.error("Elementos da planilha não encontrados.");
             return;
         }
@@ -2446,7 +2447,8 @@
             costCategoriesContainer.appendChild(createCostCategoryElement(categoryData));
         });
 
-        addCategoryBtn.addEventListener('click', async () => {
+        // Re-attach event listeners for the main buttons
+        addCategoryBtn.onclick = async () => { // Use .onclick to replace previous listener
             const newCategoryName = prompt("Digite o nome da nova categoria:");
             if (newCategoryName) {
                 const newCategoryData = { name: newCategoryName, order_index: appState.costCategories.length };
@@ -2458,9 +2460,9 @@
                     addToLog(`Nova categoria "${savedCategory.name}" adicionada e salva.`);
                 }
             }
-        });
+        };
 
-        document.getElementById('clear-all-btn').addEventListener('click', () => {
+        clearAllBtn.onclick = () => { // Use .onclick to replace previous listener
             showConfirmationModal(
                 'Limpar Planilha',
                 'Tem certeza que deseja limpar TODOS os dados da planilha (categorias e itens)? Esta ação não pode ser desfeita.',
@@ -2480,9 +2482,9 @@
                     addToLog('Todos os custos e categorias foram limpos.');
                 }
             );
-        });
+        };
 
-        saveAllBtn.addEventListener('click', async () => {
+        saveAllBtn.onclick = async () => { // Use .onclick to replace previous listener
             const allItemsToSave = [];
             document.querySelectorAll('.cost-category').forEach(categoryDiv => {
                 const categoryId = categoryDiv.dataset.categoryId;
@@ -2528,7 +2530,7 @@
 
             addToLog('Todas as alterações da planilha foram salvas.');
             updateAllTotals();
-        });
+        };
 
 
         updateAllTotals(); // Initial calculation
